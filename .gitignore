@@ -1,0 +1,16 @@
+/node_modules
+/frontend/node_modules
+/frontend/build
+/backend/__pycache__
+/backend/venv
+/backend/.venv
+
+.env
+.env.local
+**/.env
+**/.env.local
+
+.DS_Store
+.idea
+.vscode
+*.log
