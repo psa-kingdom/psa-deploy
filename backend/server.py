@@ -14,11 +14,41 @@ from datetime import datetime, timezone
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# ---------------------------------------------------------------------------
+# Parse allowed origins — strip whitespace so "  https://x.vercel.app" works
+# ---------------------------------------------------------------------------
+_raw_origins = os.environ.get('CORS_ORIGINS', '*')
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(',') if o.strip()]
+logger.info("CORS allowed origins: %s", ALLOWED_ORIGINS)
+
+# ---------------------------------------------------------------------------
+# App — IMPORTANT: add_middleware MUST be called BEFORE include_router so
+# Starlette's middleware stack is built correctly and OPTIONS preflight
+# requests are intercepted before they reach route dispatch (which would
+# return 400 for unmatched methods).
+# ---------------------------------------------------------------------------
 app = FastAPI(title="P Suman & Associates API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,  # browser may cache preflight for 10 minutes
+)
+
 api_router = APIRouter(prefix="/api")
 
 
@@ -108,21 +138,10 @@ async def list_contact_submissions():
     return rows
 
 
+# ---------------------------------------------------------------------------
+# Router — registered AFTER middleware so middleware stack is already sealed
+# ---------------------------------------------------------------------------
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 @app.on_event("shutdown")
