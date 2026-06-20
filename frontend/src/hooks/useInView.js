@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 export function useInView(options = { threshold: 0.15 }) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
+  const optionsRef = useRef(options);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -11,7 +13,7 @@ export function useInView(options = { threshold: 0.15 }) {
         setInView(true);
         obs.unobserve(entry.target);
       }
-    }, options);
+    }, optionsRef.current);
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
