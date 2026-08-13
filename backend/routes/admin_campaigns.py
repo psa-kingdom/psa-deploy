@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -22,27 +23,116 @@ from backend.models.email import (
 from backend.services.email.audience import extract_and_deduplicate_audience, get_suppressed_emails
 from backend.services.email.renderer import render_base_layout, interpolate_variables, html_to_plain_text
 from backend.services.email.provider import send_email_via_provider
+import re
+import logging
 
-router = APIRouter(prefix="/admin/communication/campaigns", tags=["Admin Campaigns"])
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/admin/communication", tags=["Admin Campaigns"])
+
+# ---------- Helpers ----------
+
+_EMAIL_REGEX = re.compile(r"^[\w\.\+\-]+@[a-zA-Z0-9\.\-]+\.[a-zA-Z]{2,}$")
+
+def _normalize_email(raw: str) -> str:
+    return raw.strip().lower()
+
+def _is_valid_email(email: str) -> bool:
+    return bool(_EMAIL_REGEX.match(email))
 
 def get_db() -> AsyncIOMotorDatabase:
-    # Will be set in server.py or retrieved from app.state
     from backend.server import db
     return db
 
-@router.get("/environment", dependencies=[Depends(get_current_admin)])
-async def get_email_environment():
+
+# ---------- Admin Settings (test recipient) ----------
+
+class AdminSettingsUpdate(BaseModel):
+    test_recipient: str
+
+
+async def _get_test_recipient(db: AsyncIOMotorDatabase) -> str:
     """
-    Returns the current email environment and allowlist configuration.
-    Used by the frontend to display the environment banner.
+    Returns the configured test recipient email.
+
+    Priority:
+    1. admin_settings collection in DB (set via admin UI)
+    2. EMAIL_TEST_RECIPIENT env var
+    3. empty string (caller must handle)
     """
+    doc = await db.admin_settings.find_one({"key": "test_recipient"}, {"_id": 0})
+    if doc and doc.get("value"):
+        return _normalize_email(doc["value"])
+    if settings.EMAIL_TEST_RECIPIENT:
+        return _normalize_email(settings.EMAIL_TEST_RECIPIENT)
+    return ""
+
+
+@router.get("/settings", dependencies=[Depends(get_current_admin)])
+async def get_admin_settings(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """
+    Returns current admin communication settings.
+    Currently: test_recipient email.
+    """
+    test_recipient = await _get_test_recipient(db)
     return {
-        "email_environment": settings.EMAIL_ENVIRONMENT,
-        "allowlist_count": len(settings.test_allowlist_emails),
-        "allowlist_emails": settings.test_allowlist_emails if settings.is_test_mode else [],
+        "test_recipient": test_recipient,
     }
 
-@router.get("/estimate", response_model=AudienceEstimateResponse, dependencies=[Depends(get_current_admin)])
+
+@router.put("/settings", dependencies=[Depends(get_current_admin)])
+async def update_admin_settings(
+    payload: AdminSettingsUpdate,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Updates admin communication settings (test_recipient).
+    Validates and normalizes the email address server-side.
+    """
+    raw = payload.test_recipient.strip()
+    if not raw:
+        # Allow clearing the test recipient
+        await db.admin_settings.update_one(
+            {"key": "test_recipient"},
+            {"$set": {"key": "test_recipient", "value": "", "updated_at": get_utc_now()}},
+            upsert=True
+        )
+        return {"test_recipient": ""}
+
+    normalized = _normalize_email(raw)
+    if not _is_valid_email(normalized):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid email address: '{raw}'. Please enter a valid email."
+        )
+
+    await db.admin_settings.update_one(
+        {"key": "test_recipient"},
+        {"$set": {"key": "test_recipient", "value": normalized, "updated_at": get_utc_now()}},
+        upsert=True
+    )
+    logger.info("Test recipient updated to: %s", normalized)
+    return {"test_recipient": normalized}
+
+
+# ---------- Environment ----------
+
+@router.get("/campaigns/environment", dependencies=[Depends(get_current_admin)])
+async def get_email_environment(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """
+    Returns the current email environment and test recipient configuration.
+    Used by the frontend to display the environment banner and test mode UI.
+    """
+    test_recipient = await _get_test_recipient(db)
+    return {
+        "email_environment": settings.EMAIL_ENVIRONMENT,
+        "test_recipient": test_recipient,
+    }
+
+
+# ---------- Audience Estimate ----------
+
+@router.get("/campaigns/estimate", response_model=AudienceEstimateResponse, dependencies=[Depends(get_current_admin)])
 async def estimate_audience(source: str = Query("newsletter_subscriptions"), db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Returns estimated raw, deduplicated, suppressed, and net recipient count for target filter.
@@ -74,7 +164,10 @@ async def estimate_audience(source: str = Query("newsletter_subscriptions"), db:
         sample_recipients=recipients[:5]
     )
 
-@router.get("", response_model=List[EmailCampaign], dependencies=[Depends(get_current_admin)])
+
+# ---------- Campaign CRUD ----------
+
+@router.get("/campaigns", response_model=List[EmailCampaign], dependencies=[Depends(get_current_admin)])
 async def list_campaigns(db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     List all email campaigns sorted by creation date descending.
@@ -82,7 +175,7 @@ async def list_campaigns(db: AsyncIOMotorDatabase = Depends(get_db)):
     campaigns = await db.email_campaigns.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [EmailCampaign(**c) for c in campaigns]
 
-@router.get("/{campaign_id}", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
+@router.get("/campaigns/{campaign_id}", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
 async def get_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Get detailed information for a single campaign.
@@ -92,7 +185,7 @@ async def get_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_
         raise HTTPException(status_code=404, detail="Campaign not found")
     return EmailCampaign(**campaign)
 
-@router.post("", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
+@router.post("/campaigns", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
 async def create_campaign(payload: CampaignCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Creates a new campaign, extracts the target audience, and creates an immutable frozen recipient snapshot.
@@ -148,7 +241,7 @@ async def create_campaign(payload: CampaignCreate, db: AsyncIOMotorDatabase = De
 
     return campaign
 
-@router.post("/{campaign_id}/confirm", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
+@router.post("/campaigns/{campaign_id}/confirm", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
 async def confirm_and_dispatch_campaign(
     campaign_id: str,
     payload: CampaignConfirm,
@@ -238,7 +331,7 @@ async def confirm_and_dispatch_campaign(
     updated = await db.email_campaigns.find_one({"campaign_id": campaign_id}, {"_id": 0})
     return EmailCampaign(**updated)
 
-@router.post("/{campaign_id}/cancel", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
+@router.post("/campaigns/{campaign_id}/cancel", response_model=EmailCampaign, dependencies=[Depends(get_current_admin)])
 async def cancel_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Cancels undispatched jobs for an active campaign immediately.
@@ -269,25 +362,45 @@ async def cancel_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(g
     updated = await db.email_campaigns.find_one({"campaign_id": campaign_id}, {"_id": 0})
     return EmailCampaign(**updated)
 
-@router.post("/test-send", dependencies=[Depends(get_current_admin)])
+
+@router.post("/campaigns/test-send", dependencies=[Depends(get_current_admin)])
 async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
-    Dispatches a single test email strictly to an allowlisted recipient.
-    """
-    clean_to = payload.recipient_email.strip().lower()
-    allowlist = settings.test_allowlist_emails
+    Dispatches a single test email ONLY to the configured server-side test recipient.
 
-    if clean_to not in allowlist:
+    The frontend-supplied recipient_email is IGNORED in test mode — the server
+    always enforces delivery to the configured test recipient only.
+
+    If no test recipient is configured, returns 400 with a clear error.
+    """
+    if not settings.is_test_mode:
         raise HTTPException(
             status_code=400,
-            detail=f"Recipient '{clean_to}' is not in the server test allowlist ({', '.join(allowlist)})."
+            detail="Test send is only available in development/staging environments."
+        )
+
+    # Server-side enforcement: always use the configured test recipient
+    configured_recipient = await _get_test_recipient(db)
+    if not configured_recipient:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No test recipient configured. "
+                "Go to Communication Center → Test Mode and set a test recipient email first."
+            )
+        )
+
+    if not _is_valid_email(configured_recipient):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configured test recipient '{configured_recipient}' is not a valid email. Please update it."
         )
 
     vars_map = {
         "name": payload.recipient_name or "Test User",
         "company": payload.recipient_company or "Test Co",
-        "email": clean_to,
-        "unsubscribe_url": f"{settings.BACKEND_URL}/api/unsubscribe?token=test_token&email={clean_to}",
+        "email": configured_recipient,
+        "unsubscribe_url": f"{settings.BACKEND_URL}/api/unsubscribe?token=test_token&email={configured_recipient}",
         "year": datetime.now(timezone.utc).year
     }
 
@@ -297,7 +410,7 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
     plain_text = html_to_plain_text(full_html)
 
     result = await send_email_via_provider(
-        to=clean_to,
+        to=configured_recipient,
         subject=rendered_subject,
         html=full_html,
         text=plain_text,
@@ -307,14 +420,16 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result.get("error", "Test send failed"))
 
+    logger.info("Test email dispatched to configured recipient: %s", configured_recipient)
     return {
         "status": "success",
-        "message": f"Test email sent successfully to {clean_to}",
+        "message": f"Test email sent to configured test recipient: {configured_recipient}",
+        "recipient": configured_recipient,
         "resend_id": result.get("resend_id"),
         "response_time_ms": result.get("response_time_ms")
     }
 
-@router.get("/{campaign_id}/recipients", response_model=List[CampaignRecipient], dependencies=[Depends(get_current_admin)])
+@router.get("/campaigns/{campaign_id}/recipients", response_model=List[CampaignRecipient], dependencies=[Depends(get_current_admin)])
 async def get_campaign_recipients(
     campaign_id: str,
     skip: int = 0,

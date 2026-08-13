@@ -22,9 +22,9 @@ const MODULES = [
   },
 ];
 
-export default function AdminDashboard({ environment = "development", allowlistCount = 0 }) {
+export default function AdminDashboard() {
   return (
-    <AdminLayout environment={environment} allowlistCount={allowlistCount}>
+    <AdminLayout>
       <div style={{ maxWidth: "760px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#f9fafb", marginBottom: "6px" }}>
           Dashboard

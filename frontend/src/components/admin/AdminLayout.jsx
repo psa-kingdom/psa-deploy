@@ -30,7 +30,7 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function AdminLayout({ children, environment = "development", allowlistCount = 0 }) {
+export default function AdminLayout({ children, environment = "development" }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
@@ -208,11 +208,6 @@ export default function AdminLayout({ children, environment = "development", all
             <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", color: envStyle.text }}>
               {envStyle.label}
             </span>
-            {environment !== "production" && allowlistCount > 0 && (
-              <span style={{ fontSize: "11px", color: envStyle.text, opacity: 0.8 }}>
-                · {allowlistCount} allowlisted
-              </span>
-            )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, Lock } from "lucide-react";
 import Logo from "./Logo";
 import { SERVICES, INDUSTRIES } from "../data/site";
 import { ARTICLES } from "../data/articles";
@@ -67,8 +67,16 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* CTA */}
-        <div className="hidden lg:block">
+        {/* CTAs */}
+        <div className="hidden lg:flex items-center gap-3">
+          <Link
+            to="/admin/login"
+            data-testid="nav-admin-portal"
+            className="inline-flex items-center gap-1.5 font-body text-[11px] uppercase tracking-[0.12em] text-ink/40 hover:text-ink/70 border border-borderline hover:border-ink/30 rounded px-3 py-1.5 transition-all duration-300"
+          >
+            <Lock className="w-3 h-3" strokeWidth={1.5} />
+            Admin Portal
+          </Link>
           <Link
             to="/contact"
             data-testid="nav-talk-to-expert"
@@ -191,6 +199,14 @@ export default function Header() {
             ))}
             <Link to="/contact" data-testid="mobile-nav-cta" className="btn-primary mt-6 w-full">
               Talk to an Expert →
+            </Link>
+            <Link
+              to="/admin/login"
+              data-testid="mobile-nav-admin-portal"
+              className="inline-flex items-center justify-center gap-2 mt-3 w-full font-body text-[11px] uppercase tracking-[0.12em] text-ink/40 hover:text-ink/60 border border-borderline rounded py-2.5 transition-all duration-300"
+            >
+              <Lock className="w-3 h-3" strokeWidth={1.5} />
+              Admin Portal
             </Link>
           </nav>
         </div>

@@ -14,20 +14,22 @@ class Settings:
     MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://localhost:27017/psuman_associates")
     DB_NAME: str = os.getenv("DB_NAME", "psuman_associates")
 
-    # CORS
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")
+    # CORS — comma-separated list of allowed origins. Never use "*" with credentials.
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 
     # Email
     EMAIL_ENVIRONMENT: str = os.getenv("EMAIL_ENVIRONMENT", "development").lower()  # development | staging | production
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <notifications@psumanassociates.com>")
     RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "contact@psumanassociates.com")
-    EMAIL_TEST_RECIPIENT_ALLOWLIST: str = os.getenv("EMAIL_TEST_RECIPIENT_ALLOWLIST", "gaurav@psumanassociates.com,admin@psumanassociates.com")
+
+    # Single test recipient for test-mode dispatches. Can be overridden via admin UI (stored in DB).
+    # If empty, test sends will fail with a clear error until configured via the admin UI.
+    EMAIL_TEST_RECIPIENT: str = os.getenv("EMAIL_TEST_RECIPIENT", "")
+
     RESEND_WEBHOOK_SECRET: str = os.getenv("RESEND_WEBHOOK_SECRET", "")
 
     # Admin Portal Authentication
-    # ADMIN_API_KEY is kept for backward-compatibility during transition but new code uses cookie sessions
-    ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY", "psa_admin_secret_dev_key_2026")
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     # ADMIN_PASSWORD_HASH: bcrypt hash for production. Set to a plain string for dev (triggers a warning).
     ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH", "psa_admin_dev_password_2026")
@@ -39,8 +41,9 @@ class Settings:
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:8001")
 
     @property
-    def test_allowlist_emails(self) -> list[str]:
-        return [e.strip().lower() for e in self.EMAIL_TEST_RECIPIENT_ALLOWLIST.split(",") if e.strip()]
+    def cors_origins_list(self) -> list[str]:
+        """Returns CORS_ORIGINS as a clean list of stripped, non-empty origin strings."""
+        return [o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     @property
     def is_test_mode(self) -> bool:

@@ -15,6 +15,7 @@ import Connect from "@/pages/Connect";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCommunication from "@/pages/AdminCommunication";
+import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 
 function AppContent() {
   const location = useLocation();
@@ -37,10 +38,27 @@ function AppContent() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/connect" element={<Connect />} />
 
-        {/* Admin portal routes */}
+        {/* Admin portal — login is public */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/communication" element={<AdminCommunication />} />
+
+        {/* Admin portal — all protected routes require authentication */}
+        {/* AdminAuthGuard checks the session cookie on mount; redirects to /admin/login if invalid */}
+        <Route
+          path="/admin"
+          element={
+            <AdminAuthGuard>
+              <AdminDashboard />
+            </AdminAuthGuard>
+          }
+        />
+        <Route
+          path="/admin/communication"
+          element={
+            <AdminAuthGuard>
+              <AdminCommunication />
+            </AdminAuthGuard>
+          }
+        />
 
         {/* Fallback */}
         <Route path="*" element={<Home />} />

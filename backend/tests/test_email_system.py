@@ -60,27 +60,23 @@ def test_email_validation():
     assert is_valid_email(None) is False
 
 @pytest.mark.asyncio
-async def test_server_allowlist_safety_guard():
-    # In development mode, non-allowlisted email must be blocked
+async def test_mock_provider_sends_in_dev_mode():
+    """
+    In development mode with no RESEND_API_KEY, the mock provider should
+    succeed for any address passed to it. Test recipient enforcement is
+    handled upstream in admin_campaigns.py, not in provider.py.
+    """
     settings.EMAIL_ENVIRONMENT = "development"
-    settings.EMAIL_TEST_RECIPIENT_ALLOWLIST = "gaurav@psumanassociates.com"
+    settings.RESEND_API_KEY = ""  # Ensure mock mode
 
-    result_blocked = await send_email_via_provider(
-        to="random_external_client@gmail.com",
-        subject="Test Blocked",
+    # Mock provider should succeed for any valid address
+    result = await send_email_via_provider(
+        to="any.recipient@example.com",
+        subject="Test via Mock",
         html="<p>Hello</p>",
         db=None
     )
-    assert result_blocked["success"] is False
-    assert result_blocked["status"] == "skipped_allowlist"
-
-    # Allowlisted recipient must succeed (in mock mode)
-    result_allowed = await send_email_via_provider(
-        to="gaurav@psumanassociates.com",
-        subject="Test Allowed",
-        html="<p>Hello</p>",
-        db=None
-    )
-    assert result_allowed["success"] is True
-    assert result_allowed["status"] == "sent"
-    assert result_allowed["resend_id"] is not None
+    assert result["success"] is True
+    assert result["status"] == "sent"
+    assert result["resend_id"] is not None
+    assert result["resend_id"].startswith("mock_re_")

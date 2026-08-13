@@ -31,6 +31,23 @@ db = client[settings.DB_NAME]
 app = FastAPI(title="P Suman & Associates API")
 api_router = APIRouter(prefix="/api")
 
+# ---------- CORS Middleware ----------
+# Must be registered before routers so preflight OPTIONS requests are handled.
+# allow_credentials=True requires explicit origins — browsers reject "*" with credentials.
+_cors_origins = settings.cors_origins_list
+if not _cors_origins:
+    # Safety guard: if env var is empty/missing, default to localhost only.
+    _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    expose_headers=["Content-Type"],
+)
+
 # Worker reference
 outbox_worker = None
 
@@ -140,13 +157,7 @@ api_router.include_router(unsubscribe.router)
 
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS middleware is registered above (before api_router) for correct preflight handling.
 
 logging.basicConfig(
     level=logging.INFO,

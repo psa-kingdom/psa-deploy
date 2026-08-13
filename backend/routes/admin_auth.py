@@ -9,17 +9,17 @@ Session model:
 Security properties:
   - Credentials verified server-side (password hash comparison via bcrypt)
   - Session token is a signed JWT stored in an HttpOnly cookie
-  - Cookie is SameSite=Lax, Secure in production
+  - Cookie is HttpOnly, Secure=True, SameSite=None (required for cross-site frontend/backend)
+  - SameSite=None requires Secure=True; both Railway and Vercel deploy over HTTPS
   - Admin secret never reaches frontend JavaScript
+  - State-changing endpoints (login, logout) validate Origin/Referer against allowed CORS origins
 """
 
-import os
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Response, Request, HTTPException, status, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.core.config import settings
@@ -78,6 +78,41 @@ def _verify_admin_password(plain: str) -> bool:
     return plain == stored
 
 
+def _validate_request_origin(request: Request) -> None:
+    """
+    Validates Origin (or Referer) header against the configured CORS allow-list.
+    Raises 403 if the origin is not in the allow-list.
+
+    This guards state-changing admin endpoints against cross-site request forgery
+    without requiring a separate CSRF token framework.
+
+    Requests with no Origin/Referer (e.g. direct server-to-server calls) are
+    allowed through — they cannot be triggered by a browser cross-site attack.
+    """
+    origin = request.headers.get("origin") or request.headers.get("referer", "")
+    if not origin:
+        # No browser origin header — allow (server-to-server / direct API calls)
+        return
+
+    allowed = settings.cors_origins_list
+    # Strip trailing slash and path from referer for comparison
+    origin_root = origin.rstrip("/").split("?")[0]
+    # For referer, strip the path component
+    if "/" in origin_root[8:]:  # Skip past https://
+        parts = origin_root.split("/")
+        origin_root = "/".join(parts[:3])
+
+    for allowed_origin in allowed:
+        if origin_root == allowed_origin or origin.startswith(allowed_origin):
+            return
+
+    logger.warning("Blocked request with disallowed origin: %s (allowed: %s)", origin, allowed)
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Request origin not allowed.",
+    )
+
+
 def get_session_from_request(request: Request) -> Optional[dict]:
     """
     Extracts and validates the session cookie from the request.
@@ -102,6 +137,40 @@ def require_admin_session(request: Request) -> dict:
     return session
 
 
+def _set_session_cookie(response: Response, token: str) -> None:
+    """
+    Sets the admin session cookie with correct cross-site security attributes.
+
+    SameSite=None + Secure=True is required for cross-origin frontend (Vercel)
+    to backend (Railway) cookie-based sessions over HTTPS.
+    """
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=True,      # Required for SameSite=None; safe since both Railway and Vercel use HTTPS
+        samesite="none",  # Required for cross-site cookie from Vercel frontend to Railway backend
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    """
+    Clears the admin session cookie. Must use the same attributes as set_cookie
+    so the browser actually removes it cross-site.
+    """
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value="",
+        max_age=0,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
+
+
 # ---------- Request/Response Models ----------
 
 class AdminLoginRequest(BaseModel):
@@ -118,10 +187,13 @@ class AdminSessionInfo(BaseModel):
 # ---------- Routes ----------
 
 @router.post("/login")
-async def admin_login(payload: AdminLoginRequest, response: Response):
+async def admin_login(payload: AdminLoginRequest, request: Request, response: Response):
     """
     Verify admin credentials and set an HttpOnly session cookie on success.
+    Validates request Origin to prevent CSRF on the login endpoint.
     """
+    _validate_request_origin(request)
+
     # Validate username
     if payload.username.strip().lower() != settings.ADMIN_USERNAME.strip().lower():
         raise HTTPException(
@@ -137,17 +209,7 @@ async def admin_login(payload: AdminLoginRequest, response: Response):
         )
 
     token = _create_session_token()
-    is_production = os.environ.get("ENVIRONMENT", "development").lower() == "production"
-
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=COOKIE_MAX_AGE_SECONDS,
-        httponly=True,
-        secure=is_production,
-        samesite="lax",
-        path="/",
-    )
+    _set_session_cookie(response, token)
     logger.info("Admin session created.")
     return {"authenticated": True, "username": settings.ADMIN_USERNAME, "role": "admin"}
 
@@ -165,9 +227,11 @@ async def admin_me(session: dict = Depends(require_admin_session)):
 
 
 @router.post("/logout")
-async def admin_logout(response: Response):
+async def admin_logout(request: Request, response: Response):
     """
     Clears the admin session cookie.
+    Validates request Origin to prevent CSRF.
     """
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    _validate_request_origin(request)
+    _clear_session_cookie(response)
     return {"message": "Logged out successfully."}
