@@ -3,26 +3,39 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import sys
 import logging
 from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent
+if str(ROOT_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR.parent))
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from dotenv import load_dotenv
+load_dotenv(ROOT_DIR / '.env')
+
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
+import asyncio
 import uuid
 from datetime import datetime, timezone
 
+from backend.core.config import settings
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongo_url = settings.MONGO_URL
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2500)
+db = client[settings.DB_NAME]
 
 app = FastAPI(title="P Suman & Associates API")
 api_router = APIRouter(prefix="/api")
 
+# Worker reference
+outbox_worker = None
 
-# ---------- Models ----------
+
+# ---------- Existing Models (Frozen & Preserved) ----------
 class NewsletterSubscription(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -59,7 +72,7 @@ class ContactCreate(BaseModel):
     message: str
 
 
-# ---------- Routes ----------
+# ---------- Existing Public Routes ----------
 @api_router.get("/")
 async def root():
     return {"firm": "P Suman & Associates", "status": "operational"}
@@ -108,6 +121,23 @@ async def list_contact_submissions():
     return rows
 
 
+# ---------- Mount Email Management Subsystem Routers ----------
+from backend.routes import (
+    admin_auth,
+    admin_campaigns,
+    admin_templates,
+    admin_logs,
+    webhooks,
+    unsubscribe
+)
+
+api_router.include_router(admin_auth.router)
+api_router.include_router(admin_campaigns.router)
+api_router.include_router(admin_templates.router)
+api_router.include_router(admin_logs.router)
+api_router.include_router(webhooks.router)
+api_router.include_router(unsubscribe.router)
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -125,6 +155,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# ---------- Lifecycle Events ----------
+@app.on_event("startup")
+async def startup_event():
+    global outbox_worker
+
+    async def init_indexes():
+        try:
+            await db.email_campaigns.create_index("campaign_id", unique=True)
+            await db.campaign_recipients.create_index([("campaign_id", 1), ("email", 1)], unique=True)
+            await db.campaign_recipients.create_index("unsubscribe_token", unique=True)
+            await db.campaign_recipients.create_index("resend_message_id")
+            await db.outbox_jobs.create_index("job_id", unique=True)
+            await db.outbox_jobs.create_index("idempotency_key", unique=True)
+            await db.outbox_jobs.create_index([("status", 1), ("next_attempt_at", 1)])
+            await db.email_suppressions.create_index("email", unique=True)
+            await db.webhook_events.create_index("event_id", unique=True)
+            logger.info("Database indexes initialized successfully.")
+        except Exception as exc:
+            logger.warning(f"Note on startup index initialization: {exc}")
+
+    asyncio.create_task(init_indexes())
+
+    # Start Async Outbox Worker
+    from backend.services.email.worker import OutboxWorker
+    outbox_worker = OutboxWorker(db=db, dispatch_rate_per_sec=3.0)
+    outbox_worker.start()
+
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_event():
+    global outbox_worker
+    if outbox_worker:
+        await outbox_worker.stop()
     client.close()
+    logger.info("Application shutdown complete.")

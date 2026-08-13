@@ -12,16 +12,22 @@ import Insights from "@/pages/Insights";
 import InsightDetail from "@/pages/InsightDetail";
 import Contact from "@/pages/Contact";
 import Connect from "@/pages/Connect";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminCommunication from "@/pages/AdminCommunication";
 
 function AppContent() {
   const location = useLocation();
   const isConnectPage = location.pathname === "/connect";
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const hideHeaderFooter = isConnectPage || isAdminPage;
 
   return (
     <div className="App bg-ivory text-ink">
       <ScrollToTop />
-      {!isConnectPage && <Header />}
+      {!hideHeaderFooter && <Header />}
       <Routes>
+        {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/services" element={<Services />} />
         <Route path="/industries" element={<Industries />} />
@@ -30,9 +36,16 @@ function AppContent() {
         <Route path="/insights/:slug" element={<InsightDetail />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/connect" element={<Connect />} />
+
+        {/* Admin portal routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/communication" element={<AdminCommunication />} />
+
+        {/* Fallback */}
         <Route path="*" element={<Home />} />
       </Routes>
-      {!isConnectPage && <Footer />}
+      {!hideHeaderFooter && <Footer />}
     </div>
   );
 }
