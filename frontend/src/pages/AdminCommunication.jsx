@@ -314,9 +314,9 @@ export default function AdminCommunication() {
     setTestSending(true);
     try {
       const res = await api.post("/api/admin/communication/campaigns/test-send", {
+        recipient_email: testRecipient,
         subject: subject,
         body_html: bodyHtml,
-        // recipient_email is NOT sent — server enforces the configured test recipient
       });
       showToast(res.data.message || `Test email dispatched to ${res.data.recipient}!`, "success");
     } catch (err) {
