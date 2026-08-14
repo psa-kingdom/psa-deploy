@@ -190,6 +190,10 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     global outbox_worker
 
+    logger.info(f"STARTUP: Total registered app.routes = {len(app.routes)}")
+    for r in app.routes:
+        logger.info(f"  REGISTERED: {getattr(r, 'path', '')} [{getattr(r, 'methods', '')}]")
+
     async def init_indexes():
         try:
             await db.email_campaigns.create_index("campaign_id", unique=True)
