@@ -56,6 +56,7 @@ export default function AdminCommunication() {
   const [testRecipientSaved, setTestRecipientSaved] = useState(false);
 
   // Campaign Composer State
+  const [sendMode, setSendMode] = useState("test"); // "test" | "production"
   const [campaignTitle, setCampaignTitle] = useState("Independence Day 2026 Greetings");
   const [selectedSource, setSelectedSource] = useState("newsletter_subscriptions");
   const [manualEmails, setManualEmails] = useState([]);
@@ -245,6 +246,7 @@ export default function AdminCommunication() {
         title: campaignTitle,
         campaign_type: "announcement",
         template_id: selectedTemplateId || null,
+        send_mode: sendMode,
         subject: subject,
         body_html: bodyHtml,
         target_filter: buildTargetFilter(),
@@ -271,13 +273,14 @@ export default function AdminCommunication() {
         {
           exact_recipient_count: pendingCampaign.frozen_recipient_count,
           idempotency_key: idempotencyKey,
+          send_mode: sendMode,
         }
       );
       setIsReviewOpen(false);
       setActiveCampaign(res.data);
       fetchCampaigns();
       showToast(
-        `Campaign confirmed! Dispatching ${res.data.frozen_recipient_count} emails.`,
+        `Campaign confirmed! Dispatching ${res.data.frozen_recipient_count} emails in ${sendMode.toUpperCase()} mode.`,
         "success"
       );
     } catch (err) {
@@ -652,6 +655,165 @@ export default function AdminCommunication() {
 
           {/* Composer card */}
           <div style={styles.card}>
+            {/* Runtime Send Mode Switcher */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={styles.label}>Campaign Send Mode</label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: "10px",
+                  marginTop: "6px",
+                  marginBottom: "12px",
+                }}
+              >
+                {/* Test Mode Option */}
+                <div
+                  id="btn-mode-test"
+                  onClick={() => setSendMode("test")}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 14px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    border: sendMode === "test" ? "1px solid #10b981" : "1px solid #252535",
+                    background: sendMode === "test" ? "rgba(16,185,129,0.12)" : "#131320",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "6px",
+                      borderRadius: "6px",
+                      background: sendMode === "test" ? "#10b981" : "#1f1f2e",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Mail size={16} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: sendMode === "test" ? "#6ee7b7" : "#d1d5db",
+                      }}
+                    >
+                      TEST MODE (Sandbox)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: sendMode === "test" ? "#a7f3d0" : "#6b7280",
+                        marginTop: "2px",
+                      }}
+                    >
+                      Strictly delivers only to configured test recipient
+                    </div>
+                  </div>
+                </div>
+
+                {/* Production Mode Option */}
+                <div
+                  id="btn-mode-production"
+                  onClick={() => setSendMode("production")}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 14px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    border: sendMode === "production" ? "1px solid #f59e0b" : "1px solid #252535",
+                    background: sendMode === "production" ? "rgba(245,158,11,0.12)" : "#131320",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "6px",
+                      borderRadius: "6px",
+                      background: sendMode === "production" ? "#f59e0b" : "#1f1f2e",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Send size={16} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: sendMode === "production" ? "#fde68a" : "#d1d5db",
+                      }}
+                    >
+                      PRODUCTION MODE
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: sendMode === "production" ? "#fef3c7" : "#6b7280",
+                        marginTop: "2px",
+                      }}
+                    >
+                      Live broadcast — requires 2-step verification & freeze
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mode Banner Description */}
+              {sendMode === "test" ? (
+                <div
+                  style={{
+                    background: "rgba(16,185,129,0.08)",
+                    border: "1px solid rgba(16,185,129,0.25)",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "12px",
+                    color: "#6ee7b7",
+                  }}
+                >
+                  <CheckCircle2 size={14} />
+                  <span>
+                    <strong>Test Mode Active:</strong> All test emails will only be delivered to the configured test recipient (<strong>{testRecipient || "not set"}</strong>). Audience broadcasts are safely blocked.
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "rgba(245,158,11,0.08)",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                    borderRadius: "6px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "12px",
+                    color: "#fde68a",
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  <span>
+                    <strong>Production Mode Active:</strong> This campaign will freeze an immutable recipient snapshot and dispatch to the verified final audience ({audienceEstimate?.net_target_count ?? 0} recipients).
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: "20px" }}>
               <label style={styles.label}>Campaign Title</label>
               <input
@@ -704,60 +866,56 @@ export default function AdminCommunication() {
                 gap: "16px",
               }}
             >
-              {/* Test Send (only in test mode) */}
-              {isTestMode ? (
-                <div>
-                  <button
-                    id="btn-test-send"
-                    onClick={handleTestSend}
-                    disabled={testSending || !testRecipient}
-                    title={
-                      !testRecipient
-                        ? "Set a Test Recipient above first"
-                        : `Send real test to ${testRecipient}`
-                    }
-                    style={{
-                      ...styles.btnSecondary,
-                      opacity: testSending || !testRecipient ? 0.4 : 1,
-                      cursor: testSending || !testRecipient ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    <Send size={13} />
-                    {testSending
-                      ? "Sending…"
-                      : `Send Test${testRecipient ? ` → ${testRecipient}` : ""}`}
-                  </button>
-                  {!testRecipient && (
-                    <div style={{ fontSize: "11px", color: "#f59e0b", marginTop: "4px" }}>
-                      Set a test recipient above first
-                    </div>
-                  )}
-                </div>
+              {/* Test Send Button (Always available for pre-flight testing) */}
+              <div>
+                <button
+                  id="btn-test-send"
+                  onClick={handleTestSend}
+                  disabled={testSending || !testRecipient}
+                  title={
+                    !testRecipient
+                      ? "Set a Test Recipient above first"
+                      : `Send test email to ${testRecipient}`
+                  }
+                  style={{
+                    ...styles.btnSecondary,
+                    opacity: testSending || !testRecipient ? 0.4 : 1,
+                    cursor: testSending || !testRecipient ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <Send size={13} />
+                  {testSending
+                    ? "Sending Test…"
+                    : `Send Test Email${testRecipient ? ` → ${testRecipient}` : ""}`}
+                </button>
+                {!testRecipient && (
+                  <div style={{ fontSize: "11px", color: "#f59e0b", marginTop: "4px" }}>
+                    Configure a test recipient above to enable test sending
+                  </div>
+                )}
+              </div>
+
+              {/* Production Review & Freeze Action */}
+              {sendMode === "production" ? (
+                <button
+                  id="btn-review-dispatch"
+                  onClick={handleCreateAndReview}
+                  disabled={loading}
+                  title="Freeze audience snapshot and review campaign confirmation"
+                  style={{
+                    ...styles.btnPrimary,
+                    opacity: loading ? 0.4 : 1,
+                    cursor: loading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <Send size={14} />
+                  {loading ? "Preparing Snapshot…" : "Review & Freeze Audience →"}
+                </button>
               ) : (
-                <div style={{ fontSize: "12px", color: "#86efac", fontWeight: "500" }}>
-                  ● Production Email Mode Active
+                <div style={{ fontSize: "11px", color: "#6b7280", fontStyle: "italic" }}>
+                  Switch Send Mode to Production above to freeze & broadcast to the full audience.
                 </div>
               )}
-
-              {/* Production dispatch — available in all environments for staging/freezing */}
-              <button
-                id="btn-review-dispatch"
-                onClick={handleCreateAndReview}
-                disabled={loading || isTestMode}
-                title={
-                  isTestMode
-                    ? "Production dispatch is disabled in Test Mode"
-                    : "Freeze audience snapshot and review campaign"
-                }
-                style={{
-                  ...styles.btnPrimary,
-                  opacity: loading || isTestMode ? 0.4 : 1,
-                  cursor: loading || isTestMode ? "not-allowed" : "pointer",
-                }}
-              >
-                <Send size={14} />
-                {loading ? "Preparing Snapshot…" : "Review & Freeze Audience →"}
-              </button>
             </div>
 
             {isTestMode && (

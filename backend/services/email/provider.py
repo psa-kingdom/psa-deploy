@@ -24,30 +24,21 @@ async def send_email_via_provider(
     job_id: Optional[str] = None,
     db: Optional[Any] = None,
     _test_recipient_override: Optional[str] = None,
+    is_production_dispatch: bool = False,
 ) -> Dict[str, Any]:
     """
     Core resilient email sender.
-    1. In non-production mode, enforces final safety guard against real recipient delivery.
+    1. Unless is_production_dispatch is True, enforces final safety guard against real recipient delivery.
     2. Sends via Resend (or Mock provider if RESEND_API_KEY is not set).
     3. Records attempt in email_attempts collection.
-
-    Defense layers (test mode):
-    - Layer 1: Campaign confirm blocked in admin_campaigns.py (prevents outbox job creation)
-    - Layer 2: provider.py final guard — if a real RESEND_API_KEY is present and
-               EMAIL_ENVIRONMENT != production, block any delivery to addresses that
-               don't match the configured test recipient.
-
-    The _test_recipient_override parameter allows the test-send endpoint to pass
-    the pre-validated test recipient so the final guard is coherent.
     """
     clean_to = to.strip().lower()
     from_email = sender or settings.RESEND_FROM_EMAIL
     reply_to_email = reply_to or settings.RESEND_REPLY_TO
 
-    # ---------- Final Safety Guard (non-production) ----------
-    # Only applies when a real API key is configured. Without a key, the mock
-    # provider activates, so no real emails can leave regardless.
-    if settings.EMAIL_ENVIRONMENT != "production" and settings.RESEND_API_KEY:
+    # ---------- Final Safety Guard (for test sends and non-production dispatches) ----------
+    # If this is NOT an authorized production dispatch, enforce delivery strictly to the test recipient.
+    if not is_production_dispatch and settings.RESEND_API_KEY:
         # Determine the configured test recipient
         if _test_recipient_override:
             test_recipient = _test_recipient_override.strip().lower()
@@ -61,8 +52,8 @@ async def send_email_via_provider(
         if clean_to != test_recipient:
             logger.error(
                 "[FINAL SAFETY GUARD] BLOCKED non-test-recipient delivery. "
-                "to=%s, test_recipient=%s, env=%s",
-                clean_to, test_recipient, settings.EMAIL_ENVIRONMENT
+                "to=%s, test_recipient=%s, is_production_dispatch=%s",
+                clean_to, test_recipient, is_production_dispatch
             )
             attempt_record_data = {
                 "job_id": job_id,

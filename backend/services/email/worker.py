@@ -105,7 +105,8 @@ class OutboxWorker:
         recipient_id = job.get("recipient_id")
         now = datetime.now(timezone.utc)
 
-        # Check if parent campaign was cancelled
+        # Check if parent campaign was cancelled or confirmed for production
+        is_production_dispatch = False
         if campaign_id:
             campaign = await self.db.email_campaigns.find_one({"campaign_id": campaign_id})
             if campaign and campaign.get("status") == CampaignStatus.CANCELLED.value:
@@ -120,6 +121,8 @@ class OutboxWorker:
                         {"$set": {"status": RecipientStatus.CANCELLED.value}}
                     )
                 return
+            if campaign and campaign.get("send_mode") == "production":
+                is_production_dispatch = True
 
         # Attempt Email Dispatch
         result = await send_email_via_provider(
@@ -131,7 +134,8 @@ class OutboxWorker:
             reply_to=job.get("reply_to"),
             campaign_id=campaign_id,
             job_id=job_id,
-            db=self.db
+            db=self.db,
+            is_production_dispatch=is_production_dispatch
         )
 
         if result["success"]:

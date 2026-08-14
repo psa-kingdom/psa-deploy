@@ -96,11 +96,16 @@ class TemplatePreviewRequest(BaseModel):
     recipient_company: Optional[str] = "Acme Corp"
     recipient_email: Optional[str] = "client@example.com"
 
+class SendMode(str, Enum):
+    TEST = "test"
+    PRODUCTION = "production"
+
 # --- Campaigns ---
 class CampaignCreate(BaseModel):
     title: str
     campaign_type: CampaignType = CampaignType.ANNOUNCEMENT
     template_id: Optional[str] = None
+    send_mode: SendMode = SendMode.TEST
     subject: str
     body_html: str
     sender_email: Optional[str] = None
@@ -110,6 +115,7 @@ class CampaignCreate(BaseModel):
 class CampaignConfirm(BaseModel):
     exact_recipient_count: int
     idempotency_key: str
+    send_mode: Optional[SendMode] = None
 
 class EmailCampaign(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -117,6 +123,7 @@ class EmailCampaign(BaseModel):
     title: str
     campaign_type: CampaignType = CampaignType.ANNOUNCEMENT
     template_id: Optional[str] = None
+    send_mode: SendMode = SendMode.TEST
     status: CampaignStatus = CampaignStatus.DRAFT
     subject: str
     body_html: str

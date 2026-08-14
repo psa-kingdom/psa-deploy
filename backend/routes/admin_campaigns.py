@@ -12,6 +12,7 @@ from backend.models.email import (
     CampaignRecipient,
     OutboxJob,
     TargetFilter,
+    SendMode,
     AudienceEstimateResponse,
     FileImportResponse,
     TestSendRequest,
@@ -283,12 +284,15 @@ async def create_campaign(payload: CampaignCreate, db: AsyncIOMotorDatabase = De
     reply_to = payload.reply_to or settings.RESEND_REPLY_TO
     plain_text = html_to_plain_text(payload.body_html)
 
+    send_mode = payload.send_mode or SendMode.TEST
+
     # 2. Build Campaign Object
     campaign = EmailCampaign(
         campaign_id=campaign_id,
         title=payload.title,
         campaign_type=payload.campaign_type,
         template_id=payload.template_id,
+        send_mode=send_mode,
         status=CampaignStatus.REVIEWING,
         subject=payload.subject,
         body_html=payload.body_html,
@@ -332,7 +336,7 @@ async def confirm_and_dispatch_campaign(
     Two-step confirmation:
     1. Verifies exact recipient count typed by the user matches the frozen snapshot count.
     2. Validates idempotency key to prevent double confirmation.
-    3. Generates Outbox Jobs for the async worker and transitions campaign to 'SENDING'.
+    3. Enforces production send_mode and generates Outbox Jobs for the async worker.
     """
     campaign = await db.email_campaigns.find_one({"campaign_id": campaign_id})
     if not campaign:
@@ -351,30 +355,42 @@ async def confirm_and_dispatch_campaign(
             detail=f"Count mismatch! Provided count ({payload.exact_recipient_count}) does not match frozen count ({campaign['frozen_recipient_count']})."
         )
 
+    if campaign["frozen_recipient_count"] <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Target audience produced 0 recipients. Cannot dispatch an empty campaign."
+        )
+
     # Safety Check 2: Idempotency check
     existing_key = await db.email_campaigns.find_one({"idempotency_key": payload.idempotency_key})
     if existing_key and existing_key["campaign_id"] != campaign_id:
         raise HTTPException(status_code=409, detail="Idempotency key already used for another campaign.")
 
-    now = get_utc_now()
+    # Safety Check 3: Runtime Send Mode enforcement
+    effective_send_mode = payload.send_mode or campaign.get("send_mode") or SendMode.TEST
+    if hasattr(effective_send_mode, "value"):
+        effective_send_mode = effective_send_mode.value
 
-    # Test Mode Guard — Defense-in-Depth
-    # In development/staging, campaign dispatch to real audience is blocked.
-    # Use the Test Send button in Communication Center to verify email content.
-    # Switch EMAIL_ENVIRONMENT=production on Railway to enable real dispatches.
-    if settings.is_test_mode:
+    if effective_send_mode != "production":
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Campaign dispatch is disabled in {settings.EMAIL_ENVIRONMENT.upper()} mode. "
-                "Switch EMAIL_ENVIRONMENT=production on Railway to enable production campaigns. "
-                "Use 'Send Test' in the Communication Center to verify email content."
+                "Campaign is configured in Test Mode and cannot be broadcast to an audience list. "
+                "Use 'Send Test' to send a single verified test email, or switch send mode to 'Production' in the campaign composer to authorize audience dispatch."
             )
         )
 
-    recipients = await db.campaign_recipients.find({"campaign_id": campaign_id}).to_list(10000)
-    outbox_docs = []
+    now = get_utc_now()
 
+    # Verify frozen snapshot integrity
+    recipients = await db.campaign_recipients.find({"campaign_id": campaign_id}).to_list(10000)
+    if len(recipients) != campaign["frozen_recipient_count"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Snapshot verification failed: database contains {len(recipients)} recipients but frozen count is {campaign['frozen_recipient_count']}."
+        )
+
+    outbox_docs = []
     for rec in recipients:
         unsub_url = f"{settings.BACKEND_URL}/api/unsubscribe?token={rec['unsubscribe_token']}&email={rec['email']}"
         vars_map = {
@@ -415,6 +431,7 @@ async def confirm_and_dispatch_campaign(
         {
             "$set": {
                 "status": CampaignStatus.SENDING.value,
+                "send_mode": SendMode.PRODUCTION.value,
                 "idempotency_key": payload.idempotency_key,
                 "confirmed_at": now,
                 "confirmed_by": "admin"
@@ -461,26 +478,19 @@ async def cancel_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(g
 async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Dispatches a single test email ONLY to the configured server-side test recipient.
+    Available at runtime for pre-flight verification across all environments.
 
-    The frontend-supplied recipient_email is IGNORED in test mode — the server
-    always enforces delivery to the configured test recipient only.
-
-    If no test recipient is configured, returns 400 with a clear error.
+    The recipient is strictly validated against the server-side configured test recipient.
+    Arbitrary recipient targets supplied by the client are rejected.
     """
-    if not settings.is_test_mode:
-        raise HTTPException(
-            status_code=400,
-            detail="Test send is only available in development/staging environments."
-        )
-
-    # Server-side enforcement: always use the configured test recipient
+    # Server-side enforcement: retrieve and validate configured test recipient
     configured_recipient = await _get_test_recipient(db)
     if not configured_recipient:
         raise HTTPException(
             status_code=400,
             detail=(
                 "No test recipient configured. "
-                "Go to Communication Center → Test Mode and set a test recipient email first."
+                "Go to Communication Center → Configured Test Recipient and set a test email first."
             )
         )
 
@@ -488,6 +498,13 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         raise HTTPException(
             status_code=500,
             detail=f"Configured test recipient '{configured_recipient}' is not a valid email. Please update it."
+        )
+
+    # Strict validation: reject any attempt to target an unconfigured recipient
+    if payload.recipient_email and payload.recipient_email.strip().lower() != configured_recipient.strip().lower():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Test send recipient mismatch. Test emails can only be sent to the configured test recipient '{configured_recipient}'."
         )
 
     vars_map = {
@@ -509,7 +526,8 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         html=full_html,
         text=plain_text,
         db=db,
-        _test_recipient_override=configured_recipient,  # Coherent with provider's final guard
+        _test_recipient_override=configured_recipient,
+        is_production_dispatch=False,
     )
 
     if not result["success"]:
