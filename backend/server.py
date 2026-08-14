@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -56,6 +56,14 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
     expose_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"INCOMING REQUEST: {request.method} {request.url.path} (full: {request.url})")
+    response = await call_next(request)
+    logger.info(f"OUTGOING RESPONSE: {request.method} {request.url.path} -> Status {response.status_code}")
+    return response
 
 # Worker reference
 outbox_worker = None
