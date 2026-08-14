@@ -139,14 +139,24 @@ async def list_contact_submissions():
 
 
 # ---------- Mount Email Management Subsystem Routers ----------
-from backend.routes import (
-    admin_auth,
-    admin_campaigns,
-    admin_templates,
-    admin_logs,
-    webhooks,
-    unsubscribe
-)
+try:
+    from backend.routes import (
+        admin_auth,
+        admin_campaigns,
+        admin_templates,
+        admin_logs,
+        webhooks,
+        unsubscribe
+    )
+except ImportError:
+    from routes import (
+        admin_auth,
+        admin_campaigns,
+        admin_templates,
+        admin_logs,
+        webhooks,
+        unsubscribe
+    )
 
 api_router.include_router(admin_auth.router)
 api_router.include_router(admin_campaigns.router)
