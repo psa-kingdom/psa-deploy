@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 import { Linkedin, ArrowUpRight } from "lucide-react";
 import Logo from "./Logo";
 import { FIRM, OFFICES } from "../data/site";
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_URL as API } from "../config";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
