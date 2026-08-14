@@ -7,11 +7,20 @@ import sys
 import logging
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).parent
-if str(ROOT_DIR.parent) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR.parent))
+ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+if str(ROOT_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR.parent))
+
+# Ensure 'backend' namespace is always available even if executed directly inside the backend directory
+try:
+    import backend
+except ImportError:
+    import types
+    backend_pkg = types.ModuleType("backend")
+    backend_pkg.__path__ = [str(ROOT_DIR)]
+    sys.modules["backend"] = backend_pkg
 
 from dotenv import load_dotenv
 load_dotenv(ROOT_DIR / '.env')
@@ -93,11 +102,6 @@ class ContactCreate(BaseModel):
 @api_router.get("/")
 async def root():
     return {"firm": "P Suman & Associates", "status": "operational"}
-
-
-@api_router.get("/diagnostic-test-version")
-async def diagnostic_test_version():
-    return {"version": "v2026-08-14-1", "routes_loaded": 25}
 
 
 @api_router.post("/newsletter", response_model=NewsletterSubscription)
