@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -167,7 +167,21 @@ except ImportError:
         unsubscribe
     )
 
-api_router.include_router(admin_auth.router)
+@api_router.post("/admin/auth/login")
+async def api_admin_login(payload: admin_auth.AdminLoginRequest, request: Request, response: Response):
+    return await admin_auth.admin_login(payload, request, response)
+
+
+@api_router.get("/admin/auth/me")
+async def api_admin_me(session: dict = Depends(admin_auth.require_admin_session)):
+    return await admin_auth.admin_me(session)
+
+
+@api_router.post("/admin/auth/logout")
+async def api_admin_logout(request: Request, response: Response):
+    return await admin_auth.admin_logout(request, response)
+
+
 api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_templates.router)
 api_router.include_router(admin_logs.router)
