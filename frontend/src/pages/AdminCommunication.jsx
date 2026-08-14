@@ -59,6 +59,7 @@ export default function AdminCommunication() {
   const [campaignTitle, setCampaignTitle] = useState("Independence Day 2026 Greetings");
   const [selectedSource, setSelectedSource] = useState("newsletter_subscriptions");
   const [manualEmails, setManualEmails] = useState([]);
+  const [excludedEmails, setExcludedEmails] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("independence_day_2026");
   const [subject, setSubject] = useState("Happy Independence Day — P Suman & Associates");
   const [bodyHtml, setBodyHtml] = useState("");
@@ -218,6 +219,9 @@ export default function AdminCommunication() {
     const filter = { source: selectedSource };
     if (selectedSource === "manual" || selectedSource === "combined") {
       filter.custom_emails = manualEmails;
+    }
+    if (excludedEmails.length > 0) {
+      filter.excluded_emails = excludedEmails;
     }
     return filter;
   };
@@ -668,6 +672,8 @@ export default function AdminCommunication() {
                 onChange={setSelectedSource}
                 manualEmails={manualEmails}
                 onManualEmailsChange={setManualEmails}
+                excludedEmails={excludedEmails}
+                onExcludedEmailsChange={setExcludedEmails}
                 onEstimateLoaded={setAudienceEstimate}
               />
             </div>

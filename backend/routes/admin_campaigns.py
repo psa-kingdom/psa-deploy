@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -13,6 +13,7 @@ from backend.models.email import (
     OutboxJob,
     TargetFilter,
     AudienceEstimateResponse,
+    FileImportResponse,
     TestSendRequest,
     CampaignStatus,
     OutboxJobStatus,
@@ -20,7 +21,12 @@ from backend.models.email import (
     generate_uuid,
     get_utc_now
 )
-from backend.services.email.audience import extract_and_deduplicate_audience, get_suppressed_emails
+from backend.services.email.audience import (
+    extract_and_deduplicate_audience,
+    get_suppressed_emails,
+    parse_recipient_file,
+    clean_email_token
+)
 from backend.services.email.renderer import render_base_layout, interpolate_variables, html_to_plain_text
 from backend.services.email.provider import send_email_via_provider
 import re
@@ -130,7 +136,7 @@ async def get_email_environment(db: AsyncIOMotorDatabase = Depends(get_db)):
     }
 
 
-# ---------- Audience Estimate ----------
+# ---------- Audience Estimate & File Import ----------
 
 async def _compute_audience_estimate(target_filter: TargetFilter, db: AsyncIOMotorDatabase) -> AudienceEstimateResponse:
     valid_sources = ("newsletter_subscriptions", "manual", "combined")
@@ -142,7 +148,16 @@ async def _compute_audience_estimate(target_filter: TargetFilter, db: AsyncIOMot
 
     from backend.services.email.audience import analyze_manual_recipients
     suppressed_set = await get_suppressed_emails(db)
+
+    # Compute audience with and without exclusions to accurately derive excluded_count
+    pre_exclusion_filter = TargetFilter(
+        source=target_filter.source,
+        custom_emails=target_filter.custom_emails,
+        excluded_emails=None
+    )
+    pre_recipients = await extract_and_deduplicate_audience(db, pre_exclusion_filter)
     recipients = await extract_and_deduplicate_audience(db, target_filter)
+    excluded_count = max(0, len(pre_recipients) - len(recipients))
 
     newsletter_count = 0
     if target_filter.source in ("newsletter_subscriptions", "combined"):
@@ -157,7 +172,7 @@ async def _compute_audience_estimate(target_filter: TargetFilter, db: AsyncIOMot
 
     raw_count = newsletter_count + manual_analysis["entered_count"]
 
-    # Calculate actual suppressed count among the matching audience
+    # Calculate actual suppressed count among matching audience
     suppressed_in_audience = 0
     if target_filter.source in ("newsletter_subscriptions", "combined"):
         subs = await db.newsletter_subscriptions.find({}, {"email": 1}).to_list(10000)
@@ -169,10 +184,11 @@ async def _compute_audience_estimate(target_filter: TargetFilter, db: AsyncIOMot
     return AudienceEstimateResponse(
         source=target_filter.source,
         raw_count=raw_count,
-        deduplicated_count=len(recipients),
+        deduplicated_count=len(pre_recipients),
         suppressed_count=suppressed_in_audience,
+        excluded_count=excluded_count,
         net_target_count=len(recipients),
-        sample_recipients=recipients[:5],
+        sample_recipients=recipients[:25],
         entered_count=manual_analysis["entered_count"],
         invalid_count=manual_analysis["invalid_count"],
         duplicate_count=manual_analysis["duplicate_count"]
@@ -196,10 +212,38 @@ async def estimate_audience_post(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """
-    Returns authoritative estimated raw, deduplicated, suppressed, and net recipient count
+    Returns authoritative estimated raw, deduplicated, suppressed, excluded, and net recipient count
     including custom manual emails with breakdown metrics (POST body).
     """
     return await _compute_audience_estimate(target_filter, db)
+
+
+@router.post("/recipients/parse-file", response_model=FileImportResponse, dependencies=[Depends(get_current_admin)])
+async def parse_recipients_file_endpoint(
+    file: UploadFile = File(...),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Parses an uploaded CSV or XLSX file in memory, auto-detects the email column,
+    and returns authoritative recipient metrics without persisting files on disk.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded.")
+
+    ext = file.filename.lower().split(".")[-1] if "." in file.filename else ""
+    if ext not in ("csv", "xlsx", "xls", "txt"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file format '.{ext}'. Please upload a CSV (.csv) or Excel (.xlsx) file."
+        )
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum allowed file size is 10MB.")
+
+    suppressed_set = await get_suppressed_emails(db)
+    result = parse_recipient_file(content, file.filename, suppressed_set=suppressed_set)
+    return FileImportResponse(**result)
 
 
 # ---------- Campaign CRUD ----------

@@ -44,6 +44,7 @@ class OutboxJobStatus(str, Enum):
 class TargetFilter(BaseModel):
     source: str = "newsletter_subscriptions"  # "newsletter_subscriptions", "manual", "combined"
     custom_emails: Optional[List[str]] = None  # used when source is "manual" or "combined"
+    excluded_emails: Optional[List[str]] = None  # campaign-level exclusions
 
 # --- Studio Templates ---
 class EmailTemplateStudio(BaseModel):
@@ -208,8 +209,24 @@ class AudienceEstimateResponse(BaseModel):
     raw_count: int
     deduplicated_count: int
     suppressed_count: int
+    excluded_count: Optional[int] = 0
     net_target_count: int
     sample_recipients: List[Dict[str, Any]]
     entered_count: Optional[int] = 0
     invalid_count: Optional[int] = 0
     duplicate_count: Optional[int] = 0
+
+
+class FileImportResponse(BaseModel):
+    filename: str
+    total_rows: int
+    email_column: Optional[str] = None
+    entered_count: int
+    valid_count: int
+    invalid_count: int
+    duplicate_count: int
+    suppressed_count: int
+    net_count: int
+    valid_emails: List[str]
+    invalid_samples: List[str]
+

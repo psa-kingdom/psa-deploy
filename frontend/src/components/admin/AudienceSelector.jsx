@@ -9,16 +9,24 @@ import {
   Plus,
   X,
   ClipboardPaste,
+  FileSpreadsheet,
   Trash2,
-  Info
+  Search,
+  UserX,
+  UploadCloud,
+  FileText,
+  AlertTriangle,
+  RotateCcw
 } from "lucide-react";
 
 export default function AudienceSelector({
   backendUrl = "",
-  selectedSource,
+  selectedSource = "newsletter_subscriptions",
   onChange,
   manualEmails = [],
   onManualEmailsChange,
+  excludedEmails = [],
+  onExcludedEmailsChange,
   onEstimateLoaded,
 }) {
   const [estimate, setEstimate] = useState(null);
@@ -27,6 +35,17 @@ export default function AudienceSelector({
   const [newEmailInput, setNewEmailInput] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // File Import State
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [fileImportResult, setFileImportResult] = useState(null);
+  const [fileError, setFileError] = useState(null);
+
+  // Exclusions Search State
+  const [excludeSearch, setExcludeSearch] = useState("");
+  const [showExcludeSearch, setShowExcludeSearch] = useState(false);
 
   const sources = [
     {
@@ -39,7 +58,7 @@ export default function AudienceSelector({
     {
       id: "manual",
       title: "Manual Recipients",
-      desc: "Admin-entered verified email list (chips / bulk paste)",
+      desc: "Admin-entered verified email list (chips / bulk paste / Excel import)",
       icon: Users,
       badge: "Targeted",
     },
@@ -53,13 +72,14 @@ export default function AudienceSelector({
   ];
 
   const fetchEstimate = useCallback(
-    async (source, emailsList) => {
+    async (source, emailsList, exclusionsList) => {
       setLoading(true);
       setError(null);
       try {
         const payload = {
           source,
           custom_emails: emailsList || [],
+          excluded_emails: exclusionsList || [],
         };
         const res = await axios.post(
           `${backendUrl}/api/admin/communication/campaigns/estimate`,
@@ -78,17 +98,17 @@ export default function AudienceSelector({
     [backendUrl, onEstimateLoaded]
   );
 
-  // Debounced estimate refresh on source or manual list change
+  // Debounced estimate refresh on source, manual list, or exclusions change
   const debounceRef = useRef(null);
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      fetchEstimate(selectedSource, manualEmails);
+      fetchEstimate(selectedSource, manualEmails, excludedEmails);
     }, 250);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [selectedSource, manualEmails, fetchEstimate]);
+  }, [selectedSource, manualEmails, excludedEmails, fetchEstimate]);
 
   const handleAddSingleEmail = (e) => {
     if (e) e.preventDefault();
@@ -98,7 +118,7 @@ export default function AudienceSelector({
     // Split if user pasted comma/spaces into single input
     const parts = trimmed
       .split(/[,;\s]+/)
-      .map((p) => p.trim().toLowerCase())
+      .map((p) => p.replace(/^["'<>\[\]\(\);,.]+|["'<>\[\]\(\);,.]+$/g, "").trim().toLowerCase())
       .filter(Boolean);
 
     const updated = [...manualEmails, ...parts];
@@ -112,7 +132,9 @@ export default function AudienceSelector({
   };
 
   const handleClearAllManual = () => {
-    if (onManualEmailsChange) onManualEmailsChange([]);
+    if (window.confirm("Are you sure you want to clear all manual recipients?")) {
+      if (onManualEmailsChange) onManualEmailsChange([]);
+    }
   };
 
   const handleApplyBulk = () => {
@@ -121,8 +143,8 @@ export default function AudienceSelector({
       return;
     }
     const parts = bulkText
-      .split(/[,;\n\r\s]+/)
-      .map((p) => p.trim().toLowerCase())
+      .split(/[,;\n\r\t\s]+/)
+      .map((p) => p.replace(/^["'<>\[\]\(\);,.]+|["'<>\[\]\(\);,.]+$/g, "").trim().toLowerCase())
       .filter(Boolean);
 
     const updated = [...manualEmails, ...parts];
@@ -131,10 +153,72 @@ export default function AudienceSelector({
     setShowBulkModal(false);
   };
 
+  // CSV / XLSX File Upload
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setFileError(null);
+      setFileImportResult(null);
+    }
+  };
+
+  const handleUploadFile = async () => {
+    if (!selectedFile) return;
+    setUploadingFile(true);
+    setFileError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const res = await axios.post(
+        `${backendUrl}/api/admin/communication/recipients/parse-file`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
+      setFileImportResult(res.data);
+    } catch (err) {
+      console.error("File parse error:", err);
+      setFileError(err.response?.data?.detail || "Failed to parse file. Ensure it is a valid CSV or XLSX.");
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleApplyImportedEmails = () => {
+    if (fileImportResult?.valid_emails?.length > 0) {
+      const updated = [...manualEmails, ...fileImportResult.valid_emails];
+      if (onManualEmailsChange) onManualEmailsChange(updated);
+    }
+    setShowFileModal(false);
+    setSelectedFile(null);
+    setFileImportResult(null);
+  };
+
+  // Exclude / Include Recipient Handlers
+  const handleExcludeEmail = (email) => {
+    const clean = email.trim().toLowerCase();
+    if (!clean) return;
+    if (!excludedEmails.includes(clean)) {
+      const updated = [...excludedEmails, clean];
+      if (onExcludedEmailsChange) onExcludedEmailsChange(updated);
+    }
+  };
+
+  const handleRestoreEmail = (email) => {
+    const clean = email.trim().toLowerCase();
+    const updated = excludedEmails.filter((e) => e.toLowerCase() !== clean);
+    if (onExcludedEmailsChange) onExcludedEmailsChange(updated);
+  };
+
   const isManualActive = selectedSource === "manual" || selectedSource === "combined";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {/* 1. Recipient Audience Source */}
       <div>
         <label
           style={{
@@ -234,7 +318,7 @@ export default function AudienceSelector({
         </div>
       </div>
 
-      {/* Manual Recipient Management (Shown when manual or combined) */}
+      {/* 2. Manual Recipient Management (Shown when manual or combined) */}
       {isManualActive && (
         <div
           style={{
@@ -264,6 +348,26 @@ export default function AudienceSelector({
             </div>
 
             <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => setShowFileModal(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  background: "rgba(16,185,129,0.15)",
+                  border: "1px solid rgba(16,185,129,0.3)",
+                  color: "#6ee7b7",
+                  fontSize: "11px",
+                  fontWeight: "500",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                <FileSpreadsheet size={12} /> Import CSV / Excel
+              </button>
+
               <button
                 type="button"
                 onClick={() => setShowBulkModal(true)}
@@ -308,13 +412,13 @@ export default function AudienceSelector({
             </div>
           </div>
 
-          {/* Add input */}
+          {/* Add single input */}
           <form
             onSubmit={handleAddSingleEmail}
             style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
           >
             <input
-              type="email"
+              type="text"
               placeholder="Add recipient email (e.g. client@company.com) & press Enter"
               value={newEmailInput}
               onChange={(e) => setNewEmailInput(e.target.value)}
@@ -351,14 +455,14 @@ export default function AudienceSelector({
             </button>
           </form>
 
-          {/* Chips container */}
+          {/* Chips container with individual [x] removal controls */}
           {manualEmails.length > 0 ? (
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
                 gap: "6px",
-                maxHeight: "140px",
+                maxHeight: "150px",
                 overflowY: "auto",
                 padding: "8px",
                 background: "#0d0d14",
@@ -395,7 +499,7 @@ export default function AudienceSelector({
                       display: "flex",
                       alignItems: "center",
                     }}
-                    title="Remove"
+                    title="Remove recipient"
                   >
                     <X size={11} />
                   </button>
@@ -414,13 +518,174 @@ export default function AudienceSelector({
                 color: "#6b7280",
               }}
             >
-              No manual recipients added yet. Type an email above or use Bulk Paste.
+              No manual recipients added yet. Type an email above, paste a list, or import a spreadsheet.
             </div>
           )}
         </div>
       )}
 
-      {/* Bulk Paste Modal */}
+      {/* 3. CSV / Excel Import Modal */}
+      {showFileModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.75)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "520px",
+              background: "#0d0d14",
+              border: "1px solid #252535",
+              borderRadius: "10px",
+              padding: "24px",
+              color: "#f3f4f6",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileSpreadsheet className="text-emerald-400" size={18} />
+                <h3 style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>Import CSV / Excel Spreadsheet</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFileModal(false);
+                  setSelectedFile(null);
+                  setFileImportResult(null);
+                }}
+                style={{ background: "transparent", border: "none", color: "#9ca3af", cursor: "pointer" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {!fileImportResult ? (
+              <>
+                <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "16px" }}>
+                  Upload a <strong>.csv</strong> or <strong>.xlsx</strong> file. The system will automatically detect the email column, normalize addresses, and deduplicate entries.
+                </p>
+
+                <div
+                  style={{
+                    border: "2px dashed #2e2e48",
+                    borderRadius: "8px",
+                    padding: "24px",
+                    textAlign: "center",
+                    background: "#131320",
+                    marginBottom: "16px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => document.getElementById("csv-file-input")?.click()}
+                >
+                  <UploadCloud size={32} style={{ margin: "0 auto 8px auto", color: "#6366f1" }} />
+                  <div style={{ fontSize: "13px", fontWeight: "500", color: "#e2e8f0" }}>
+                    {selectedFile ? selectedFile.name : "Click to select or drag & drop CSV/XLSX file"}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px" }}>
+                    Supports CSV, Excel (.xlsx, .xls) up to 10MB
+                  </div>
+                  <input
+                    id="csv-file-input"
+                    type="file"
+                    accept=".csv,.xlsx,.xls,.txt"
+                    onChange={handleFileSelect}
+                    style={{ display: "none" }}
+                  />
+                </div>
+
+                {fileError && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#fca5a5", fontSize: "12px", marginBottom: "14px" }}>
+                    <AlertCircle size={14} /> {fileError}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowFileModal(false)}
+                    style={{ background: "#131320", border: "1px solid #252535", color: "#9ca3af", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUploadFile}
+                    disabled={!selectedFile || uploadingFile}
+                    style={{
+                      background: "#10b981",
+                      border: "none",
+                      color: "#fff",
+                      borderRadius: "6px",
+                      padding: "8px 16px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: selectedFile && !uploadingFile ? "pointer" : "not-allowed",
+                      opacity: selectedFile && !uploadingFile ? 1 : 0.6,
+                    }}
+                  >
+                    {uploadingFile ? "Analyzing File..." : "Analyze & Parse"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div>
+                <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: "8px", padding: "14px", marginBottom: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6ee7b7", fontWeight: "600", fontSize: "13px", marginBottom: "10px" }}>
+                    <CheckCircle2 size={16} /> Import Summary for {fileImportResult.filename}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px" }}>
+                    <div>Total Rows: <strong>{fileImportResult.total_rows}</strong></div>
+                    <div>Detected Column: <strong>{fileImportResult.email_column || "N/A"}</strong></div>
+                    <div>Valid Addresses: <strong style={{ color: "#6ee7b7" }}>{fileImportResult.valid_count}</strong></div>
+                    <div>Duplicates Filtered: <strong>{fileImportResult.duplicate_count}</strong></div>
+                    <div>Invalid Tokens: <strong style={{ color: "#fca5a5" }}>{fileImportResult.invalid_count}</strong></div>
+                    <div>Suppressed Filtered: <strong>{fileImportResult.suppressed_count}</strong></div>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(16,185,129,0.2)", marginTop: "10px", paddingTop: "8px", fontSize: "13px" }}>
+                    Net Unique Recipients to Add: <strong style={{ color: "#86efac", fontSize: "15px" }}>{fileImportResult.net_count}</strong>
+                  </div>
+                </div>
+
+                {fileImportResult.invalid_samples?.length > 0 && (
+                  <div style={{ marginBottom: "14px", fontSize: "11px", color: "#fca5a5" }}>
+                    <strong>Invalid samples:</strong> {fileImportResult.invalid_samples.join(", ")}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => { setFileImportResult(null); setSelectedFile(null); }}
+                    style={{ background: "#131320", border: "1px solid #252535", color: "#9ca3af", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
+                  >
+                    Select Another
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyImportedEmails}
+                    style={{ background: "#10b981", border: "none", color: "#fff", borderRadius: "6px", padding: "8px 18px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                  >
+                    Add {fileImportResult.net_count} Recipients to Campaign
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. Bulk Paste Modal */}
       {showBulkModal && (
         <div
           style={{
@@ -529,7 +794,7 @@ export default function AudienceSelector({
         </div>
       )}
 
-      {/* Authoritative Audience Estimation Card */}
+      {/* 5. Authoritative Audience Estimation Card with Detailed Metrics */}
       <div
         style={{
           background: "#0d0d14",
@@ -572,7 +837,7 @@ export default function AudienceSelector({
                   display: "block",
                 }}
               >
-                Verified Audience Calculation
+                Authoritative Audience Calculation
               </span>
               <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "2px" }}>
                 <span
@@ -586,7 +851,7 @@ export default function AudienceSelector({
                   {loading ? "…" : estimate ? estimate.net_target_count : 0}
                 </span>
                 <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: "500" }}>
-                  Net Unique Recipients to Receive Campaign
+                  Net Verified Recipients
                 </span>
               </div>
             </div>
@@ -603,7 +868,7 @@ export default function AudienceSelector({
                   color: "#9ca3af",
                 }}
               >
-                Raw: <strong style={{ color: "#f3f4f6" }}>{estimate.raw_count}</strong>
+                Raw Tokens: <strong style={{ color: "#f3f4f6" }}>{estimate.raw_count}</strong>
               </div>
 
               {estimate.invalid_count > 0 && (
@@ -615,6 +880,7 @@ export default function AudienceSelector({
                     border: "1px solid rgba(239,68,68,0.3)",
                     color: "#fca5a5",
                   }}
+                  title={estimate.sample_recipients ? "Invalid syntax addresses filtered out" : ""}
                 >
                   Invalid: <strong>{estimate.invalid_count}</strong>
                 </div>
@@ -646,6 +912,20 @@ export default function AudienceSelector({
                 Suppressed: <strong style={{ color: "#f3f4f6" }}>{estimate.suppressed_count}</strong>
               </div>
 
+              {estimate.excluded_count > 0 && (
+                <div
+                  style={{
+                    background: "rgba(239,68,68,0.1)",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    color: "#fca5a5",
+                  }}
+                >
+                  Campaign Excluded: <strong>{estimate.excluded_count}</strong>
+                </div>
+              )}
+
               <div
                 style={{
                   background: "rgba(22,163,74,0.1)",
@@ -662,6 +942,142 @@ export default function AudienceSelector({
                 <CheckCircle2 size={12} />
                 Final: {estimate.net_target_count}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* 6. Recipient Exclusion / Search Panel */}
+        <div style={{ marginTop: "14px", borderTop: "1px solid #1f1f2e", paddingTop: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => setShowExcludeSearch(!showExcludeSearch)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#a5b4fc",
+                fontSize: "11px",
+                fontWeight: "500",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: 0,
+              }}
+            >
+              <UserX size={12} />
+              {showExcludeSearch ? "Hide Exclusions Manager" : `Manage Campaign Exclusions (${excludedEmails.length} excluded)`}
+            </button>
+
+            {excludedEmails.length > 0 && !showExcludeSearch && (
+              <span style={{ fontSize: "11px", color: "#fca5a5" }}>
+                {excludedEmails.length} email(s) excluded from this send
+              </span>
+            )}
+          </div>
+
+          {showExcludeSearch && (
+            <div style={{ marginTop: "10px", background: "#131320", border: "1px solid #252535", borderRadius: "6px", padding: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#9ca3af", marginBottom: "8px" }}>
+                Exclude specific recipients from this campaign without deleting them permanently from subscribers or raw lists:
+              </div>
+
+              <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                <input
+                  type="text"
+                  placeholder="Enter email to exclude (e.g. partner@example.com)"
+                  value={excludeSearch}
+                  onChange={(e) => setExcludeSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleExcludeEmail(excludeSearch);
+                      setExcludeSearch("");
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    background: "#0d0d14",
+                    border: "1px solid #2e2e48",
+                    borderRadius: "4px",
+                    padding: "6px 10px",
+                    color: "#f3f4f6",
+                    fontSize: "11px",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExcludeEmail(excludeSearch);
+                    setExcludeSearch("");
+                  }}
+                  disabled={!excludeSearch.trim()}
+                  style={{
+                    background: "#ef4444",
+                    border: "none",
+                    color: "#fff",
+                    borderRadius: "4px",
+                    padding: "6px 12px",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    cursor: excludeSearch.trim() ? "pointer" : "not-allowed",
+                    opacity: excludeSearch.trim() ? 1 : 0.6,
+                  }}
+                >
+                  Exclude
+                </button>
+              </div>
+
+              {/* Excluded chips */}
+              {excludedEmails.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: "10px", textTransform: "uppercase", color: "#ef4444", fontWeight: "700", marginBottom: "6px" }}>
+                    Currently Excluded:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {excludedEmails.map((email) => (
+                      <span
+                        key={email}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          background: "rgba(239,68,68,0.12)",
+                          border: "1px solid rgba(239,68,68,0.3)",
+                          color: "#fca5a5",
+                          fontSize: "11px",
+                          fontFamily: "monospace",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        {email}
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreEmail(email)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#fca5a5",
+                            cursor: "pointer",
+                            padding: 0,
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title="Restore into audience"
+                        >
+                          <RotateCcw size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: "11px", color: "#6b7280", fontStyle: "italic" }}>
+                  No recipients excluded.
+                </div>
+              )}
             </div>
           )}
         </div>
