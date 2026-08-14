@@ -95,6 +95,11 @@ async def root():
     return {"firm": "P Suman & Associates", "status": "operational"}
 
 
+@api_router.get("/diagnostic-test-version")
+async def diagnostic_test_version():
+    return {"version": "v2026-08-14-1", "routes_loaded": 25}
+
+
 @api_router.post("/newsletter", response_model=NewsletterSubscription)
 async def subscribe_newsletter(payload: NewsletterCreate):
     existing = await db.newsletter_subscriptions.find_one({"email": payload.email})
