@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-
-const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
+import { API_URL as API } from "../config";
 
 /**
  * NewsletterBlock — used inside pages (homepage + article bottoms).

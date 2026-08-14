@@ -37,9 +37,7 @@ import CampaignReviewModal from "../components/admin/CampaignReviewModal";
 import CampaignProgress from "../components/admin/CampaignProgress";
 import DeliveryLogsTable from "../components/admin/DeliveryLogsTable";
 import AdminLayout from "../components/admin/AdminLayout";
-
-// When deployed on Vercel, relative path uses /api/* rewrite proxy
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+import { BACKEND_URL } from "../config";
 
 // Axios instance that always sends the HttpOnly session cookie
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
