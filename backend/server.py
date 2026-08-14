@@ -190,7 +190,22 @@ api_router.include_router(unsubscribe.router)
 
 app.include_router(api_router)
 
-# CORS middleware is registered above (before api_router) for correct preflight handling.
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    from fastapi.openapi.utils import get_openapi
+    openapi_schema = get_openapi(
+        title=app.title,
+        version="0.1.0",
+        description="PSA Backend API",
+        routes=app.routes,
+    )
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 logging.basicConfig(
     level=logging.INFO,
