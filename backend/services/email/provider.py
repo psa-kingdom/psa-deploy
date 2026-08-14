@@ -105,6 +105,7 @@ async def send_email_via_provider(
     # ---------- Provider Dispatch ----------
     try:
         if settings.RESEND_API_KEY and not settings.RESEND_API_KEY.startswith("mock"):
+            resend.api_key = settings.RESEND_API_KEY
             params = {
                 "from": from_email,
                 "to": [clean_to],
@@ -118,7 +119,18 @@ async def send_email_via_provider(
 
             # Call Resend SDK in async threadpool
             response = await asyncio.to_thread(resend.Emails.send, params)
-            resend_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", str(response))
+            if isinstance(response, dict):
+                resend_id = response.get("id")
+            elif hasattr(response, "id"):
+                resend_id = getattr(response, "id")
+            elif hasattr(response, "__getitem__"):
+                try:
+                    resend_id = response["id"]
+                except Exception:
+                    resend_id = str(response)
+            else:
+                resend_id = str(response)
+
             status = "sent"
             status_code = 200
         else:
