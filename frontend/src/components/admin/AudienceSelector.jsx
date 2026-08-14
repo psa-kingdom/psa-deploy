@@ -1,141 +1,683 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { Users, Mail, ListFilter, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Users,
+  Mail,
+  ListFilter,
+  AlertCircle,
+  CheckCircle2,
+  Plus,
+  X,
+  ClipboardPaste,
+  Trash2,
+  Info
+} from "lucide-react";
 
-export default function AudienceSelector({ backendUrl, selectedSource, onChange, onEstimateLoaded }) {
+export default function AudienceSelector({
+  backendUrl = "",
+  selectedSource,
+  onChange,
+  manualEmails = [],
+  onManualEmailsChange,
+  onEstimateLoaded,
+}) {
   const [estimate, setEstimate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [newEmailInput, setNewEmailInput] = useState("");
+  const [bulkText, setBulkText] = useState("");
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   const sources = [
     {
       id: "newsletter_subscriptions",
       title: "Newsletter Subscribers",
-      desc: "Users who subscribed to PSA Insights via website forms",
+      desc: "Explicit website opt-ins via PSA Insights subscription forms",
       icon: Mail,
-      badge: "Recommended"
+      badge: "Opted-In",
     },
     {
       id: "manual",
       title: "Manual Recipients",
-      desc: "Admin-entered email addresses (entered in the composer above)",
+      desc: "Admin-entered verified email list (chips / bulk paste)",
       icon: Users,
-      badge: null
+      badge: "Targeted",
     },
     {
       id: "combined",
       title: "Both Sources",
-      desc: "Newsletter subscribers + manual list, deduplicated",
+      desc: "Newsletter subscribers + manual recipient list, deduplicated",
       icon: ListFilter,
-      badge: null
-    }
+      badge: "Full Reach",
+    },
   ];
 
-  useEffect(() => {
-    fetchEstimate(selectedSource);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSource]);
+  const fetchEstimate = useCallback(
+    async (source, emailsList) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const payload = {
+          source,
+          custom_emails: emailsList || [],
+        };
+        const res = await axios.post(
+          `${backendUrl}/api/admin/communication/campaigns/estimate`,
+          payload,
+          { withCredentials: true }
+        );
+        setEstimate(res.data);
+        if (onEstimateLoaded) onEstimateLoaded(res.data);
+      } catch (err) {
+        console.error("Failed to fetch audience estimate:", err);
+        setError("Unable to compute audience count from backend");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [backendUrl, onEstimateLoaded]
+  );
 
-  const fetchEstimate = async (source) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await axios.get(
-        `${backendUrl}/api/admin/communication/campaigns/estimate?source=${source}`,
-        { withCredentials: true }
-      );
-      setEstimate(res.data);
-      if (onEstimateLoaded) onEstimateLoaded(res.data);
-    } catch (err) {
-      console.error("Failed to fetch audience estimate:", err);
-      setError("Unable to compute audience count from backend");
-    } finally {
-      setLoading(false);
-    }
+  // Debounced estimate refresh on source or manual list change
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchEstimate(selectedSource, manualEmails);
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [selectedSource, manualEmails, fetchEstimate]);
+
+  const handleAddSingleEmail = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = newEmailInput.trim().toLowerCase();
+    if (!trimmed) return;
+
+    // Split if user pasted comma/spaces into single input
+    const parts = trimmed
+      .split(/[,;\s]+/)
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+
+    const updated = [...manualEmails, ...parts];
+    if (onManualEmailsChange) onManualEmailsChange(updated);
+    setNewEmailInput("");
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-serif font-bold text-navy mb-1">1. Select Target Audience</h3>
-        <p className="text-sm text-slate-500">
-          Choose recipient source. All emails are automatically normalized, deduplicated, and checked against suppression lists.
-        </p>
-      </div>
+  const handleRemoveEmail = (indexToRemove) => {
+    const updated = manualEmails.filter((_, idx) => idx !== indexToRemove);
+    if (onManualEmailsChange) onManualEmailsChange(updated);
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {sources.map((src) => {
-          const Icon = src.icon;
-          const isSelected = selectedSource === src.id;
-          return (
-            <div
-              key={src.id}
-              onClick={() => onChange(src.id)}
-              className={`relative cursor-pointer rounded-lg p-5 border transition-all duration-200 ${
-                isSelected
-                  ? "bg-navy/5 border-navy shadow-sm ring-1 ring-navy"
-                  : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
-              }`}
-            >
-              {src.badge && (
-                <span className="absolute top-3 right-3 text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                  {src.badge}
-                </span>
-              )}
-              <div className="flex items-start gap-3">
-                <div className={`p-2.5 rounded-lg ${isSelected ? "bg-navy text-white" : "bg-slate-100 text-slate-600"}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-navy">{src.title}</h4>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{src.desc}</p>
+  const handleClearAllManual = () => {
+    if (onManualEmailsChange) onManualEmailsChange([]);
+  };
+
+  const handleApplyBulk = () => {
+    if (!bulkText.trim()) {
+      setShowBulkModal(false);
+      return;
+    }
+    const parts = bulkText
+      .split(/[,;\n\r\s]+/)
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+
+    const updated = [...manualEmails, ...parts];
+    if (onManualEmailsChange) onManualEmailsChange(updated);
+    setBulkText("");
+    setShowBulkModal(false);
+  };
+
+  const isManualActive = selectedSource === "manual" || selectedSource === "combined";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div>
+        <label
+          style={{
+            display: "block",
+            fontSize: "11px",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            color: "#6b7280",
+            marginBottom: "8px",
+          }}
+        >
+          Recipient Audience Source
+        </label>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "10px",
+          }}
+        >
+          {sources.map((src) => {
+            const Icon = src.icon;
+            const isSelected = selectedSource === src.id;
+            return (
+              <div
+                key={src.id}
+                onClick={() => onChange(src.id)}
+                style={{
+                  position: "relative",
+                  cursor: "pointer",
+                  borderRadius: "8px",
+                  padding: "14px 16px",
+                  border: isSelected ? "1px solid #6366f1" : "1px solid #252535",
+                  background: isSelected ? "rgba(99,102,241,0.12)" : "#131320",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {src.badge && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      fontSize: "9px",
+                      fontWeight: "700",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      background: isSelected ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.06)",
+                      color: isSelected ? "#a5b4fc" : "#9ca3af",
+                    }}
+                  >
+                    {src.badge}
+                  </span>
+                )}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <div
+                    style={{
+                      padding: "6px",
+                      borderRadius: "6px",
+                      background: isSelected ? "#6366f1" : "#1f1f2e",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon size={16} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: isSelected ? "#f9fafb" : "#d1d5db",
+                      }}
+                    >
+                      {src.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: isSelected ? "#a5b4fc" : "#6b7280",
+                        marginTop: "2px",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {src.desc}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Audience Estimation Card */}
-      <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <ListFilter className="w-5 h-5 text-amber-600" />
+      {/* Manual Recipient Management (Shown when manual or combined) */}
+      {isManualActive && (
+        <div
+          style={{
+            background: "#131320",
+            border: "1px solid #252535",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
             <div>
-              <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block">
-                Audience Calculation Summary
+              <span style={{ fontSize: "12px", fontWeight: "600", color: "#f3f4f6" }}>
+                Manual Recipients List
               </span>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-2xl font-bold text-navy">
-                  {loading ? "..." : (estimate ? estimate.net_target_count : 0)}
+              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "8px" }}>
+                ({manualEmails.length} entered)
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  background: "rgba(99,102,241,0.15)",
+                  border: "1px solid rgba(99,102,241,0.3)",
+                  color: "#a5b4fc",
+                  fontSize: "11px",
+                  fontWeight: "500",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                <ClipboardPaste size={12} /> Bulk Paste
+              </button>
+
+              {manualEmails.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllManual}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    background: "rgba(239,68,68,0.1)",
+                    border: "1px solid rgba(239,68,68,0.25)",
+                    color: "#fca5a5",
+                    fontSize: "11px",
+                    fontWeight: "500",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Trash2 size={12} /> Clear All
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Add input */}
+          <form
+            onSubmit={handleAddSingleEmail}
+            style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
+          >
+            <input
+              type="email"
+              placeholder="Add recipient email (e.g. client@company.com) & press Enter"
+              value={newEmailInput}
+              onChange={(e) => setNewEmailInput(e.target.value)}
+              style={{
+                flex: 1,
+                background: "#0d0d14",
+                border: "1px solid #252535",
+                borderRadius: "6px",
+                padding: "8px 12px",
+                color: "#f3f4f6",
+                fontSize: "12px",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!newEmailInput.trim()}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: newEmailInput.trim() ? "#6366f1" : "#1f1f2e",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                padding: "8px 14px",
+                fontSize: "12px",
+                fontWeight: "500",
+                cursor: newEmailInput.trim() ? "pointer" : "not-allowed",
+                opacity: newEmailInput.trim() ? 1 : 0.6,
+              }}
+            >
+              <Plus size={13} /> Add
+            </button>
+          </form>
+
+          {/* Chips container */}
+          {manualEmails.length > 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "6px",
+                maxHeight: "140px",
+                overflowY: "auto",
+                padding: "8px",
+                background: "#0d0d14",
+                borderRadius: "6px",
+                border: "1px solid #1f1f2e",
+              }}
+            >
+              {manualEmails.map((email, idx) => (
+                <span
+                  key={`${email}-${idx}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#1a1a2e",
+                    border: "1px solid #2e2e48",
+                    color: "#e2e8f0",
+                    fontSize: "11px",
+                    fontFamily: "monospace",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {email}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveEmail(idx)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    title="Remove"
+                  >
+                    <X size={11} />
+                  </button>
                 </span>
-                <span className="text-xs text-slate-500 font-medium">Verified Unique Recipients</span>
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: "14px",
+                background: "#0d0d14",
+                borderRadius: "6px",
+                border: "1px dashed #252535",
+                textAlign: "center",
+                fontSize: "11px",
+                color: "#6b7280",
+              }}
+            >
+              No manual recipients added yet. Type an email above or use Bulk Paste.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bulk Paste Modal */}
+      {showBulkModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              background: "#0d0d14",
+              border: "1px solid #252535",
+              borderRadius: "10px",
+              padding: "24px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
+              <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#f3f4f6", margin: 0 }}>
+                Bulk Paste Recipients
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#9ca3af",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px" }}>
+              Paste a list of email addresses separated by commas, semicolons, spaces, or newlines.
+            </p>
+            <textarea
+              rows={8}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              placeholder={"partner1@domain.com\npartner2@domain.com, partner3@domain.com"}
+              style={{
+                width: "100%",
+                background: "#131320",
+                border: "1px solid #252535",
+                borderRadius: "6px",
+                padding: "10px",
+                color: "#f3f4f6",
+                fontSize: "12px",
+                fontFamily: "monospace",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" }}>
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(false)}
+                style={{
+                  background: "#131320",
+                  border: "1px solid #252535",
+                  color: "#9ca3af",
+                  borderRadius: "6px",
+                  padding: "8px 14px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyBulk}
+                style={{
+                  background: "#6366f1",
+                  border: "none",
+                  color: "#fff",
+                  borderRadius: "6px",
+                  padding: "8px 16px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Add to List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Authoritative Audience Estimation Card */}
+      <div
+        style={{
+          background: "#0d0d14",
+          border: "1px solid #1f1f2e",
+          borderRadius: "8px",
+          padding: "16px 20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                padding: "8px",
+                borderRadius: "6px",
+                background: "rgba(245,158,11,0.12)",
+                color: "#f59e0b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ListFilter size={18} />
+            </div>
+            <div>
+              <span
+                style={{
+                  fontSize: "10px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "#6b7280",
+                  fontWeight: "700",
+                  display: "block",
+                }}
+              >
+                Verified Audience Calculation
+              </span>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "2px" }}>
+                <span
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "800",
+                    color: "#f9fafb",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {loading ? "…" : estimate ? estimate.net_target_count : 0}
+                </span>
+                <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: "500" }}>
+                  Net Unique Recipients to Receive Campaign
+                </span>
               </div>
             </div>
           </div>
 
           {estimate && (
-            <div className="flex items-center gap-4 text-xs">
-              <div className="bg-white px-3 py-1.5 rounded border border-slate-200">
-                <span className="text-slate-400 mr-1.5">Raw Records:</span>
-                <span className="font-semibold text-slate-700">{estimate.raw_count}</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "11px" }}>
+              <div
+                style={{
+                  background: "#131320",
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid #252535",
+                  color: "#9ca3af",
+                }}
+              >
+                Raw: <strong style={{ color: "#f3f4f6" }}>{estimate.raw_count}</strong>
               </div>
-              <div className="bg-white px-3 py-1.5 rounded border border-slate-200">
-                <span className="text-slate-400 mr-1.5">Suppressed / Opted Out:</span>
-                <span className="font-semibold text-slate-700">{estimate.suppressed_count}</span>
+
+              {estimate.invalid_count > 0 && (
+                <div
+                  style={{
+                    background: "rgba(239,68,68,0.1)",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    color: "#fca5a5",
+                  }}
+                >
+                  Invalid: <strong>{estimate.invalid_count}</strong>
+                </div>
+              )}
+
+              {estimate.duplicate_count > 0 && (
+                <div
+                  style={{
+                    background: "rgba(245,158,11,0.1)",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                    color: "#fde68a",
+                  }}
+                >
+                  Duplicates: <strong>{estimate.duplicate_count}</strong>
+                </div>
+              )}
+
+              <div
+                style={{
+                  background: "#131320",
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid #252535",
+                  color: "#9ca3af",
+                }}
+              >
+                Suppressed: <strong style={{ color: "#f3f4f6" }}>{estimate.suppressed_count}</strong>
               </div>
-              <div className="flex items-center gap-1 text-emerald-600 font-medium">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Zero Duplicates</span>
+
+              <div
+                style={{
+                  background: "rgba(22,163,74,0.1)",
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(22,163,74,0.3)",
+                  color: "#86efac",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontWeight: "600",
+                }}
+              >
+                <CheckCircle2 size={12} />
+                Final: {estimate.net_target_count}
               </div>
             </div>
           )}
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-rose-600">
-            <AlertCircle className="w-4 h-4" />
-            <span>{error}</span>
+          <div
+            style={{
+              marginTop: "10px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "12px",
+              color: "#fca5a5",
+            }}
+          >
+            <AlertCircle size={14} /> {error}
           </div>
         )}
       </div>

@@ -14,7 +14,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Send, LayoutDashboard, LogOut, ChevronRight } from "lucide-react";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
 const NAV_ITEMS = [
   {

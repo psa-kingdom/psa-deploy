@@ -9,7 +9,7 @@ from backend.models.email import OutboxJobStatus, RecipientStatus, CampaignStatu
 logger = logging.getLogger(__name__)
 
 class OutboxWorker:
-    def __init__(self, db: AsyncIOMotorDatabase, dispatch_rate_per_sec: float = 3.0):
+    def __init__(self, db: AsyncIOMotorDatabase, dispatch_rate_per_sec: float = 2.0):
         self.db = db
         self.dispatch_interval = 1.0 / dispatch_rate_per_sec
         self.is_running = False

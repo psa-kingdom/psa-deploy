@@ -94,19 +94,16 @@ def _validate_request_origin(request: Request) -> None:
         # No browser origin header — allow (server-to-server / direct API calls)
         return
 
-    allowed = settings.cors_origins_list
-    # Strip trailing slash and path from referer for comparison
+    # Extract the origin root (scheme + hostname + port if any)
     origin_root = origin.rstrip("/").split("?")[0]
-    # For referer, strip the path component
-    if "/" in origin_root[8:]:  # Skip past https://
+    if "://" in origin_root:
         parts = origin_root.split("/")
         origin_root = "/".join(parts[:3])
 
-    for allowed_origin in allowed:
-        if origin_root == allowed_origin or origin.startswith(allowed_origin):
-            return
+    if settings.is_allowed_origin(origin_root):
+        return
 
-    logger.warning("Blocked request with disallowed origin: %s (allowed: %s)", origin, allowed)
+    logger.warning("Blocked request with disallowed origin: %s (root: %s)", origin, origin_root)
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Request origin not allowed.",

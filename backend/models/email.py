@@ -210,3 +210,6 @@ class AudienceEstimateResponse(BaseModel):
     suppressed_count: int
     net_target_count: int
     sample_recipients: List[Dict[str, Any]]
+    entered_count: Optional[int] = 0
+    invalid_count: Optional[int] = 0
+    duplicate_count: Optional[int] = 0

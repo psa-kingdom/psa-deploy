@@ -132,37 +132,74 @@ async def get_email_environment(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 # ---------- Audience Estimate ----------
 
-@router.get("/campaigns/estimate", response_model=AudienceEstimateResponse, dependencies=[Depends(get_current_admin)])
-async def estimate_audience(source: str = Query("newsletter_subscriptions"), db: AsyncIOMotorDatabase = Depends(get_db)):
-    """
-    Returns estimated raw, deduplicated, suppressed, and net recipient count for target filter.
-
-    V1 supported sources: newsletter_subscriptions | manual | combined
-    contact_submissions is NOT a valid source.
-    """
+async def _compute_audience_estimate(target_filter: TargetFilter, db: AsyncIOMotorDatabase) -> AudienceEstimateResponse:
     valid_sources = ("newsletter_subscriptions", "manual", "combined")
-    if source not in valid_sources:
+    if target_filter.source not in valid_sources:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid source '{source}'. Valid sources: {', '.join(valid_sources)}"
+            detail=f"Invalid source '{target_filter.source}'. Valid sources: {', '.join(valid_sources)}"
         )
 
-    target_filter = TargetFilter(source=source)
-    recipients = await extract_and_deduplicate_audience(db, target_filter)
+    from backend.services.email.audience import analyze_manual_recipients
     suppressed_set = await get_suppressed_emails(db)
+    recipients = await extract_and_deduplicate_audience(db, target_filter)
 
-    raw_count = 0
-    if source in ("newsletter_subscriptions", "combined"):
-        raw_count += await db.newsletter_subscriptions.count_documents({})
+    newsletter_count = 0
+    if target_filter.source in ("newsletter_subscriptions", "combined"):
+        newsletter_count = await db.newsletter_subscriptions.count_documents({})
+
+    manual_analysis = {"entered_count": 0, "invalid_count": 0, "duplicate_count": 0, "suppressed_count": 0}
+    if target_filter.source in ("manual", "combined") and target_filter.custom_emails:
+        manual_analysis = analyze_manual_recipients(
+            [str(e) for e in target_filter.custom_emails],
+            suppressed_set=suppressed_set
+        )
+
+    raw_count = newsletter_count + manual_analysis["entered_count"]
+
+    # Calculate actual suppressed count among the matching audience
+    suppressed_in_audience = 0
+    if target_filter.source in ("newsletter_subscriptions", "combined"):
+        subs = await db.newsletter_subscriptions.find({}, {"email": 1}).to_list(10000)
+        sub_emails = {s.get("email", "").strip().lower() for s in subs if s.get("email")}
+        suppressed_in_audience += len(sub_emails.intersection(suppressed_set))
+    if target_filter.source in ("manual", "combined"):
+        suppressed_in_audience += manual_analysis["suppressed_count"]
 
     return AudienceEstimateResponse(
-        source=source,
+        source=target_filter.source,
         raw_count=raw_count,
         deduplicated_count=len(recipients),
-        suppressed_count=len(suppressed_set),
+        suppressed_count=suppressed_in_audience,
         net_target_count=len(recipients),
-        sample_recipients=recipients[:5]
+        sample_recipients=recipients[:5],
+        entered_count=manual_analysis["entered_count"],
+        invalid_count=manual_analysis["invalid_count"],
+        duplicate_count=manual_analysis["duplicate_count"]
     )
+
+
+@router.get("/campaigns/estimate", response_model=AudienceEstimateResponse, dependencies=[Depends(get_current_admin)])
+async def estimate_audience_get(
+    source: str = Query("newsletter_subscriptions"),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Returns estimated raw, deduplicated, suppressed, and net recipient count for target filter (GET query).
+    """
+    return await _compute_audience_estimate(TargetFilter(source=source), db)
+
+
+@router.post("/campaigns/estimate", response_model=AudienceEstimateResponse, dependencies=[Depends(get_current_admin)])
+async def estimate_audience_post(
+    target_filter: TargetFilter,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Returns authoritative estimated raw, deduplicated, suppressed, and net recipient count
+    including custom manual emails with breakdown metrics (POST body).
+    """
+    return await _compute_audience_estimate(target_filter, db)
 
 
 # ---------- Campaign CRUD ----------

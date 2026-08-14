@@ -33,16 +33,16 @@ api_router = APIRouter(prefix="/api")
 
 # ---------- CORS Middleware ----------
 # Must be registered before routers so preflight OPTIONS requests are handled.
-# allow_credentials=True requires explicit origins — browsers reject "*" with credentials.
+# allow_credentials=True requires explicit origins or scoped allow_origin_regex.
 _cors_origins = settings.cors_origins_list
 if not _cors_origins:
-    # Safety guard: if env var is empty/missing, default to localhost only.
     _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=_cors_origins,
+    allow_origin_regex=settings.PSA_VERCEL_PREVIEW_REGEX,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
     expose_headers=["Content-Type"],
@@ -188,9 +188,9 @@ async def startup_event():
 
     asyncio.create_task(init_indexes())
 
-    # Start Async Outbox Worker
+    # Start Async Outbox Worker with configured safe dispatch rate (default 2.0/s)
     from backend.services.email.worker import OutboxWorker
-    outbox_worker = OutboxWorker(db=db, dispatch_rate_per_sec=3.0)
+    outbox_worker = OutboxWorker(db=db, dispatch_rate_per_sec=settings.EMAIL_DISPATCH_RATE_PER_SEC)
     outbox_worker.start()
 
 

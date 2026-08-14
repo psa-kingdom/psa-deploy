@@ -5,20 +5,18 @@
  * All axios calls use { withCredentials: true } to include the HttpOnly cookie.
  *
  * Audience sources (V1):
- *   - newsletter_subscriptions
- *   - manual (admin-entered emails)
- *   - combined (both)
- *
- * contact_submissions are NOT included.
+ *   - newsletter_subscriptions (Opted-in via website)
+ *   - manual (Admin-entered / bulk-pasted verified recipient chips)
+ *   - combined (Both sources deduplicated)
  *
  * TEST MODE:
  *   When EMAIL_ENVIRONMENT !== "production", all test dispatches are
- *   routed server-side to the configured Test Recipient only.
- *   The backend enforces this — the frontend cannot override it.
+ *   routed server-side to the single configured Test Recipient only.
+ *   The backend enforces this.
  *
  * PRODUCTION MODE:
  *   When EMAIL_ENVIRONMENT === "production", the selected audience
- *   is used for the actual dispatch. Test Recipient UI is hidden.
+ *   is frozen and dispatched via the Outbox system.
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -30,6 +28,8 @@ import {
   CheckCircle2,
   Save,
   Mail,
+  X,
+  RefreshCw,
 } from "lucide-react";
 import AudienceSelector from "../components/admin/AudienceSelector";
 import TemplateEditor from "../components/admin/TemplateEditor";
@@ -38,7 +38,8 @@ import CampaignProgress from "../components/admin/CampaignProgress";
 import DeliveryLogsTable from "../components/admin/DeliveryLogsTable";
 import AdminLayout from "../components/admin/AdminLayout";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+// When deployed on Vercel, relative path uses /api/* rewrite proxy
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
 // Axios instance that always sends the HttpOnly session cookie
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
@@ -52,13 +53,14 @@ export default function AdminCommunication() {
   // Test recipient state (Test Mode only)
   const [testRecipient, setTestRecipient] = useState("");
   const [testRecipientInput, setTestRecipientInput] = useState("");
+  const [isEditingTestRecipient, setIsEditingTestRecipient] = useState(false);
   const [savingTestRecipient, setSavingTestRecipient] = useState(false);
   const [testRecipientSaved, setTestRecipientSaved] = useState(false);
 
   // Campaign Composer State
   const [campaignTitle, setCampaignTitle] = useState("Independence Day 2026 Greetings");
   const [selectedSource, setSelectedSource] = useState("newsletter_subscriptions");
-  const [manualEmails, setManualEmails] = useState("");
+  const [manualEmails, setManualEmails] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("independence_day_2026");
   const [subject, setSubject] = useState("Happy Independence Day — P Suman & Associates");
   const [bodyHtml, setBodyHtml] = useState("");
@@ -83,6 +85,7 @@ export default function AdminCommunication() {
       const recipient = res.data.test_recipient || "";
       setTestRecipient(recipient);
       setTestRecipientInput(recipient);
+      setIsEditingTestRecipient(!recipient);
     } catch (_) {
       // Non-critical — default to development if endpoint not available
     }
@@ -163,10 +166,11 @@ export default function AdminCommunication() {
     setTestRecipientSaved(false);
     try {
       const res = await api.put("/api/admin/communication/settings", {
-        test_recipient: testRecipientInput,
+        test_recipient: testRecipientInput.trim(),
       });
       setTestRecipient(res.data.test_recipient);
       setTestRecipientInput(res.data.test_recipient);
+      setIsEditingTestRecipient(false);
       setTestRecipientSaved(true);
       showToast(
         res.data.test_recipient
@@ -185,6 +189,23 @@ export default function AdminCommunication() {
     }
   };
 
+  const handleRemoveTestRecipient = async () => {
+    setSavingTestRecipient(true);
+    try {
+      const res = await api.put("/api/admin/communication/settings", {
+        test_recipient: "",
+      });
+      setTestRecipient("");
+      setTestRecipientInput("");
+      setIsEditingTestRecipient(true);
+      showToast("Test recipient removed.", "info");
+    } catch (err) {
+      showToast("Failed to remove test recipient.", "error");
+    } finally {
+      setSavingTestRecipient(false);
+    }
+  };
+
   const handleTemplateSelect = (templateId) => {
     setSelectedTemplateId(templateId);
     if (!templateId) return;
@@ -198,11 +219,7 @@ export default function AdminCommunication() {
   const buildTargetFilter = () => {
     const filter = { source: selectedSource };
     if (selectedSource === "manual" || selectedSource === "combined") {
-      const emails = manualEmails
-        .split(/[,;\n\r\s]+/)
-        .map((e) => e.trim())
-        .filter(Boolean);
-      filter.custom_emails = emails;
+      filter.custom_emails = manualEmails;
     }
     return filter;
   };
@@ -214,7 +231,7 @@ export default function AdminCommunication() {
     }
     if (
       (selectedSource === "manual" || selectedSource === "combined") &&
-      !manualEmails.trim()
+      manualEmails.length === 0
     ) {
       showToast("Please enter at least one manual recipient email.", "error");
       return;
@@ -293,7 +310,7 @@ export default function AdminCommunication() {
       return;
     }
     if (!testRecipient) {
-      showToast("Configure a Test Recipient below before sending a test.", "error");
+      showToast("Configure a Test Recipient above before sending a test.", "error");
       return;
     }
     setTestSending(true);
@@ -348,20 +365,6 @@ export default function AdminCommunication() {
       outline: "none",
       boxSizing: "border-box",
     },
-    textarea: {
-      width: "100%",
-      background: "#131320",
-      border: "1px solid #252535",
-      borderRadius: "8px",
-      padding: "10px 12px",
-      color: "#f3f4f6",
-      fontSize: "12px",
-      fontFamily: "monospace",
-      outline: "none",
-      boxSizing: "border-box",
-      resize: "vertical",
-      minHeight: "90px",
-    },
     tab: (active) => ({
       padding: "8px 16px",
       fontSize: "12px",
@@ -402,7 +405,7 @@ export default function AdminCommunication() {
       display: "inline-flex",
       alignItems: "center",
       gap: "6px",
-      background: "rgba(22, 163, 74, 0.12)",
+      background: "rgba(22, 163, 74, 0.15)",
       border: "1px solid #166534",
       borderRadius: "8px",
       padding: "8px 14px",
@@ -417,23 +420,41 @@ export default function AdminCommunication() {
     <AdminLayout environment={environment}>
       {/* Toast */}
       {toastMsg && (
-        <div style={{
-          position: "fixed",
-          top: "16px",
-          right: "16px",
-          zIndex: 9999,
-          background: toastMsg.type === "error" ? "#1a0a0a" : toastMsg.type === "info" ? "#0a0f1a" : "#0a1a0a",
-          border: `1px solid ${toastMsg.type === "error" ? "#dc2626" : toastMsg.type === "info" ? "#3b82f6" : "#16a34a"}`,
-          color: toastMsg.type === "error" ? "#fca5a5" : toastMsg.type === "info" ? "#93c5fd" : "#86efac",
-          borderRadius: "8px",
-          padding: "12px 16px",
-          fontSize: "13px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          maxWidth: "360px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            top: "16px",
+            right: "16px",
+            zIndex: 9999,
+            background:
+              toastMsg.type === "error"
+                ? "#1a0a0a"
+                : toastMsg.type === "info"
+                ? "#0a0f1a"
+                : "#0a1a0a",
+            border: `1px solid ${
+              toastMsg.type === "error"
+                ? "#dc2626"
+                : toastMsg.type === "info"
+                ? "#3b82f6"
+                : "#16a34a"
+            }`,
+            color:
+              toastMsg.type === "error"
+                ? "#fca5a5"
+                : toastMsg.type === "info"
+                ? "#93c5fd"
+                : "#86efac",
+            borderRadius: "8px",
+            padding: "12px 16px",
+            fontSize: "13px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            maxWidth: "360px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          }}
+        >
           {toastMsg.type === "error" ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
           {toastMsg.msg}
         </div>
@@ -445,7 +466,7 @@ export default function AdminCommunication() {
           Communication Center
         </h1>
         <p style={{ fontSize: "13px", color: "#6b7280" }}>
-          Compose, review, and send email campaigns to your audience.
+          Compose, test, review, and dispatch verified email campaigns to your audience.
         </p>
       </div>
 
@@ -465,57 +486,154 @@ export default function AdminCommunication() {
 
       {/* TAB: CAMPAIGNS */}
       {activeTab === "campaigns" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "860px" }}>
-
-          {/* TEST MODE panel — only shown in non-production */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "880px" }}>
+          {/* TEST MODE panel — single server-controlled test recipient with tag chip UX */}
           {isTestMode && (
             <div style={styles.testModeCard}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-                <Mail size={14} style={{ color: "#86efac" }} />
-                <span style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.06em", color: "#86efac", textTransform: "uppercase" }}>
-                  TEST MODE
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Mail size={14} style={{ color: "#86efac" }} />
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      letterSpacing: "0.06em",
+                      color: "#86efac",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    TEST MODE ACTIVE
+                  </span>
+                </div>
+                <span style={{ fontSize: "11px", color: "#4ade80", opacity: 0.8 }}>
+                  Safety Layer 1 & 2 Enforced
                 </span>
               </div>
 
-              <label style={{ ...styles.label, color: "#4ade80" }}>Test Recipient</label>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <input
-                  id="test-recipient-input"
-                  type="email"
-                  value={testRecipientInput}
-                  onChange={(e) => setTestRecipientInput(e.target.value)}
-                  placeholder="email@example.com"
-                  style={{
-                    ...styles.input,
-                    flex: 1,
-                    borderColor: testRecipientSaved ? "#166534" : "#252535",
-                    background: "#0a140a",
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#22c55e"}
-                  onBlur={(e) => e.target.style.borderColor = testRecipientSaved ? "#166534" : "#252535"}
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveTestRecipient()}
-                />
-                <button
-                  id="btn-save-test-recipient"
-                  onClick={handleSaveTestRecipient}
-                  disabled={savingTestRecipient}
-                  style={{
-                    ...styles.btnGreen,
-                    opacity: savingTestRecipient ? 0.6 : 1,
-                    cursor: savingTestRecipient ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <Save size={13} />
-                  {savingTestRecipient ? "Saving…" : testRecipientSaved ? "Saved ✓" : "Save"}
-                </button>
-              </div>
+              <label style={{ ...styles.label, color: "#4ade80" }}>Configured Test Recipient</label>
 
-              <p style={{ fontSize: "12px", color: "#4ade80", opacity: 0.7, marginTop: "10px", lineHeight: "1.5" }}>
-                In Test Mode, campaign emails are sent <strong>ONLY</strong> to the configured Test Recipient above —
-                regardless of the selected audience. The backend enforces this restriction.
+              {testRecipient && !isEditingTestRecipient ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      background: "rgba(22, 163, 74, 0.2)",
+                      border: "1px solid #166534",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      color: "#86efac",
+                      fontFamily: "monospace",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    <span>{testRecipient}</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveTestRecipient}
+                      disabled={savingTestRecipient}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#86efac",
+                        cursor: "pointer",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                      title="Remove test recipient"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestRecipientInput(testRecipient);
+                      setIsEditingTestRecipient(true);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #22c55e",
+                      borderRadius: "6px",
+                      padding: "5px 10px",
+                      color: "#86efac",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Change Recipient
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input
+                    id="test-recipient-input"
+                    type="email"
+                    value={testRecipientInput}
+                    onChange={(e) => setTestRecipientInput(e.target.value)}
+                    placeholder="e.g. yourname@domain.com"
+                    style={{
+                      ...styles.input,
+                      flex: 1,
+                      borderColor: testRecipientSaved ? "#166534" : "#252535",
+                      background: "#0a140a",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#22c55e")}
+                    onBlur={(e) =>
+                      (e.target.style.borderColor = testRecipientSaved ? "#166534" : "#252535")
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveTestRecipient()}
+                  />
+                  <button
+                    id="btn-save-test-recipient"
+                    onClick={handleSaveTestRecipient}
+                    disabled={savingTestRecipient || !testRecipientInput.trim()}
+                    style={{
+                      ...styles.btnGreen,
+                      opacity: savingTestRecipient || !testRecipientInput.trim() ? 0.6 : 1,
+                      cursor: savingTestRecipient || !testRecipientInput.trim() ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <Save size={13} />
+                    {savingTestRecipient ? "Saving…" : "Save Test Recipient"}
+                  </button>
+                  {testRecipient && isEditingTestRecipient && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTestRecipient(false)}
+                      style={{
+                        background: "#131320",
+                        border: "1px solid #252535",
+                        color: "#9ca3af",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#4ade80",
+                  opacity: 0.75,
+                  marginTop: "10px",
+                  lineHeight: "1.5",
+                }}
+              >
+                In Test Mode, emails are dispatched <strong>ONLY</strong> to the single server-controlled test recipient above.
                 {!testRecipient && (
-                  <span style={{ color: "#fbbf24", display: "block", marginTop: "6px" }}>
-                    ⚠ No test recipient set. Test sends will fail until you save a valid email above.
+                  <span style={{ color: "#fbbf24", display: "block", marginTop: "4px" }}>
+                    ⚠ No test recipient configured. Save an address above before testing.
                   </span>
                 )}
               </p>
@@ -544,65 +662,20 @@ export default function AdminCommunication() {
               />
             </div>
 
+            {/* Unified Audience Selection & Chip Recipient Management */}
             <div style={{ borderTop: "1px solid #1f1f2e", paddingTop: "20px", marginBottom: "20px" }}>
-              {/* Audience Source Selector */}
-              <label style={styles.label}>Recipient Audience</label>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-                {[
-                  { value: "newsletter_subscriptions", label: "Newsletter Subscribers" },
-                  { value: "manual", label: "Manual Recipients" },
-                  { value: "combined", label: "Both" },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSelectedSource(opt.value)}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      border: selectedSource === opt.value ? "1px solid #6366f1" : "1px solid #252535",
-                      background: selectedSource === opt.value ? "rgba(99,102,241,0.15)" : "#131320",
-                      color: selectedSource === opt.value ? "#a5b4fc" : "#9ca3af",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Manual emails textarea */}
-              {(selectedSource === "manual" || selectedSource === "combined") && (
-                <div style={{ marginBottom: "12px" }}>
-                  <label style={{ ...styles.label, marginTop: "8px" }}>
-                    Manual Recipients (one per line, or comma-separated)
-                  </label>
-                  <textarea
-                    id="manual-emails"
-                    value={manualEmails}
-                    onChange={(e) => setManualEmails(e.target.value)}
-                    placeholder={"example@domain.com\nanother@domain.com"}
-                    style={styles.textarea}
-                  />
-                  <div style={{ fontSize: "11px", color: "#4b5563", marginTop: "4px" }}>
-                    {manualEmails.split(/[,;\n\r\s]+/).filter(e => e.trim()).length} entered
-                  </div>
-                </div>
-              )}
-
-              {/* Audience estimate */}
               <AudienceSelector
                 backendUrl={BACKEND_URL}
                 selectedSource={selectedSource}
                 onChange={setSelectedSource}
+                manualEmails={manualEmails}
+                onManualEmailsChange={setManualEmails}
                 onEstimateLoaded={setAudienceEstimate}
               />
             </div>
 
+            {/* Template & Content Editor */}
             <div style={{ borderTop: "1px solid #1f1f2e", paddingTop: "20px", marginBottom: "20px" }}>
-              {/* Template & Content Editor */}
               <TemplateEditor
                 backendUrl={BACKEND_URL}
                 templates={templates}
@@ -616,31 +689,39 @@ export default function AdminCommunication() {
             </div>
 
             {/* Actions row */}
-            <div style={{
-              borderTop: "1px solid #1f1f2e",
-              paddingTop: "20px",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                borderTop: "1px solid #1f1f2e",
+                paddingTop: "20px",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+              }}
+            >
               {/* Test Send (only in test mode) */}
-              {isTestMode && (
+              {isTestMode ? (
                 <div>
                   <button
                     id="btn-test-send"
                     onClick={handleTestSend}
                     disabled={testSending || !testRecipient}
-                    title={!testRecipient ? "Set a Test Recipient above first" : `Send test to ${testRecipient}`}
+                    title={
+                      !testRecipient
+                        ? "Set a Test Recipient above first"
+                        : `Send real test to ${testRecipient}`
+                    }
                     style={{
                       ...styles.btnSecondary,
-                      opacity: testSending || !testRecipient ? 0.5 : 1,
+                      opacity: testSending || !testRecipient ? 0.4 : 1,
                       cursor: testSending || !testRecipient ? "not-allowed" : "pointer",
                     }}
                   >
                     <Send size={13} />
-                    {testSending ? "Sending…" : `Send Test${testRecipient ? ` → ${testRecipient}` : ""}`}
+                    {testSending
+                      ? "Sending…"
+                      : `Send Test${testRecipient ? ` → ${testRecipient}` : ""}`}
                   </button>
                   {!testRecipient && (
                     <div style={{ fontSize: "11px", color: "#f59e0b", marginTop: "4px" }}>
@@ -648,14 +729,22 @@ export default function AdminCommunication() {
                     </div>
                   )}
                 </div>
+              ) : (
+                <div style={{ fontSize: "12px", color: "#86efac", fontWeight: "500" }}>
+                  ● Production Email Mode Active
+                </div>
               )}
 
               {/* Production dispatch — available in all environments for staging/freezing */}
               <button
                 id="btn-review-dispatch"
                 onClick={handleCreateAndReview}
-                disabled={loading || (isTestMode)}
-                title={isTestMode ? "Production dispatch is disabled in Test Mode" : "Freeze audience and review campaign"}
+                disabled={loading || isTestMode}
+                title={
+                  isTestMode
+                    ? "Production dispatch is disabled in Test Mode"
+                    : "Freeze audience snapshot and review campaign"
+                }
                 style={{
                   ...styles.btnPrimary,
                   opacity: loading || isTestMode ? 0.4 : 1,
@@ -663,15 +752,25 @@ export default function AdminCommunication() {
                 }}
               >
                 <Send size={14} />
-                {loading ? "Creating…" : "Review & Freeze Audience →"}
+                {loading ? "Preparing Snapshot…" : "Review & Freeze Audience →"}
               </button>
             </div>
 
             {isTestMode && (
-              <div style={{ fontSize: "11px", color: "#4b5563", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #1f1f2e" }}>
-                Production dispatch is disabled in Test Mode. Switch to{" "}
-                <code style={{ background: "#131320", padding: "1px 4px", borderRadius: "3px" }}>EMAIL_ENVIRONMENT=production</code>{" "}
-                on Railway to enable production campaigns.
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#6b7280",
+                  marginTop: "12px",
+                  paddingTop: "12px",
+                  borderTop: "1px solid #1f1f2e",
+                }}
+              >
+                Production campaign dispatch is guarded in Test Mode. Set{" "}
+                <code style={{ background: "#131320", padding: "1px 4px", borderRadius: "3px" }}>
+                  EMAIL_ENVIRONMENT=production
+                </code>{" "}
+                in Railway to enable live audience broadcast.
               </div>
             )}
           </div>
@@ -679,47 +778,61 @@ export default function AdminCommunication() {
           {/* Campaign History */}
           {campaignsList.length > 0 && (
             <div style={styles.card}>
-              <div style={{ fontSize: "13px", fontWeight: "600", color: "#d1d5db", marginBottom: "16px" }}>
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#d1d5db",
+                  marginBottom: "16px",
+                }}
+              >
                 Campaign History
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {campaignsList.slice(0, 10).map((c) => (
-                  <div key={c.campaign_id} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    background: "#131320",
-                    borderRadius: "8px",
-                    border: "1px solid #1f1f2e",
-                    fontSize: "12px",
-                  }}>
+                  <div
+                    key={c.campaign_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      background: "#131320",
+                      borderRadius: "8px",
+                      border: "1px solid #1f1f2e",
+                      fontSize: "12px",
+                    }}
+                  >
                     <div style={{ color: "#d1d5db", fontWeight: "500" }}>{c.title}</div>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                       <span style={{ color: "#6b7280" }}>
                         {c.frozen_recipient_count} recipients
                       </span>
-                      <span style={{
-                        padding: "2px 8px",
-                        borderRadius: "4px",
-                        fontSize: "10px",
-                        fontWeight: "700",
-                        textTransform: "uppercase",
-                        background: c.status === "completed"
-                          ? "rgba(22,163,74,0.15)"
-                          : c.status === "sending"
-                          ? "rgba(99,102,241,0.15)"
-                          : c.status === "cancelled"
-                          ? "rgba(239,68,68,0.1)"
-                          : "rgba(107,114,128,0.15)",
-                        color: c.status === "completed"
-                          ? "#86efac"
-                          : c.status === "sending"
-                          ? "#a5b4fc"
-                          : c.status === "cancelled"
-                          ? "#fca5a5"
-                          : "#9ca3af",
-                      }}>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          textTransform: "uppercase",
+                          background:
+                            c.status === "completed"
+                              ? "rgba(22,163,74,0.15)"
+                              : c.status === "sending"
+                              ? "rgba(99,102,241,0.15)"
+                              : c.status === "cancelled"
+                              ? "rgba(239,68,68,0.1)"
+                              : "rgba(107,114,128,0.15)",
+                          color:
+                            c.status === "completed"
+                              ? "#86efac"
+                              : c.status === "sending"
+                              ? "#a5b4fc"
+                              : c.status === "cancelled"
+                              ? "#fca5a5"
+                              : "#9ca3af",
+                        }}
+                      >
                         {c.status}
                       </span>
                     </div>
@@ -732,9 +845,7 @@ export default function AdminCommunication() {
       )}
 
       {/* TAB: AUDIT LOGS */}
-      {activeTab === "logs" && (
-        <DeliveryLogsTable backendUrl={BACKEND_URL} />
-      )}
+      {activeTab === "logs" && <DeliveryLogsTable backendUrl={BACKEND_URL} />}
 
       {/* Review & Confirmation Modal */}
       <CampaignReviewModal

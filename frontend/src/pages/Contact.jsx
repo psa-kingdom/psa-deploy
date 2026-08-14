@@ -3,7 +3,7 @@ import axios from "axios";
 import { Linkedin, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { FIRM, OFFICES } from "../data/site";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 const SERVICES_OPTS = [
   "Internal Audit",
