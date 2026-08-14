@@ -162,13 +162,20 @@ class OutboxWorker:
                     {"campaign_id": campaign_id},
                     {"$inc": {"dispatched_count": 1}}
                 )
-        elif result.get("status") == "skipped_allowlist":
-            # Skipped by allowlist
+        elif result.get("status") == "blocked_test_mode":
+            # Blocked by provider's test mode safety guard (Layer 2 defense).
+            # This should not occur under normal operation (Layer 1 in campaign confirm prevents this).
+            # Log as error for investigation.
+            logger.error(
+                "Job %s reached provider but was blocked by test mode safety guard. "
+                "Campaign: %s, Recipient: %s. This indicates a Layer 1 bypass — investigate.",
+                job_id, campaign_id, recipient_email
+            )
             await self.db.outbox_jobs.update_one(
                 {"job_id": job_id},
                 {
                     "$set": {
-                        "status": OutboxJobStatus.COMPLETED.value,
+                        "status": OutboxJobStatus.FAILED.value,
                         "error_details": result.get("error"),
                         "updated_at": now
                     }
@@ -179,7 +186,7 @@ class OutboxWorker:
                     {"id": recipient_id},
                     {
                         "$set": {
-                            "status": RecipientStatus.SKIPPED_ALLOWLIST.value,
+                            "status": RecipientStatus.SKIPPED_SUPPRESSION.value,
                             "error_message": result.get("error")
                         }
                     }

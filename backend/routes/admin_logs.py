@@ -45,7 +45,11 @@ async def get_email_stats(db: AsyncIOMotorDatabase = Depends(get_db)):
     total_attempts = await db.email_attempts.count_documents({})
     sent_count = await db.email_attempts.count_documents({"status": "sent"})
     failed_count = await db.email_attempts.count_documents({"status": "failed"})
-    skipped_count = await db.email_attempts.count_documents({"status": "skipped_allowlist"})
+    # Count both new blocked_test_mode and legacy skipped_allowlist (backward compat)
+    skipped_count = await db.email_attempts.count_documents(
+        {"status": {"$in": ["blocked_test_mode", "skipped_allowlist"]}}
+    )
+
     suppressed_count = await db.email_suppressions.count_documents({})
     total_campaigns = await db.email_campaigns.count_documents({})
 

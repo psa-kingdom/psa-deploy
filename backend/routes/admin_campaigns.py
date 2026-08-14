@@ -277,7 +277,20 @@ async def confirm_and_dispatch_campaign(
 
     now = get_utc_now()
 
-    # Generate Outbox Jobs from frozen snapshot
+    # Test Mode Guard — Defense-in-Depth
+    # In development/staging, campaign dispatch to real audience is blocked.
+    # Use the Test Send button in Communication Center to verify email content.
+    # Switch EMAIL_ENVIRONMENT=production on Railway to enable real dispatches.
+    if settings.is_test_mode:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Campaign dispatch is disabled in {settings.EMAIL_ENVIRONMENT.upper()} mode. "
+                "Switch EMAIL_ENVIRONMENT=production on Railway to enable production campaigns. "
+                "Use 'Send Test' in the Communication Center to verify email content."
+            )
+        )
+
     recipients = await db.campaign_recipients.find({"campaign_id": campaign_id}).to_list(10000)
     outbox_docs = []
 
@@ -414,7 +427,8 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         subject=rendered_subject,
         html=full_html,
         text=plain_text,
-        db=db
+        db=db,
+        _test_recipient_override=configured_recipient,  # Coherent with provider's final guard
     )
 
     if not result["success"]:

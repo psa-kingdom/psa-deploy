@@ -104,7 +104,7 @@ export default function DeliveryLogsTable({ backendUrl }) {
           >
             <option value="">All Statuses</option>
             <option value="sent">Sent</option>
-            <option value="skipped_allowlist">Blocked (Allowlist)</option>
+            <option value="blocked_test_mode">Blocked (Test Mode)</option>
             <option value="failed">Failed</option>
           </select>
 
@@ -146,7 +146,8 @@ export default function DeliveryLogsTable({ backendUrl }) {
                 if (log.status === "sent") {
                   badgeClass = "bg-emerald-100 text-emerald-800";
                   Icon = CheckCircle2;
-                } else if (log.status === "skipped_allowlist") {
+                } else if (log.status === "blocked_test_mode" || log.status === "skipped_allowlist") {
+                  // skipped_allowlist kept for backward-compatible display of old DB records
                   badgeClass = "bg-amber-100 text-amber-800";
                   Icon = ShieldCheck;
                 } else if (log.status === "failed") {

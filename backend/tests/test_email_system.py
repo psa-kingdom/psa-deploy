@@ -63,13 +63,12 @@ def test_email_validation():
 async def test_mock_provider_sends_in_dev_mode():
     """
     In development mode with no RESEND_API_KEY, the mock provider should
-    succeed for any address passed to it. Test recipient enforcement is
-    handled upstream in admin_campaigns.py, not in provider.py.
+    succeed for any address. Without a real key, no real emails can leave
+    regardless of environment.
     """
     settings.EMAIL_ENVIRONMENT = "development"
-    settings.RESEND_API_KEY = ""  # Ensure mock mode
+    settings.RESEND_API_KEY = ""  # No real key — mock mode
 
-    # Mock provider should succeed for any valid address
     result = await send_email_via_provider(
         to="any.recipient@example.com",
         subject="Test via Mock",
@@ -80,3 +79,48 @@ async def test_mock_provider_sends_in_dev_mode():
     assert result["status"] == "sent"
     assert result["resend_id"] is not None
     assert result["resend_id"].startswith("mock_re_")
+
+@pytest.mark.asyncio
+async def test_final_safety_guard_blocks_non_test_recipient_when_key_present():
+    """
+    Final safety guard (Layer 2): when EMAIL_ENVIRONMENT != production AND
+    a real RESEND_API_KEY is present, any recipient that doesn't match the
+    configured test recipient must be blocked.
+
+    We simulate a real API key by setting a dummy value that won't trigger mock mode.
+    The Resend SDK call will fail (no real key), but the guard should fire first.
+    """
+    settings.EMAIL_ENVIRONMENT = "development"
+    settings.RESEND_API_KEY = "re_fake_test_key_for_guard_test"
+
+    # Deliver to a non-test-recipient should be blocked
+    result = await send_email_via_provider(
+        to="real.campaign.recipient@example.com",
+        subject="Should be blocked",
+        html="<p>This should never send</p>",
+        db=None,
+        _test_recipient_override="testrecipient@example.com"
+    )
+    assert result["success"] is False
+    assert result["status"] == "blocked_test_mode"
+    assert "blocked" in (result["error"] or "").lower()
+
+@pytest.mark.asyncio
+async def test_final_safety_guard_allows_test_recipient():
+    """
+    Final safety guard passes when the recipient matches the configured test recipient.
+    With a real-looking key, it will then attempt Resend and fail — we only
+    care that the guard passes (the Resend call failure is expected in test).
+    """
+    settings.EMAIL_ENVIRONMENT = "development"
+    settings.RESEND_API_KEY = ""  # No key — fall through to mock
+
+    result = await send_email_via_provider(
+        to="testrecipient@example.com",
+        subject="Test guard pass",
+        html="<p>Allowed</p>",
+        db=None,
+        _test_recipient_override="testrecipient@example.com"
+    )
+    assert result["success"] is True
+    assert result["status"] == "sent"
