@@ -167,14 +167,13 @@ except ImportError:
         unsubscribe
     )
 
-api_router.include_router(admin_auth.router)
-api_router.include_router(admin_campaigns.router)
-api_router.include_router(admin_templates.router)
-api_router.include_router(admin_logs.router)
-api_router.include_router(webhooks.router)
-api_router.include_router(unsubscribe.router)
-
 app.include_router(api_router)
+app.include_router(admin_auth.router, prefix="/api")
+app.include_router(admin_campaigns.router, prefix="/api")
+app.include_router(admin_templates.router, prefix="/api")
+app.include_router(admin_logs.router, prefix="/api")
+app.include_router(webhooks.router, prefix="/api")
+app.include_router(unsubscribe.router, prefix="/api")
 
 # CORS middleware is registered above (before api_router) for correct preflight handling.
 
