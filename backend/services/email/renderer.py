@@ -46,46 +46,13 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
             <td align="center">
                 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
                     
-                    <!-- Header -->
-                    <tr>
-                        <td style="background-color: {PSA_BRAND_PRIMARY}; padding: 28px 32px; text-align: left; border-bottom: 3px solid {PSA_BRAND_ACCENT};">
-                            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
-                                <tr>
-                                    <td>
-                                        <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase;">
-                                            P SUMAN & ASSOCIATES
-                                        </h1>
-                                        <p style="margin: 4px 0 0; font-size: 12px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">
-                                            Chartered Accountants · Audit · Advisory
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
 
                     <!-- Body Content -->
                     <tr>
                         <td style="padding: 36px 32px; font-size: 15px; line-height: 1.6; color: {PSA_BRAND_TEXT}; background-color: #ffffff;">
                             {content_html}
                         </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background-color: {PSA_BRAND_IVORY}; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; font-weight: 600; color: {PSA_BRAND_PRIMARY};">
-                                P Suman & Associates — Chartered Accountants
-                            </p>
-                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED};">
-                                New Delhi · Hyderabad · PAN-India Advisory
-                            </p>
-                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED};">
-                                Website: <a href="https://psumanassociates.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none;">psumanassociates.com</a>
-                            </p>
-                            {unsub_section}
-                        </td>
-                    </tr>
+                    </tr
 
                 </table>
             </td>
