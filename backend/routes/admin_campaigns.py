@@ -28,7 +28,7 @@ from backend.services.email.audience import (
     parse_recipient_file,
     clean_email_token
 )
-from backend.services.email.renderer import render_base_layout, interpolate_variables, html_to_plain_text
+from backend.services.email.renderer import render_final_email, interpolate_variables, html_to_plain_text
 from backend.services.email.provider import send_email_via_provider
 import re
 import logging
@@ -297,6 +297,7 @@ async def create_campaign(payload: CampaignCreate, db: AsyncIOMotorDatabase = De
         subject=payload.subject,
         body_html=payload.body_html,
         body_text=plain_text,
+        apply_wrapper=payload.apply_wrapper,
         sender_email=sender,
         reply_to=reply_to,
         target_filter=payload.target_filter,
@@ -402,9 +403,12 @@ async def confirm_and_dispatch_campaign(
         }
 
         rendered_subject = interpolate_variables(campaign["subject"], vars_map)
-        rendered_body = interpolate_variables(campaign["body_html"], vars_map)
-        full_html = render_base_layout(rendered_body, unsubscribe_url=unsub_url)
-        plain_text = html_to_plain_text(full_html)
+        full_html, plain_text = render_final_email(
+            body_html=campaign["body_html"],
+            apply_wrapper=campaign.get("apply_wrapper", True),
+            variables=vars_map,
+            unsubscribe_url=unsub_url
+        )
 
         job = OutboxJob(
             campaign_id=campaign_id,
@@ -516,9 +520,12 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
     }
 
     rendered_subject = interpolate_variables(payload.subject, vars_map)
-    rendered_body = interpolate_variables(payload.body_html, vars_map)
-    full_html = render_base_layout(rendered_body, unsubscribe_url=vars_map["unsubscribe_url"])
-    plain_text = html_to_plain_text(full_html)
+    full_html, plain_text = render_final_email(
+        body_html=payload.body_html,
+        apply_wrapper=payload.apply_wrapper,
+        variables=vars_map,
+        unsubscribe_url=vars_map["unsubscribe_url"]
+    )
 
     result = await send_email_via_provider(
         to=configured_recipient,

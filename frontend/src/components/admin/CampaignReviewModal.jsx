@@ -63,6 +63,12 @@ export default function CampaignReviewModal({
               <span className="text-slate-500 font-medium">Subject Line:</span>
               <span className="font-semibold text-slate-800">{campaign.subject}</span>
             </div>
+            <div className="flex justify-between py-1 border-b border-slate-200">
+              <span className="text-slate-500 font-medium">Corporate Wrapper:</span>
+              <span className={`font-semibold ${campaign.apply_wrapper !== false ? "text-navy" : "text-amber-800"}`}>
+                {campaign.apply_wrapper !== false ? "Enabled (PSA Header Banner & CA Footer)" : "Disabled (Exact Authored HTML)"}
+              </span>
+            </div>
             <div className="flex justify-between py-1">
               <span className="text-slate-500 font-medium">Frozen Target Audience:</span>
               <span className="font-bold text-sm text-navy bg-amber-100 px-2 py-0.5 rounded">

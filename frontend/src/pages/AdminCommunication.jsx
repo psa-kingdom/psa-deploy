@@ -64,6 +64,7 @@ export default function AdminCommunication() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("independence_day_2026");
   const [subject, setSubject] = useState("Happy Independence Day — P Suman & Associates");
   const [bodyHtml, setBodyHtml] = useState("");
+  const [applyWrapper, setApplyWrapper] = useState(true);
   const [templates, setTemplates] = useState([]);
   const [audienceEstimate, setAudienceEstimate] = useState(null);
 
@@ -99,6 +100,9 @@ export default function AdminCommunication() {
       if (found && !bodyHtml) {
         setSubject(found.published_subject || found.draft_subject || subject);
         setBodyHtml(found.published_body_html || found.draft_body_html || "");
+        if (found.apply_wrapper !== undefined) {
+          setApplyWrapper(found.apply_wrapper);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch templates:", err);
@@ -213,6 +217,9 @@ export default function AdminCommunication() {
     if (found) {
       setSubject(found.published_subject || found.draft_subject);
       setBodyHtml(found.published_body_html || found.draft_body_html);
+      if (found.apply_wrapper !== undefined) {
+        setApplyWrapper(found.apply_wrapper);
+      }
     }
   };
 
@@ -249,6 +256,7 @@ export default function AdminCommunication() {
         send_mode: sendMode,
         subject: subject,
         body_html: bodyHtml,
+        apply_wrapper: applyWrapper,
         target_filter: buildTargetFilter(),
       });
       setPendingCampaign(res.data);
@@ -324,6 +332,7 @@ export default function AdminCommunication() {
         recipient_email: testRecipient,
         subject: subject,
         body_html: bodyHtml,
+        apply_wrapper: applyWrapper,
       });
       showToast(res.data.message || `Test email dispatched to ${res.data.recipient}!`, "success");
     } catch (err) {
@@ -851,6 +860,8 @@ export default function AdminCommunication() {
                 onSubjectChange={setSubject}
                 bodyHtml={bodyHtml}
                 onBodyHtmlChange={setBodyHtml}
+                applyWrapper={applyWrapper}
+                onApplyWrapperChange={setApplyWrapper}
               />
             </div>
 

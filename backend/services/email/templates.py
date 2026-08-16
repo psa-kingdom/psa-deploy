@@ -1,32 +1,27 @@
 from typing import Dict, Any, Tuple
 from backend.services.email.renderer import render_base_layout, interpolate_variables, html_to_plain_text
 
-def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+def get_independence_day_campaign_html() -> str:
     """
-    Returns (subject, rendered_html, plain_text) for Independence Day 2026 Greetings.
+    Returns the clean inner campaign HTML content for Independence Day 2026 Greetings.
+    Does not bake in the outer corporate wrapper, allowing dynamic apply_wrapper control.
     """
-    raw_subject = "Happy Independence Day — P Suman & Associates"
-    
-    name = variables.get("name") or "Valued Partner"
-    company = variables.get("company")
-    salutation = f"Dear {name}," if not company else f"Dear {name} ({company}),"
-
-    content_html = f"""
+    return """
     <div style="text-align: center; margin-bottom: 24px;">
         <span style="display: inline-block; background-color: #fef3c7; color: #92400e; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">
             79th Independence Day Greetings
         </span>
         <h2 style="margin: 16px 0 8px; font-size: 22px; font-weight: 700; color: #0a192f;">
-            Celebrating India's Growth, Resilience & Freedom
+            Celebrating India's Growth, Resilience &amp; Freedom
         </h2>
     </div>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: #334155;">
-        {salutation}
+        Dear {{name}},
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: #334155; line-height: 1.6;">
-        As our nation marks another milestone of independence and economic transformation, we at <strong>P Suman & Associates</strong> extend our warmest wishes to you, your family, and your organization.
+        As our nation marks another milestone of independence and economic transformation, we at <strong>P Suman &amp; Associates</strong> extend our warmest wishes to you, your family, and your organization.
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: #334155; line-height: 1.6;">
@@ -35,7 +30,7 @@ def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, 
 
     <div style="background-color: #f8fafc; border-left: 4px solid #c5a059; padding: 16px 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
         <p style="margin: 0; font-size: 14px; font-style: italic; color: #475569;">
-            "Progress is not merely economic growth; it is the discipline of integrity, innovation, and sustainable leadership."
+            &ldquo;Progress is not merely economic growth; it is the discipline of integrity, innovation, and sustainable leadership.&rdquo;
         </p>
     </div>
 
@@ -48,13 +43,27 @@ def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, 
             Warm regards,
         </p>
         <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #c5a059;">
-            CA Prem Suman & Team
+            CA Prem Suman &amp; Team
         </p>
         <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">
-            P Suman & Associates · Chartered Accountants
+            P Suman &amp; Associates · Chartered Accountants
         </p>
     </div>
     """
+
+def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+    """
+    Returns (subject, rendered_html, plain_text) for Independence Day 2026 Greetings.
+    """
+    raw_subject = "Happy Independence Day — P Suman & Associates"
+    content_html = get_independence_day_campaign_html()
+    
+    name = variables.get("name") or "Valued Partner"
+    company = variables.get("company")
+    salutation = f"Dear {name}," if not company else f"Dear {name} ({company}),"
+    
+    # Replace the generic salutation line with specific if present
+    content_html = content_html.replace("Dear {{name}},", salutation)
 
     subject = interpolate_variables(raw_subject, variables)
     full_html = render_base_layout(content_html, preheader="Warm Independence Day wishes from P Suman & Associates", unsubscribe_url=variables.get("unsubscribe_url"))

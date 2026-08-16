@@ -59,6 +59,7 @@ class EmailTemplateStudio(BaseModel):
     draft_body_html: Optional[str] = ""
     has_pending_draft: bool = False
     version: int = 1
+    apply_wrapper: bool = True
     variables: List[str] = Field(default_factory=lambda: ["name", "company", "unsubscribe_url"])
     created_at: datetime = Field(default_factory=get_utc_now)
     updated_at: datetime = Field(default_factory=get_utc_now)
@@ -70,6 +71,7 @@ class TemplateVersionHistory(BaseModel):
     version_number: int
     subject: str
     body_html: str
+    apply_wrapper: bool = True
     created_by: str = "admin"
     created_at: datetime = Field(default_factory=get_utc_now)
 
@@ -80,6 +82,7 @@ class TemplateCreate(BaseModel):
     description: Optional[str] = ""
     subject: str
     body_html: str
+    apply_wrapper: bool = True
     variables: Optional[List[str]] = None
 
 class TemplateUpdate(BaseModel):
@@ -87,11 +90,13 @@ class TemplateUpdate(BaseModel):
     description: Optional[str] = None
     subject: Optional[str] = None
     body_html: Optional[str] = None
+    apply_wrapper: Optional[bool] = None
     publish_immediately: bool = False
 
 class TemplatePreviewRequest(BaseModel):
     subject: str
     body_html: str
+    apply_wrapper: bool = True
     recipient_name: Optional[str] = "Valued Client"
     recipient_company: Optional[str] = "Acme Corp"
     recipient_email: Optional[str] = "client@example.com"
@@ -108,6 +113,7 @@ class CampaignCreate(BaseModel):
     send_mode: SendMode = SendMode.TEST
     subject: str
     body_html: str
+    apply_wrapper: bool = True
     sender_email: Optional[str] = None
     reply_to: Optional[str] = None
     target_filter: TargetFilter = Field(default_factory=TargetFilter)
@@ -128,6 +134,7 @@ class EmailCampaign(BaseModel):
     subject: str
     body_html: str
     body_text: Optional[str] = ""
+    apply_wrapper: bool = True
     sender_email: str
     reply_to: str
     target_filter: TargetFilter
@@ -204,10 +211,12 @@ class EmailSuppression(BaseModel):
     created_at: datetime = Field(default_factory=get_utc_now)
 
 class TestSendRequest(BaseModel):
+    __test__ = False
     recipient_email: EmailStr
     subject: str
     body_html: str
     template_id: Optional[str] = None
+    apply_wrapper: bool = True
     recipient_name: Optional[str] = "Test User"
     recipient_company: Optional[str] = "Test Company"
 

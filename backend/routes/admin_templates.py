@@ -12,8 +12,9 @@ from backend.models.email import (
     generate_uuid,
     get_utc_now
 )
-from backend.services.email.renderer import render_base_layout, interpolate_variables, html_to_plain_text
+from backend.services.email.renderer import render_final_email, interpolate_variables, html_to_plain_text
 from backend.services.email.templates import (
+    get_independence_day_campaign_html,
     get_independence_day_template,
     get_contact_acknowledgement_template,
     get_newsletter_welcome_template
@@ -31,9 +32,9 @@ async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
         return
 
     now = get_utc_now()
-    # 1. Independence Day
-    subj_id, html_id, _ = get_independence_day_template({"name": "{{name}}", "company": "{{company}}"})
-    # Extract inner content for editing convenience
+    # 1. Independence Day — clean inner HTML without hardcoded outer wrapper
+    html_id = get_independence_day_campaign_html()
+    subj_id = "Happy Independence Day — P Suman & Associates"
     t1 = EmailTemplateStudio(
         template_id="independence_day_2026",
         name="Independence Day 2026 Greetings",
@@ -43,6 +44,7 @@ async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
         published_body_html=html_id,
         draft_subject=subj_id,
         draft_body_html=html_id,
+        apply_wrapper=True,
         has_pending_draft=False,
         version=1,
         created_at=now,
@@ -60,6 +62,7 @@ async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
         published_body_html=html_ack,
         draft_subject=subj_ack,
         draft_body_html=html_ack,
+        apply_wrapper=True,
         has_pending_draft=False,
         version=1,
         created_at=now,
@@ -77,6 +80,7 @@ async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
         published_body_html=html_news,
         draft_subject=subj_news,
         draft_body_html=html_news,
+        apply_wrapper=True,
         has_pending_draft=False,
         version=1,
         created_at=now,
@@ -114,6 +118,7 @@ async def create_template(payload: TemplateCreate, db: AsyncIOMotorDatabase = De
         published_body_html=payload.body_html,
         draft_subject=payload.subject,
         draft_body_html=payload.body_html,
+        apply_wrapper=payload.apply_wrapper,
         has_pending_draft=False,
         version=1,
         variables=payload.variables or ["name", "company", "unsubscribe_url"],
@@ -146,6 +151,10 @@ async def update_template(
     if payload.body_html is not None:
         update_data["draft_body_html"] = payload.body_html
         update_data["has_pending_draft"] = True
+    if payload.apply_wrapper is not None:
+        update_data["apply_wrapper"] = payload.apply_wrapper
+
+    effective_wrapper = payload.apply_wrapper if payload.apply_wrapper is not None else template.get("apply_wrapper", True)
 
     if payload.publish_immediately:
         # Create Version History Snapshot
@@ -158,6 +167,7 @@ async def update_template(
             version_number=new_version,
             subject=subj_to_pub,
             body_html=body_to_pub,
+            apply_wrapper=effective_wrapper,
             created_at=now
         )
         await db.template_version_history.insert_one(history_entry.model_dump())
@@ -183,12 +193,14 @@ async def publish_template(template_id: str, db: AsyncIOMotorDatabase = Depends(
     new_version = template.get("version", 1) + 1
     subj_to_pub = template.get("draft_subject") or template.get("published_subject")
     body_to_pub = template.get("draft_body_html") or template.get("published_body_html")
+    apply_wrapper = template.get("apply_wrapper", True)
 
     history_entry = TemplateVersionHistory(
         template_id=template_id,
         version_number=new_version,
         subject=subj_to_pub,
         body_html=body_to_pub,
+        apply_wrapper=apply_wrapper,
         created_at=now
     )
     await db.template_version_history.insert_one(history_entry.model_dump())
@@ -209,7 +221,7 @@ async def publish_template(template_id: str, db: AsyncIOMotorDatabase = Depends(
 @router.post("/preview", dependencies=[Depends(get_current_admin)])
 async def preview_template(payload: TemplatePreviewRequest):
     """
-    Renders preview with injected sample variables.
+    Renders preview using the canonical render_final_email pipeline.
     """
     vars_map = {
         "name": payload.recipient_name or "Valued Client",
@@ -219,9 +231,12 @@ async def preview_template(payload: TemplatePreviewRequest):
         "year": datetime.now(timezone.utc).year
     }
     rendered_subj = interpolate_variables(payload.subject, vars_map)
-    rendered_body = interpolate_variables(payload.body_html, vars_map)
-    full_html = render_base_layout(rendered_body, unsubscribe_url=vars_map["unsubscribe_url"])
-    plain_text = html_to_plain_text(full_html)
+    full_html, plain_text = render_final_email(
+        body_html=payload.body_html,
+        apply_wrapper=payload.apply_wrapper,
+        variables=vars_map,
+        unsubscribe_url=vars_map["unsubscribe_url"]
+    )
 
     return {
         "subject": rendered_subj,

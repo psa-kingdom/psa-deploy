@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Eye, Code, Smartphone, Monitor, Sparkles, AlertCircle } from "lucide-react";
+import { Eye, Code, Smartphone, Monitor, Sparkles, Layout } from "lucide-react";
 
 export default function TemplateEditor({
   backendUrl,
@@ -10,7 +10,9 @@ export default function TemplateEditor({
   subject,
   onSubjectChange,
   bodyHtml,
-  onBodyHtmlChange
+  onBodyHtmlChange,
+  applyWrapper = true,
+  onApplyWrapperChange
 }) {
   const [viewMode, setViewMode] = useState("preview"); // "editor" | "preview" | "split"
   const [previewDevice, setPreviewDevice] = useState("desktop"); // "desktop" | "mobile"
@@ -18,11 +20,11 @@ export default function TemplateEditor({
   const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
-    fetchLivePreview(subject, bodyHtml);
+    fetchLivePreview(subject, bodyHtml, applyWrapper);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject, bodyHtml]);
+  }, [subject, bodyHtml, applyWrapper]);
 
-  const fetchLivePreview = async (subj, html) => {
+  const fetchLivePreview = async (subj, html, wrapper) => {
     if (!html) {
       setPreviewHtml("");
       return;
@@ -34,6 +36,7 @@ export default function TemplateEditor({
         {
           subject: subj || "Subject Preview",
           body_html: html,
+          apply_wrapper: wrapper !== false,
           recipient_name: "CA Rajesh Sharma",
           recipient_company: "Bharat Financial Corp",
           recipient_email: "rajesh@example.com"
@@ -61,7 +64,7 @@ export default function TemplateEditor({
         <div>
           <h3 className="text-lg font-serif font-bold text-navy mb-1">2. Compose Email Content</h3>
           <p className="text-sm text-slate-500">
-            Select a pre-designed corporate template or customize subject and HTML body.
+            Select a pre-designed corporate template or customize subject, wrapper, and HTML body.
           </p>
         </div>
 
@@ -101,6 +104,36 @@ export default function TemplateEditor({
         </div>
       </div>
 
+      {/* Explicit Wrapper Setting Toggle */}
+      <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-3.5 transition-all">
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="apply_wrapper_toggle"
+            checked={applyWrapper !== false}
+            onChange={(e) => onApplyWrapperChange && onApplyWrapperChange(e.target.checked)}
+            className="mt-0.5 rounded border-slate-300 text-navy focus:ring-navy h-4 w-4 cursor-pointer"
+          />
+          <div>
+            <label htmlFor="apply_wrapper_toggle" className="text-xs font-bold text-slate-800 cursor-pointer flex items-center gap-1.5">
+              <Layout className="w-3.5 h-3.5 text-amber-600" /> Apply PSA Corporate Wrapper
+            </label>
+            <span className="text-[11px] text-slate-500 block mt-0.5">
+              {applyWrapper !== false
+                ? "Checked: Formal navy header banner and CA advisory footer will be wrapped around this content."
+                : "Unchecked: Your exact authored HTML will be delivered as-is without outer corporate branding."}
+            </span>
+          </div>
+        </div>
+        <span
+          className={`text-[10px] font-mono px-2.5 py-1 rounded font-semibold uppercase tracking-wider ${
+            applyWrapper !== false ? "bg-amber-100 text-amber-900 border border-amber-200" : "bg-slate-200 text-slate-700 border border-slate-300"
+          }`}
+        >
+          {applyWrapper !== false ? "Wrapper ON" : "Wrapper OFF"}
+        </span>
+      </div>
+
       {/* Personalization Tag Inserter */}
       <div className="flex items-center gap-2 flex-wrap text-xs">
         <span className="text-slate-400 font-medium flex items-center gap-1">
@@ -126,7 +159,9 @@ export default function TemplateEditor({
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
               <Code className="w-3.5 h-3.5 text-slate-400" /> HTML Content Body
             </span>
-            <span className="text-[11px] text-slate-400">Base PSA corporate wrapper applied automatically</span>
+            <span className="text-[11px] text-slate-400">
+              {applyWrapper !== false ? "Corporate wrapper applied around body" : "Exact authored HTML sent as-is"}
+            </span>
           </div>
           <textarea
             rows={18}
