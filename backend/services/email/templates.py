@@ -3,8 +3,7 @@ from backend.services.email.renderer import render_base_layout, interpolate_vari
 
 def get_independence_day_campaign_html() -> str:
     """
-    Returns the clean inner campaign HTML content for Independence Day 2026 Greetings.
-    Does not bake in the outer corporate wrapper, allowing dynamic apply_wrapper control.
+    Returns clean template HTML content for Independence Day Greetings.
     """
     return """
     <div style="text-align: center; margin-bottom: 24px;">

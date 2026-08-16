@@ -12,7 +12,6 @@ export default function TemplateEditor({
   bodyHtml,
   onBodyHtmlChange,
 }) {
-  const [viewMode, setViewMode] = useState("preview"); // "editor" | "preview" | "split"
   const [previewDevice, setPreviewDevice] = useState("desktop"); // "desktop" | "mobile"
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -125,7 +124,7 @@ export default function TemplateEditor({
               <Code className="w-3.5 h-3.5 text-slate-400" /> HTML Content Body
             </span>
             <span className="text-[11px] text-slate-400">
-              {applyWrapper !== false ? "Corporate wrapper applied around body" : "Exact authored HTML sent as-is"}
+              Exact authored HTML sent as-is
             </span>
           </div>
           <textarea
