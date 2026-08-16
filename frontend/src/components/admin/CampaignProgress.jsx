@@ -1,7 +1,7 @@
 import React from "react";
 import { CheckCircle2, AlertOctagon, RefreshCw, Send, XCircle } from "lucide-react";
 
-export default function CampaignProgress({ campaign, onCancel, cancelling }) {
+export default function CampaignProgress({ campaign, onCancel, cancelling, onDismiss }) {
   if (!campaign) return null;
 
   const total = campaign.frozen_recipient_count || 1;
@@ -35,17 +35,29 @@ export default function CampaignProgress({ campaign, onCancel, cancelling }) {
           </p>
         </div>
 
-        {isSending && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={cancelling}
-            className="px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 transition-colors"
-          >
-            <XCircle className="w-4 h-4" />
-            {cancelling ? "Stopping..." : "Stop Remaining Outbox"}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isSending && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={cancelling}
+              className="px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 transition-colors"
+            >
+              <XCircle className="w-4 h-4" />
+              {cancelling ? "Stopping..." : "Stop Remaining Outbox"}
+            </button>
+          )}
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              title="Dismiss banner"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress Bar */}

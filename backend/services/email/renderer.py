@@ -130,14 +130,9 @@ def html_to_plain_text(html_content: str) -> str:
     clean = re.sub(r"\n{3,}", "\n\n", clean)
     return clean.strip()
 
-# Marker used to detect whether HTML already has the PSA corporate layout
-PSA_WRAPPER_HEADER_MARKER = "Chartered Accountants · Audit · Advisory"
-
 def render_final_email(
     body_html: str,
-    apply_wrapper: bool = True,
     variables: Optional[Dict[str, Any]] = None,
-    preheader: str = "",
     unsubscribe_url: Optional[str] = None
 ) -> Tuple[str, str]:
     """
@@ -146,39 +141,18 @@ def render_final_email(
     2. Test Send
     3. Production Dispatch (Outbox Job creation)
 
-    Parameters:
-    - body_html: The authored email HTML
-    - apply_wrapper: True to apply PSA corporate header/footer wrapper, False to send raw authored HTML
-    - variables: Placeholder substitution mapping (e.g. name, company, unsubscribe_url)
-    - preheader: Optional preheader hidden text (used when apply_wrapper is True)
-    - unsubscribe_url: Optional unsubscribe URL for the footer / variables
-
-    Returns:
-    - (final_html, plain_text)
+    Pipeline:
+        Administrator Authored HTML -> Variable Interpolation -> Final Delivered HTML
+        
+    No hidden wrappers or automatic transformations.
     """
-    # 1. Variable Interpolation
     vars_map = variables or {}
     if unsubscribe_url and "unsubscribe_url" not in vars_map:
         vars_map["unsubscribe_url"] = unsubscribe_url
-    
-    interpolated_body = interpolate_variables(body_html or "", vars_map)
 
-    # 2. Optional Wrapper Composition with Double-Wrapper Guard
-    if apply_wrapper:
-        # If the authored content already contains the outer PSA corporate wrapper, do not double-wrap
-        if PSA_WRAPPER_HEADER_MARKER in interpolated_body:
-            final_html = interpolated_body
-        else:
-            final_html = render_base_layout(
-                interpolated_body,
-                preheader=preheader,
-                unsubscribe_url=vars_map.get("unsubscribe_url") or unsubscribe_url
-            )
-    else:
-        final_html = interpolated_body
-
-    # 3. Plain Text Extraction
+    final_html = interpolate_variables(body_html or "", vars_map)
     plain_text = html_to_plain_text(final_html)
 
     return final_html, plain_text
+
 

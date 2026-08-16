@@ -51,11 +51,12 @@ export default function AdminLayout({ children, environment = "development" }) {
   };
 
   const envConfig = {
-    development: { label: "TEST MODE", bg: "#1a2e1a", border: "#22c55e", text: "#86efac" },
-    staging: { label: "STAGING", bg: "#2a1a00", border: "#f59e0b", text: "#fcd34d" },
-    production: { label: "PRODUCTION", bg: "#1a0a0a", border: "#ef4444", text: "#fca5a5" },
+    development: { label: "TEST MODE", bg: "rgba(34, 197, 94, 0.12)", border: "#22c55e", text: "#86efac" },
+    test: { label: "TEST MODE", bg: "rgba(34, 197, 94, 0.12)", border: "#22c55e", text: "#86efac" },
+    staging: { label: "STAGING", bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fcd34d" },
+    production: { label: "PRODUCTION", bg: "rgba(234, 179, 8, 0.15)", border: "#eab308", text: "#fde047" },
   };
-  const envStyle = envConfig[environment] || envConfig.development;
+  const envStyle = envConfig[environment] || envConfig.test;
 
   return (
     <div style={{

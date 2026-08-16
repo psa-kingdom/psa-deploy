@@ -405,7 +405,6 @@ async def confirm_and_dispatch_campaign(
         rendered_subject = interpolate_variables(campaign["subject"], vars_map)
         full_html, plain_text = render_final_email(
             body_html=campaign["body_html"],
-            apply_wrapper=campaign.get("apply_wrapper", True),
             variables=vars_map,
             unsubscribe_url=unsub_url
         )
@@ -522,7 +521,6 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
     rendered_subject = interpolate_variables(payload.subject, vars_map)
     full_html, plain_text = render_final_email(
         body_html=payload.body_html,
-        apply_wrapper=payload.apply_wrapper,
         variables=vars_map,
         unsubscribe_url=vars_map["unsubscribe_url"]
     )

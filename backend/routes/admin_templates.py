@@ -233,7 +233,6 @@ async def preview_template(payload: TemplatePreviewRequest):
     rendered_subj = interpolate_variables(payload.subject, vars_map)
     full_html, plain_text = render_final_email(
         body_html=payload.body_html,
-        apply_wrapper=payload.apply_wrapper,
         variables=vars_map,
         unsubscribe_url=vars_map["unsubscribe_url"]
     )

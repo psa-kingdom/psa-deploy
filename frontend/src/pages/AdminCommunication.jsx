@@ -57,14 +57,13 @@ export default function AdminCommunication() {
 
   // Campaign Composer State
   const [sendMode, setSendMode] = useState("test"); // "test" | "production"
-  const [campaignTitle, setCampaignTitle] = useState("Independence Day 2026 Greetings");
+  const [campaignTitle, setCampaignTitle] = useState("");
   const [selectedSource, setSelectedSource] = useState("newsletter_subscriptions");
   const [manualEmails, setManualEmails] = useState([]);
   const [excludedEmails, setExcludedEmails] = useState([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("independence_day_2026");
-  const [subject, setSubject] = useState("Happy Independence Day — P Suman & Associates");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
-  const [applyWrapper, setApplyWrapper] = useState(true);
   const [templates, setTemplates] = useState([]);
   const [audienceEstimate, setAudienceEstimate] = useState(null);
 
@@ -96,34 +95,22 @@ export default function AdminCommunication() {
     try {
       const res = await api.get("/api/admin/communication/templates");
       setTemplates(res.data);
-      const found = res.data.find((t) => t.template_id === "independence_day_2026");
-      if (found && !bodyHtml) {
-        setSubject(found.published_subject || found.draft_subject || subject);
-        setBodyHtml(found.published_body_html || found.draft_body_html || "");
-        if (found.apply_wrapper !== undefined) {
-          setApplyWrapper(found.apply_wrapper);
-        }
-      }
     } catch (err) {
       console.error("Failed to fetch templates:", err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCampaigns = useCallback(async () => {
     try {
       const res = await api.get("/api/admin/communication/campaigns");
       setCampaignsList(res.data);
-      const sending = res.data.find(
-        (c) => c.status === "sending" || c.status === "reviewing"
-      );
-      if (sending && !activeCampaign) {
+      const sending = res.data.find((c) => c.status === "sending");
+      if (sending) {
         setActiveCampaign(sending);
       }
     } catch (err) {
       console.error("Failed to fetch campaigns:", err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -215,11 +202,8 @@ export default function AdminCommunication() {
     if (!templateId) return;
     const found = templates.find((t) => t.template_id === templateId);
     if (found) {
-      setSubject(found.published_subject || found.draft_subject);
-      setBodyHtml(found.published_body_html || found.draft_body_html);
-      if (found.apply_wrapper !== undefined) {
-        setApplyWrapper(found.apply_wrapper);
-      }
+      setSubject(found.published_subject || found.draft_subject || "");
+      setBodyHtml(found.published_body_html || found.draft_body_html || "");
     }
   };
 
@@ -256,7 +240,6 @@ export default function AdminCommunication() {
         send_mode: sendMode,
         subject: subject,
         body_html: bodyHtml,
-        apply_wrapper: applyWrapper,
         target_filter: buildTargetFilter(),
       });
       setPendingCampaign(res.data);
@@ -332,7 +315,6 @@ export default function AdminCommunication() {
         recipient_email: testRecipient,
         subject: subject,
         body_html: bodyHtml,
-        apply_wrapper: applyWrapper,
       });
       showToast(res.data.message || `Test email dispatched to ${res.data.recipient}!`, "success");
     } catch (err) {
@@ -431,7 +413,7 @@ export default function AdminCommunication() {
   };
 
   return (
-    <AdminLayout environment={environment}>
+    <AdminLayout environment={sendMode === "production" ? "production" : "test"}>
       {/* Toast */}
       {toastMsg && (
         <div
@@ -659,6 +641,7 @@ export default function AdminCommunication() {
             <CampaignProgress
               campaign={activeCampaign}
               onCancel={() => handleCancelCampaign(activeCampaign.campaign_id)}
+              onDismiss={() => setActiveCampaign(null)}
             />
           )}
 
@@ -860,8 +843,6 @@ export default function AdminCommunication() {
                 onSubjectChange={setSubject}
                 bodyHtml={bodyHtml}
                 onBodyHtmlChange={setBodyHtml}
-                applyWrapper={applyWrapper}
-                onApplyWrapperChange={setApplyWrapper}
               />
             </div>
 
@@ -947,78 +928,17 @@ export default function AdminCommunication() {
               </div>
             )}
           </div>
-
-          {/* Campaign History */}
-          {campaignsList.length > 0 && (
-            <div style={styles.card}>
-              <div
-                style={{
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  color: "#d1d5db",
-                  marginBottom: "16px",
-                }}
-              >
-                Campaign History
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {campaignsList.slice(0, 10).map((c) => (
-                  <div
-                    key={c.campaign_id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 14px",
-                      background: "#131320",
-                      borderRadius: "8px",
-                      border: "1px solid #1f1f2e",
-                      fontSize: "12px",
-                    }}
-                  >
-                    <div style={{ color: "#d1d5db", fontWeight: "500" }}>{c.title}</div>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                      <span style={{ color: "#6b7280" }}>
-                        {c.frozen_recipient_count} recipients
-                      </span>
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          fontSize: "10px",
-                          fontWeight: "700",
-                          textTransform: "uppercase",
-                          background:
-                            c.status === "completed"
-                              ? "rgba(22,163,74,0.15)"
-                              : c.status === "sending"
-                              ? "rgba(99,102,241,0.15)"
-                              : c.status === "cancelled"
-                              ? "rgba(239,68,68,0.1)"
-                              : "rgba(107,114,128,0.15)",
-                          color:
-                            c.status === "completed"
-                              ? "#86efac"
-                              : c.status === "sending"
-                              ? "#a5b4fc"
-                              : c.status === "cancelled"
-                              ? "#fca5a5"
-                              : "#9ca3af",
-                        }}
-                      >
-                        {c.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       {/* TAB: AUDIT LOGS */}
-      {activeTab === "logs" && <DeliveryLogsTable backendUrl={BACKEND_URL} />}
+      {activeTab === "logs" && (
+        <DeliveryLogsTable
+          backendUrl={BACKEND_URL}
+          campaigns={campaignsList}
+          onRefreshCampaigns={fetchCampaigns}
+        />
+      )}
 
       {/* Review & Confirmation Modal */}
       <CampaignReviewModal
