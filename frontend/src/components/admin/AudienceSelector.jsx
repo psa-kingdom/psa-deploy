@@ -255,61 +255,74 @@ export default function AudienceSelector({
                   border: isSelected ? "1px solid #6366f1" : "1px solid #252535",
                   background: isSelected ? "rgba(99,102,241,0.12)" : "#131320",
                   transition: "all 0.15s ease",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "12px",
                 }}
               >
-                {src.badge && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "10px",
-                      right: "10px",
-                      fontSize: "9px",
-                      fontWeight: "700",
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      background: isSelected ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.06)",
-                      color: isSelected ? "#a5b4fc" : "#9ca3af",
-                    }}
-                  >
-                    {src.badge}
-                  </span>
-                )}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                <div
+                  style={{
+                    padding: "6px",
+                    borderRadius: "6px",
+                    background: isSelected ? "#6366f1" : "#1f1f2e",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginTop: "2px",
+                  }}
+                >
+                  <Icon size={16} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      padding: "6px",
-                      borderRadius: "6px",
-                      background: isSelected ? "#6366f1" : "#1f1f2e",
-                      color: "#fff",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                      marginBottom: "4px",
                     }}
                   >
-                    <Icon size={16} />
-                  </div>
-                  <div>
-                    <div
+                    <span
                       style={{
                         fontSize: "13px",
                         fontWeight: "600",
                         color: isSelected ? "#f9fafb" : "#d1d5db",
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
                       }}
                     >
                       {src.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: isSelected ? "#a5b4fc" : "#6b7280",
-                        marginTop: "2px",
-                        lineHeight: "1.4",
-                      }}
-                    >
-                      {src.desc}
-                    </div>
+                    </span>
+                    {src.badge && (
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: "700",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: isSelected ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.06)",
+                          color: isSelected ? "#a5b4fc" : "#9ca3af",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {src.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      color: isSelected ? "#a5b4fc" : "#6b7280",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    {src.desc}
                   </div>
                 </div>
               </div>

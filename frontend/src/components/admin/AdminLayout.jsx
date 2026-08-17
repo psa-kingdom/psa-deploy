@@ -51,53 +51,81 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div style={{
-      display: "flex",
-      minHeight: "100vh",
-      background: "#0a0a0f",
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      color: "#e5e7eb",
-    }}>
-      {/* Sidebar */}
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        background: "#0a0a0f",
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        color: "#e5e7eb",
+        position: "relative",
+      }}
+    >
+      {/* Mobile Backdrop Overlay */}
+      {expanded && (
+        <div
+          onClick={() => setExpanded(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(2px)",
+            zIndex: 35,
+          }}
+          className="md:hidden"
+        />
+      )}
+
+      {/* Fixed Viewport Sidebar */}
       <aside
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         style={{
-          width: expanded ? "200px" : "58px",
-          minHeight: "100vh",
+          width: expanded ? "210px" : "58px",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
           background: "#0d0d14",
           borderRight: "1px solid #1f1f2e",
           display: "flex",
           flexDirection: "column",
-          transition: "width 0.2s ease",
+          transition: "width 0.2s ease, transform 0.2s ease",
           overflow: "hidden",
           flexShrink: 0,
-          zIndex: 10,
+          zIndex: 40,
+          alignSelf: "flex-start",
         }}
       >
-        {/* Logo area */}
-        <div style={{
-          height: "58px",
-          display: "flex",
-          alignItems: "center",
-          paddingLeft: "16px",
-          borderBottom: "1px solid #1f1f2e",
-          gap: "10px",
-          flexShrink: 0,
-        }}>
-          <div style={{
-            width: "26px",
-            height: "26px",
-            borderRadius: "6px",
-            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+        {/* Logo & Mobile Toggle Area */}
+        <div
+          onClick={() => setExpanded((prev) => !prev)}
+          style={{
+            height: "58px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: "11px",
-            fontWeight: "700",
-            color: "#fff",
+            paddingLeft: "16px",
+            borderBottom: "1px solid #1f1f2e",
+            gap: "10px",
             flexShrink: 0,
-          }}>
+            cursor: "pointer",
+          }}
+          title={expanded ? "Collapse panel" : "Expand panel"}
+        >
+          <div
+            style={{
+              width: "26px",
+              height: "26px",
+              borderRadius: "6px",
+              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#fff",
+              flexShrink: 0,
+            }}
+          >
             P
           </div>
           {expanded && (
@@ -107,8 +135,8 @@ export default function AdminLayout({ children }) {
           )}
         </div>
 
-        {/* Navigation */}
-        <nav style={{ flex: 1, padding: "12px 0" }}>
+        {/* Navigation items */}
+        <nav style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
@@ -116,6 +144,9 @@ export default function AdminLayout({ children }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => {
+                  if (window.innerWidth < 768) setExpanded(false);
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -140,8 +171,8 @@ export default function AdminLayout({ children }) {
           })}
         </nav>
 
-        {/* Logout */}
-        <div style={{ padding: "12px 0", borderTop: "1px solid #1f1f2e" }}>
+        {/* Fixed Logout Button at bottom of Sidebar */}
+        <div style={{ padding: "12px 0", borderTop: "1px solid #1f1f2e", marginTop: "auto", flexShrink: 0 }}>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
@@ -158,8 +189,9 @@ export default function AdminLayout({ children }) {
               whiteSpace: "nowrap",
               transition: "color 0.15s",
             }}
-            onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
-            onMouseLeave={e => e.currentTarget.style.color = "#6b7280"}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#6b7280")}
+            title="Logout"
           >
             <LogOut size={16} style={{ flexShrink: 0 }} />
             {expanded && <span style={{ fontSize: "13px" }}>{loggingOut ? "Logging out…" : "Logout"}</span>}
@@ -167,32 +199,37 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main area */}
+      {/* Main content viewport */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Top bar */}
-        <header style={{
-          height: "58px",
-          borderBottom: "1px solid #1f1f2e",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 24px",
-          flexShrink: 0,
-          background: "#0a0a0f",
-        }}>
+        <header
+          style={{
+            height: "58px",
+            borderBottom: "1px solid #1f1f2e",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 24px",
+            flexShrink: 0,
+            background: "#0a0a0f",
+            position: "sticky",
+            top: 0,
+            zIndex: 30,
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "12px", color: "#4b5563" }}>PSA Admin Portal</span>
             <ChevronRight size={12} style={{ color: "#374151" }} />
             <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "500" }}>
-              {NAV_ITEMS.find(i => location.pathname.startsWith(i.path) && !i.exact)?.label ||
-               NAV_ITEMS.find(i => i.exact && location.pathname === i.path)?.label ||
-               "Admin"}
+              {NAV_ITEMS.find((i) => location.pathname.startsWith(i.path) && !i.exact)?.label ||
+                NAV_ITEMS.find((i) => i.exact && location.pathname === i.path)?.label ||
+                "Admin"}
             </span>
           </div>
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflow: "auto", padding: "24px" }}>
+        <main style={{ flex: 1, padding: "24px" }}>
           {children}
         </main>
       </div>

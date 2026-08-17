@@ -531,7 +531,7 @@ export default function AdminCommunication() {
       {activeTab === "campaigns" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "100%" }}>
           {/* TEST MODE panel — single server-controlled test recipient with tag chip UX */}
-          {isTestMode && (
+          {sendMode === "test" && (
             <div style={styles.testModeCard}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -860,7 +860,7 @@ export default function AdminCommunication() {
                 type="text"
                 value={campaignTitle}
                 onChange={(e) => setCampaignTitle(e.target.value)}
-                placeholder="e.g. Independence Day 2026 Greetings"
+                placeholder="e.g. Q3 Advisory & Regulatory Update"
                 style={styles.input}
               />
             </div>
@@ -957,7 +957,7 @@ export default function AdminCommunication() {
               )}
             </div>
 
-            {isTestMode && (
+            {environment !== "production" && (
               <div
                 style={{
                   fontSize: "11px",
