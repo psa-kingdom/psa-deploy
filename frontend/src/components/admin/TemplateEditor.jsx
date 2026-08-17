@@ -128,11 +128,11 @@ export default function TemplateEditor({
             </span>
           </div>
           <textarea
-            rows={18}
+            rows={24}
             value={bodyHtml}
             onChange={(e) => onBodyHtmlChange(e.target.value)}
             placeholder="<h2>Enter HTML message content here...</h2>"
-            className="w-full font-mono text-xs p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 leading-relaxed"
+            className="w-full font-mono text-xs p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 leading-relaxed min-h-[580px] resize-y"
           />
         </div>
 
@@ -161,8 +161,8 @@ export default function TemplateEditor({
           </div>
 
           <div
-            className={`border border-slate-200 rounded-lg bg-slate-100 overflow-hidden flex justify-center p-3 h-[410px] ${
-              previewDevice === "mobile" ? "max-w-[380px] mx-auto" : "w-full"
+            className={`border border-slate-200 rounded-lg bg-slate-100 overflow-hidden flex justify-center p-3 h-[580px] transition-all ${
+              previewDevice === "mobile" ? "max-w-[380px] mx-auto shadow-inner" : "w-full"
             }`}
           >
             {previewLoading ? (

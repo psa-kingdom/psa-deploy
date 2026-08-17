@@ -412,7 +412,7 @@ export default function AdminCommunication() {
   };
 
   return (
-    <AdminLayout environment={sendMode === "production" ? "production" : "test"}>
+    <AdminLayout>
       {/* Toast */}
       {toastMsg && (
         <div
@@ -455,14 +455,62 @@ export default function AdminCommunication() {
         </div>
       )}
 
-      {/* Page header */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#f9fafb", marginBottom: "4px" }}>
-          Communication Center
-        </h1>
-        <p style={{ fontSize: "13px", color: "#6b7280" }}>
-          Compose, test, review, and dispatch verified email campaigns to your audience.
-        </p>
+      {/* Page header with Reactive Send Mode Badge */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          marginBottom: "24px",
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#f9fafb", marginBottom: "4px" }}>
+            Communication Center
+          </h1>
+          <p style={{ fontSize: "13px", color: "#9ca3af" }}>
+            Compose, test, review, and dispatch verified email campaigns to your audience.
+          </p>
+        </div>
+
+        {/* Reactive Campaign Send Mode Indicator Badge */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: sendMode === "production" ? "rgba(234, 179, 8, 0.15)" : "rgba(34, 197, 94, 0.12)",
+            border: `1px solid ${sendMode === "production" ? "#eab308" : "#22c55e"}`,
+            borderRadius: "8px",
+            padding: "6px 14px",
+            boxShadow: sendMode === "production" ? "0 0 16px rgba(234, 179, 8, 0.1)" : "0 0 16px rgba(34, 197, 94, 0.1)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <div
+            style={{
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: sendMode === "production" ? "#eab308" : "#22c55e",
+              boxShadow: `0 0 8px ${sendMode === "production" ? "#eab308" : "#22c55e"}`,
+              animation: sendMode === "production" ? "pulse 2s infinite" : "none",
+            }}
+          />
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              letterSpacing: "0.08em",
+              color: sendMode === "production" ? "#fde047" : "#86efac",
+              textTransform: "uppercase",
+            }}
+          >
+            {sendMode === "production" ? "PRODUCTION" : "TEST MODE"}
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -481,7 +529,7 @@ export default function AdminCommunication() {
 
       {/* TAB: CAMPAIGNS */}
       {activeTab === "campaigns" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "880px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "100%" }}>
           {/* TEST MODE panel — single server-controlled test recipient with tag chip UX */}
           {isTestMode && (
             <div style={styles.testModeCard}>

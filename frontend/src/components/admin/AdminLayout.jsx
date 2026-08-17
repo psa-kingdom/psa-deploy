@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function AdminLayout({ children, environment = "development" }) {
+export default function AdminLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
@@ -49,14 +49,6 @@ export default function AdminLayout({ children, environment = "development" }) {
     }
     navigate("/admin/login", { replace: true });
   };
-
-  const envConfig = {
-    development: { label: "TEST MODE", bg: "rgba(34, 197, 94, 0.12)", border: "#22c55e", text: "#86efac" },
-    test: { label: "TEST MODE", bg: "rgba(34, 197, 94, 0.12)", border: "#22c55e", text: "#86efac" },
-    staging: { label: "STAGING", bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fcd34d" },
-    production: { label: "PRODUCTION", bg: "rgba(234, 179, 8, 0.15)", border: "#eab308", text: "#fde047" },
-  };
-  const envStyle = envConfig[environment] || envConfig.test;
 
   return (
     <div style={{
@@ -188,32 +180,10 @@ export default function AdminLayout({ children, environment = "development" }) {
           flexShrink: 0,
           background: "#0a0a0f",
         }}>
-          {/* Environment badge */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            background: envStyle.bg,
-            border: `1px solid ${envStyle.border}`,
-            borderRadius: "6px",
-            padding: "4px 10px",
-          }}>
-            <div style={{
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              background: envStyle.border,
-              animation: environment !== "production" ? "none" : "pulse 2s infinite",
-            }} />
-            <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", color: envStyle.text }}>
-              {envStyle.label}
-            </span>
-          </div>
-
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "12px", color: "#4b5563" }}>PSA Admin Portal</span>
             <ChevronRight size={12} style={{ color: "#374151" }} />
-            <span style={{ fontSize: "12px", color: "#6b7280" }}>
+            <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "500" }}>
               {NAV_ITEMS.find(i => location.pathname.startsWith(i.path) && !i.exact)?.label ||
                NAV_ITEMS.find(i => i.exact && location.pathname === i.path)?.label ||
                "Admin"}
