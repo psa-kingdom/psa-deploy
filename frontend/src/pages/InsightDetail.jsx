@@ -13,6 +13,9 @@ export default function InsightDetail() {
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [activeId, setActiveId] = useState("");
+  const isClickScrolling = React.useRef(false);
+  const scrollTimeoutRef = React.useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +33,9 @@ export default function InsightDetail() {
               toc: res.data.toc || [],
             };
             setArticle(live);
+            if (live.toc && live.toc.length > 0) {
+              setActiveId(live.toc[0].id);
+            }
           } else {
             setNotFound(true);
           }
@@ -60,6 +66,7 @@ export default function InsightDetail() {
     };
   }, [slug]);
 
+  // Reading progress
   useEffect(() => {
     const onScroll = () => {
       const h = document.documentElement;
@@ -74,6 +81,68 @@ export default function InsightDetail() {
       cancelAnimationFrame(id);
     };
   }, [slug]);
+
+  // TOC Scrollspy via native IntersectionObserver + scroll position
+  useEffect(() => {
+    if (!article || !article.toc || article.toc.length === 0) return;
+
+    const headingIds = article.toc.map((t) => t.id).filter(Boolean);
+    const headingElements = headingIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+
+    if (headingElements.length === 0) return;
+
+    // IntersectionObserver with header offset margin (-100px top, -60% bottom)
+    const observerCallback = (entries) => {
+      if (isClickScrolling.current) return;
+
+      const intersecting = entries.filter((e) => e.isIntersecting);
+      if (intersecting.length > 0) {
+        // Pick the intersecting element closest to top of viewport
+        const topElement = intersecting.reduce((prev, curr) =>
+          curr.boundingClientRect.top < prev.boundingClientRect.top ? curr : prev
+        );
+        if (topElement?.target?.id) {
+          setActiveId(topElement.target.id);
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, {
+      rootMargin: "-100px 0px -60% 0px",
+      threshold: [0, 0.5, 1.0],
+    });
+
+    headingElements.forEach((el) => observer.observe(el));
+
+    // Fallback scroll position check
+    const handleScrollCheck = () => {
+      if (isClickScrolling.current) return;
+      const scrollPos = window.scrollY + 120; // past 80px fixed header + margin
+
+      let currentId = headingIds[0];
+      for (let i = 0; i < headingElements.length; i++) {
+        const el = headingElements[i];
+        if (el.offsetTop <= scrollPos) {
+          currentId = el.id;
+        } else {
+          break;
+        }
+      }
+      if (currentId) {
+        setActiveId(currentId);
+      }
+    };
+
+    window.addEventListener("scroll", handleScrollCheck, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScrollCheck);
+      clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [article]);
 
   if (loading) {
     return (
@@ -109,6 +178,37 @@ export default function InsightDetail() {
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       // clipboard unavailable
+    }
+  };
+
+  const handleTocClick = (e, targetId) => {
+    e.preventDefault();
+    const el = document.getElementById(targetId);
+    if (el) {
+      setActiveId(targetId);
+      isClickScrolling.current = true;
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isClickScrolling.current = false;
+      }, 800);
+
+      const headerOffset = 100;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      const prefersReducedMotion =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+
+      if (typeof window !== "undefined" && window.history && window.history.pushState) {
+        window.history.pushState(null, "", `#${targetId}`);
+      }
     }
   };
 
@@ -181,17 +281,35 @@ export default function InsightDetail() {
               <div className="sticky top-32">
                 <p className="eyebrow mb-5">In this article</p>
                 <ul className="space-y-3 border-l border-borderline pl-5">
-                  {tocList.map((t) => (
-                    <li key={t.id} className={t.level === 3 ? "pl-3" : ""}>
-                      <a
-                        href={`#${t.id}`}
-                        data-testid={`toc-${t.id}`}
-                        className={`font-body text-sm ${t.level === 3 ? "text-ink/50 text-[13px]" : "text-ink/65"} hover:text-gold transition-colors duration-300 leading-snug block`}
-                      >
-                        {t.label}
-                      </a>
-                    </li>
-                  ))}
+                  {tocList.map((t) => {
+                    const isActive = activeId === t.id;
+                    const isLevel3 = t.level === 3;
+
+                    return (
+                      <li key={t.id} className={`relative transition-all duration-200 ${isLevel3 ? "pl-3" : ""}`}>
+                        {isActive && (
+                          <span
+                            className="absolute -left-5 top-0 bottom-0 w-[2px] bg-gold rounded-full transition-all duration-200"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <a
+                          href={`#${t.id}`}
+                          data-testid={`toc-${t.id}`}
+                          onClick={(e) => handleTocClick(e, t.id)}
+                          className={`font-body text-sm leading-snug block transition-all duration-200 ${
+                            isActive
+                              ? "text-gold font-medium"
+                              : isLevel3
+                              ? "text-ink/50 text-[13px] hover:text-gold"
+                              : "text-ink/65 hover:text-gold"
+                          }`}
+                        >
+                          {t.label}
+                        </a>
+                      </li>
+                    );
+                  })}
 
                 </ul>
               </div>
