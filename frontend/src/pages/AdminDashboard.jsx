@@ -4,8 +4,8 @@
  * Premium overview for the PSA admin portal.
  * - KPI cards backed by real data from /api/admin/communication/logs/stats
  * - Recent campaigns from /api/admin/communication/campaigns
- * - Recent enquiries from /api/contact
- * - Quick actions (Communication Center)
+ * - Recent enquiries from /api/admin/inquiries (authenticated, Phase 03)
+ * - Quick actions
  *
  * Rules: Only real data. No fabricated analytics. No placeholder modules.
  */
@@ -336,14 +336,15 @@ export default function AdminDashboard() {
     if (isRefresh) setRefreshing(true);
 
     try {
-      const [statsRes, campaignsRes, enquiriesRes] = await Promise.allSettled([
+      const [statsRes, campaignsRes, enquiriesRes, inqStatsRes] = await Promise.allSettled([
         axios.get(`${BACKEND_URL}/api/admin/communication/logs/stats`, { withCredentials: true }),
         axios.get(`${BACKEND_URL}/api/admin/communication/campaigns`, { withCredentials: true }),
-        axios.get(`${BACKEND_URL}/api/contact`, { withCredentials: true }),
+        axios.get(`${BACKEND_URL}/api/admin/inquiries?limit=5`, { withCredentials: true }),
+        axios.get(`${BACKEND_URL}/api/admin/inquiries/stats`, { withCredentials: true }),
       ]);
 
       if (statsRes.status === "fulfilled") {
-        setStats(statsRes.value.data);
+        setStats({ ...statsRes.value.data, inqTotal: inqStatsRes.status === "fulfilled" ? inqStatsRes.value.data.total : null });
       }
       if (campaignsRes.status === "fulfilled") {
         const all = campaignsRes.value.data || [];
@@ -377,6 +378,13 @@ export default function AdminDashboard() {
       sublabel: "All time",
     },
     {
+      label: "Total Enquiries",
+      value: stats?.inqTotal ?? null,
+      icon: Inbox,
+      accent: "#a78bfa",
+      sublabel: "Website enquiries",
+    },
+    {
       label: "Emails Sent",
       value: stats?.sent_count ?? null,
       icon: CheckCircle2,
@@ -389,15 +397,6 @@ export default function AdminDashboard() {
       icon: XCircle,
       accent: "#ef4444",
       sublabel: "All time failures",
-    },
-    {
-      label: "Suppressed / Skipped",
-      value: stats?.suppressed_count != null && stats?.skipped_count != null
-        ? stats.suppressed_count + stats.skipped_count
-        : null,
-      icon: Ban,
-      accent: "#f59e0b",
-      sublabel: "Suppressions + blocked",
     },
   ];
 
@@ -548,7 +547,7 @@ export default function AdminDashboard() {
         </Panel>
 
         {/* Recent Enquiries */}
-        <Panel title="Recent Enquiries" icon={MessageSquare}>
+        <Panel title="Recent Enquiries" icon={MessageSquare} action="/admin/inquiries" actionLabel="View all">
           {dataLoading ? (
             <div style={{ padding: "32px 16px", textAlign: "center", color: "#334155", fontSize: "12px" }}>
               Loading…

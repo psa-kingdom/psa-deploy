@@ -85,6 +85,10 @@ class ContactSubmission(BaseModel):
     phone: Optional[str] = None
     service_of_interest: Optional[str] = None
     message: str
+    # Inquiry management fields — backward-compatible (defaults apply to existing docs)
+    source: str = "website_contact"  # website_contact | future: calcom_meeting | newsletter | etc.
+    status: str = "new"              # new | contacted | qualified | converted | closed
+    notes: Optional[str] = None      # Admin-only internal notes
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -96,6 +100,7 @@ class ContactCreate(BaseModel):
     phone: Optional[str] = None
     service_of_interest: Optional[str] = None
     message: str
+    source: str = "website_contact"  # defaults to website contact form
 
 
 # ---------- Existing Public Routes ----------
@@ -154,6 +159,7 @@ try:
         admin_campaigns,
         admin_templates,
         admin_logs,
+        admin_inquiries,
         webhooks,
         unsubscribe
     )
@@ -163,6 +169,7 @@ except ImportError:
         admin_campaigns,
         admin_templates,
         admin_logs,
+        admin_inquiries,
         webhooks,
         unsubscribe
     )
@@ -185,6 +192,7 @@ async def api_admin_logout(request: Request, response: Response):
 api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_templates.router)
 api_router.include_router(admin_logs.router)
+api_router.include_router(admin_inquiries.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(unsubscribe.router)
 
@@ -234,6 +242,10 @@ async def startup_event():
             await db.outbox_jobs.create_index([("status", 1), ("next_attempt_at", 1)])
             await db.email_suppressions.create_index("email", unique=True)
             await db.webhook_events.create_index("event_id", unique=True)
+            # Inquiry management indexes
+            await db.contact_submissions.create_index("status")
+            await db.contact_submissions.create_index("source")
+            await db.contact_submissions.create_index("created_at")
             logger.info("Database indexes initialized successfully.")
         except Exception as exc:
             logger.warning(f"Note on startup index initialization: {exc}")

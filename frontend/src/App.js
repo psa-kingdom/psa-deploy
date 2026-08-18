@@ -15,6 +15,7 @@ import Connect from "@/pages/Connect";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCommunication from "@/pages/AdminCommunication";
+import AdminInquiries from "@/pages/AdminInquiries";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 
 function AppContent() {
@@ -56,6 +57,14 @@ function AppContent() {
           element={
             <AdminAuthGuard>
               <AdminCommunication />
+            </AdminAuthGuard>
+          }
+        />
+        <Route
+          path="/admin/inquiries"
+          element={
+            <AdminAuthGuard>
+              <AdminInquiries />
             </AdminAuthGuard>
           }
         />
