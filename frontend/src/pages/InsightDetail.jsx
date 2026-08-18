@@ -3,49 +3,54 @@ import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Linkedin, Link2, ArrowUpRight } from "lucide-react";
 import NewsletterBlock from "../components/NewsletterBlock";
-import { ARTICLES } from "../data/articles";
 import { BACKEND_URL } from "../config";
 
 export default function InsightDetail() {
   const { slug } = useParams();
-  const staticArticle = ARTICLES.find((a) => a.slug === slug);
-  const [article, setArticle] = useState(staticArticle || null);
-  const [relatedArticles, setRelatedArticles] = useState(
-    ARTICLES.filter((a) => a.slug !== slug).slice(0, 3)
-  );
+  const [article, setArticle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [relatedArticles, setRelatedArticles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
+    setNotFound(false);
+
     axios
       .get(`${BACKEND_URL}/api/insights/${slug}`)
       .then((res) => {
-        if (isMounted && res.data) {
-          const live = {
-            ...res.data,
-            readTime: res.data.read_time || res.data.readTime || "8 min read",
-            toc: res.data.toc || [],
-          };
-          setArticle(live);
+        if (isMounted) {
+          if (res.data) {
+            const live = {
+              ...res.data,
+              readTime: res.data.read_time || res.data.readTime || "8 min read",
+              toc: res.data.toc || [],
+            };
+            setArticle(live);
+          } else {
+            setNotFound(true);
+          }
+          setLoading(false);
         }
       })
       .catch(() => {
-        // Fallback to static if live fails
-        if (isMounted && staticArticle) {
-          setArticle(staticArticle);
+        if (isMounted) {
+          setArticle(null);
+          setNotFound(true);
+          setLoading(false);
         }
       });
 
-    // Also fetch all published for related articles
+    // Also fetch published insights for related section
     axios
       .get(`${BACKEND_URL}/api/insights`)
       .then((res) => {
-        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (isMounted && res.data && Array.isArray(res.data)) {
           const others = res.data.filter((a) => a.slug !== slug).slice(0, 3);
-          if (others.length > 0) {
-            setRelatedArticles(others);
-          }
+          setRelatedArticles(others);
         }
       })
       .catch(() => {});
@@ -53,7 +58,7 @@ export default function InsightDetail() {
     return () => {
       isMounted = false;
     };
-  }, [slug, staticArticle]);
+  }, [slug]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -70,12 +75,25 @@ export default function InsightDetail() {
     };
   }, [slug]);
 
-  if (!article) {
+  if (loading) {
+    return (
+      <main className="bg-ivory pt-40 pb-32 min-h-screen">
+        <div className="container-px mx-auto max-w-[800px] text-center">
+          <p className="font-body text-base text-ink/50">Loading insight article…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (notFound || !article) {
     return (
       <main className="bg-ivory pt-40 pb-32 min-h-screen">
         <div className="container-px mx-auto max-w-[800px] text-center">
           <p className="eyebrow mb-4">404</p>
           <h1 className="font-display text-5xl text-ink">Article not found.</h1>
+          <p className="font-body text-base text-ink/60 mt-4">
+            The article you are looking for may have been unpublished or moved.
+          </p>
           <Link to="/insights" data-testid="article-back" className="btn-primary mt-10 inline-flex">
             Back to Insights
           </Link>

@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
-import { ARTICLES } from "../data/articles";
 import { CATEGORIES } from "../data/site";
 
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
@@ -190,15 +189,10 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
       onSave(savedDoc);
       onClose();
     } catch (err) {
-      // Fallback for preview deployments without database migration
-      const simulatedDoc = {
-        ...payload,
-        id: article?.id || `local-${Date.now()}`,
-        created_at: article?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      onSave(simulatedDoc);
-      onClose();
+      setError(
+        err?.response?.data?.detail ||
+          "Failed to save insight to the database. Please verify your connection or session."
+      );
     } finally {
       setSaving(false);
     }
@@ -762,64 +756,14 @@ export default function AdminInsights() {
         }),
       ]);
 
-      let items = [];
-      let statsData = null;
-
       if (listRes.status === "fulfilled" && Array.isArray(listRes.value.data)) {
-        items = listRes.value.data;
+        setInsights(listRes.value.data);
+      } else {
+        setInsights([]);
       }
       if (statsRes.status === "fulfilled" && statsRes.value.data) {
-        statsData = statsRes.value.data;
+        setStats(statsRes.value.data);
       }
-
-      // Resilient fallback to static ARTICLES if backend route returns 404
-      if (listRes.status !== "fulfilled" || statsRes.status !== "fulfilled") {
-        const raw = ARTICLES.map((a, idx) => ({
-          id: `seed-${idx}`,
-          slug: a.slug,
-          title: a.title,
-          category: a.category,
-          excerpt: a.excerpt,
-          image: a.image,
-          date: a.date,
-          read_time: a.readTime,
-          author: a.author,
-          body: a.body,
-          status: "published",
-        }));
-
-        if (!statsData) {
-          statsData = {
-            total: raw.length,
-            published_count: raw.length,
-            draft_count: 0,
-            archived_count: 0,
-          };
-        }
-
-        if (items.length === 0 && listRes.status !== "fulfilled") {
-          let filtered = raw;
-          if (targetStatus && targetStatus !== "all") {
-            filtered = filtered.filter((a) => a.status === targetStatus);
-          }
-          if (targetCategory && targetCategory !== "All") {
-            filtered = filtered.filter((a) => a.category === targetCategory);
-          }
-          if (targetQ && targetQ.trim()) {
-            const term = targetQ.trim().toLowerCase();
-            filtered = filtered.filter(
-              (a) =>
-                a.title.toLowerCase().includes(term) ||
-                a.excerpt.toLowerCase().includes(term) ||
-                a.author.toLowerCase().includes(term)
-            );
-          }
-          items = filtered;
-        }
-      }
-
-      setStats(statsData);
-      setInsights(items);
       setLastRefresh(new Date());
     } catch (_) {
       // silent
@@ -866,17 +810,21 @@ export default function AdminInsights() {
   const handleDeleteArticle = async (id) => {
     try {
       await api.delete(`/api/admin/insights/${id}`);
-    } catch (_) {}
-    setInsights((prev) => prev.filter((i) => i.id !== id));
-    loadAll({ q: search, status: statusFilter, category: categoryFilter });
+      setInsights((prev) => prev.filter((i) => i.id !== id));
+      loadAll({ q: search, status: statusFilter, category: categoryFilter });
+    } catch (err) {
+      alert("Failed to delete insight: " + (err?.response?.data?.detail || err.message));
+    }
   };
 
   const handleQuickStatusToggle = async (insight) => {
     const nextStatus = insight.status === "published" ? "draft" : "published";
     try {
-      await api.patch(`/api/admin/insights/${insight.id}/status`, { status: nextStatus });
-    } catch (_) {}
-    handleSaveArticle({ ...insight, status: nextStatus });
+      const res = await api.patch(`/api/admin/insights/${insight.id}/status`, { status: nextStatus });
+      handleSaveArticle(res.data);
+    } catch (err) {
+      alert("Failed to update status: " + (err?.response?.data?.detail || err.message));
+    }
   };
 
   return (
