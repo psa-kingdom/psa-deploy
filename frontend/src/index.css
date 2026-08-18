@@ -105,10 +105,10 @@
     @apply font-body text-[17px] leading-[1.85] text-ink/85;
   }
   .article-prose h2 {
-    @apply font-heading text-3xl md:text-4xl text-ink mt-16 mb-6 tracking-tight;
+    @apply font-heading text-3xl md:text-4xl text-ink mt-16 mb-6 tracking-tight scroll-mt-28;
   }
   .article-prose h3 {
-    @apply font-heading text-2xl text-ink mt-12 mb-4;
+    @apply font-heading text-2xl text-ink mt-12 mb-4 scroll-mt-28;
   }
   .article-prose p { @apply mb-6; }
   .article-prose ul { @apply mb-6 ml-6 list-disc space-y-2; }

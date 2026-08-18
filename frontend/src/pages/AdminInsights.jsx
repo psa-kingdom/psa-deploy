@@ -319,7 +319,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
           )}
 
           {/* Form Fields */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "16px", marginBottom: "20px" }}>
             {/* Title */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
@@ -637,6 +637,8 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
             padding: "16px 24px",
             borderTop: "1px solid rgba(14,165,233,0.1)",
             background: "#071324",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
           <div>
@@ -1044,7 +1046,7 @@ export default function AdminInsights() {
           background: "#07101f",
           border: "1px solid rgba(14,165,233,0.08)",
           borderRadius: "12px",
-          overflow: "hidden",
+          overflowX: "auto",
         }}
       >
         {/* Table Header */}
@@ -1060,6 +1062,7 @@ export default function AdminInsights() {
             color: "#334155",
             textTransform: "uppercase",
             letterSpacing: "0.08em",
+            minWidth: "700px",
           }}
         >
           <span>Cover</span>
@@ -1071,11 +1074,11 @@ export default function AdminInsights() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "#334155", fontSize: "12px" }}>
+          <div style={{ padding: "48px", textAlign: "center", color: "#334155", fontSize: "12px", minWidth: "700px" }}>
             Loading editorial insights…
           </div>
         ) : insights.length === 0 ? (
-          <div style={{ padding: "54px", textAlign: "center" }}>
+          <div style={{ padding: "54px", textAlign: "center", minWidth: "700px" }}>
             <BookOpen size={30} style={{ color: "#1e293b", margin: "0 auto 12px" }} />
             <div style={{ fontSize: "13px", color: "#475569" }}>
               {search || statusFilter !== "all" || categoryFilter !== "All"
@@ -1096,6 +1099,7 @@ export default function AdminInsights() {
                 borderBottom: idx === insights.length - 1 ? "none" : "1px solid rgba(14,165,233,0.05)",
                 background: "transparent",
                 transition: "background 0.12s",
+                minWidth: "700px",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.03)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}

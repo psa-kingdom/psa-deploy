@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, Linkedin, Link2, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Linkedin, Link2, ArrowUpRight, ChevronDown } from "lucide-react";
 import NewsletterBlock from "../components/NewsletterBlock";
 import { BACKEND_URL } from "../config";
 
@@ -14,6 +14,7 @@ export default function InsightDetail() {
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
   const [activeId, setActiveId] = useState("");
+  const [mobileTocOpen, setMobileTocOpen] = useState(false);
   const isClickScrolling = React.useRef(false);
   const scrollTimeoutRef = React.useRef(null);
 
@@ -143,6 +144,30 @@ export default function InsightDetail() {
       clearTimeout(scrollTimeoutRef.current);
     };
   }, [article]);
+
+  // Handle direct deep-link hash navigation on initial load
+  useEffect(() => {
+    if (!loading && article && typeof window !== "undefined" && window.location.hash) {
+      const hashId = window.location.hash.replace(/^#/, "");
+      if (hashId) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(hashId);
+          if (el) {
+            setActiveId(hashId);
+            const headerOffset = 100;
+            const elementPosition = el.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: "smooth",
+            });
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, article]);
+
 
   if (loading) {
     return (
@@ -317,6 +342,56 @@ export default function InsightDetail() {
           )}
 
           <article className={tocList.length > 0 ? "col-span-12 lg:col-span-8 lg:col-start-5" : "col-span-12 lg:col-span-10 lg:col-start-2"}>
+            {/* Mobile / Tablet Collapsible "In this article" Box */}
+            {tocList.length > 0 && (
+              <div className="lg:hidden mb-10 bg-white border border-borderline p-5 rounded shadow-sm" data-testid="mobile-toc-container">
+                <button
+                  type="button"
+                  onClick={() => setMobileTocOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between text-left"
+                  aria-expanded={mobileTocOpen}
+                  data-testid="mobile-toc-toggle"
+                >
+                  <span className="eyebrow text-xs">In this article ({tocList.length} sections)</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-ink/60 transition-transform duration-300 ${
+                      mobileTocOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {mobileTocOpen && (
+                  <ul className="mt-4 pt-4 border-t border-borderline/60 space-y-2.5">
+                    {tocList.map((t) => {
+                      const isActive = activeId === t.id;
+                      const isLevel3 = t.level === 3;
+                      return (
+                        <li key={t.id} className={isLevel3 ? "pl-3" : ""}>
+                          <a
+                            href={`#${t.id}`}
+                            data-testid={`mobile-toc-${t.id}`}
+                            onClick={(e) => {
+                              handleTocClick(e, t.id);
+                              setMobileTocOpen(false);
+                            }}
+                            className={`font-body text-sm block transition-colors ${
+                              isActive
+                                ? "text-gold font-medium"
+                                : isLevel3
+                                ? "text-ink/50 text-[13px]"
+                                : "text-ink/70"
+                            }`}
+                          >
+                            {t.label}
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+
             <div className="article-prose" dangerouslySetInnerHTML={{ __html: article.body }} />
           </article>
         </div>

@@ -327,7 +327,7 @@ export default function TocEditor({ toc = [], onChange, body = "", onUpdateBody 
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px auto", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: "8px", alignItems: "center" }}>
             <input
               value={customLabel}
               onChange={(e) => setCustomLabel(e.target.value)}
@@ -359,39 +359,42 @@ export default function TocEditor({ toc = [], onChange, body = "", onUpdateBody 
               }}
             />
 
-            <select
-              value={customLevel}
-              onChange={(e) => setCustomLevel(Number(e.target.value))}
-              style={{
-                background: "#060f1c",
-                border: "1px solid rgba(14,165,233,0.15)",
-                borderRadius: "5px",
-                padding: "6px 8px",
-                fontSize: "11px",
-                color: "#cbd5e1",
-                outline: "none",
-              }}
-            >
-              <option value={2}>H2 (Level 2)</option>
-              <option value={3}>H3 (Level 3)</option>
-            </select>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select
+                value={customLevel}
+                onChange={(e) => setCustomLevel(Number(e.target.value))}
+                style={{
+                  flex: 1,
+                  background: "#060f1c",
+                  border: "1px solid rgba(14,165,233,0.15)",
+                  borderRadius: "5px",
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  color: "#cbd5e1",
+                  outline: "none",
+                }}
+              >
+                <option value={2}>H2 (Level 2)</option>
+                <option value={3}>H3 (Level 3)</option>
+              </select>
 
-            <button
-              type="submit"
-              style={{
-                padding: "6px 12px",
-                borderRadius: "5px",
-                border: "none",
-                background: "#0ea5e9",
-                color: "#fff",
-                fontSize: "11px",
-                fontWeight: "600",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Add Item
-            </button>
+              <button
+                type="submit"
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "5px",
+                  border: "none",
+                  background: "#0ea5e9",
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Add
+              </button>
+            </div>
           </div>
         </form>
       )}
