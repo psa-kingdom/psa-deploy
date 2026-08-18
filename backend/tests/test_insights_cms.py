@@ -200,3 +200,173 @@ def test_insights_end_to_end_source_of_truth(client, mock_db):
     res_pub_restored = client.get(f"/api/insights/{slug}")
     assert res_pub_restored.status_code == 200
     assert res_pub_restored.json()["category"] == "Automotive"
+
+
+def test_all_editorial_fields_multi_field_lifecycle(client, mock_db):
+    """
+    Controlled multi-field test for:
+    'Internal Controls in the Age of Rapid Automotive Expansion'
+    Audits:
+    1. Title
+    2. Slug
+    3. Category
+    4. Excerpt / Summary
+    5. Cover Image
+    6. Author
+    7. Publication Date
+    8. Read Time
+    9. Article Body
+    10. Table of Contents (toc)
+    11. Publication Status
+    """
+    orig_slug = "internal-controls-automotive-expansion"
+    
+    # 1. Fetch original article publicly
+    res_init = client.get(f"/api/insights/{orig_slug}")
+    assert res_init.status_code == 200
+    orig_data = res_init.json()
+    article_id = orig_data["id"]
+    orig_title = orig_data["title"]
+    orig_category = orig_data["category"]
+    orig_excerpt = orig_data["excerpt"]
+    orig_image = orig_data["image"]
+    orig_date = orig_data["date"]
+    orig_read_time = orig_data["read_time"]
+    orig_author = orig_data["author"]
+    orig_body = orig_data["body"]
+    orig_toc = orig_data["toc"]
+
+    admin_token = _create_session_token()
+    client.cookies.set(COOKIE_NAME, admin_token)
+
+    # 2. Multi-field update: change Category, Excerpt, Cover Image, Read Time, Title, Author, Date, Body
+    new_image = "https://images.unsplash.com/photo-1647427060118-4911c9821b82?crop=entropy&cs=srgb&fm=jpg&w=1600&q=80"
+    update_payload = {
+        "title": "Internal Controls in Automotive: 2026 Boardroom Briefing",
+        "category": "Automotive",
+        "excerpt": "Controlled test excerpt: examining dealer-level governance drift.",
+        "image": new_image,
+        "date": "April 2026",
+        "read_time": "12 min read",
+        "author": "PSA Editorial & Advisory Board",
+        "body": "<h2 id=\"context\">Updated Context</h2><p>Controlled test body paragraph demonstrating full HTML persistence.</p>"
+    }
+
+    res_update = client.put(f"/api/admin/insights/{article_id}", json=update_payload)
+    assert res_update.status_code == 200
+    updated_doc = res_update.json()
+
+    assert updated_doc["title"] == update_payload["title"]
+    assert updated_doc["category"] == "Automotive"
+    assert updated_doc["excerpt"] == update_payload["excerpt"]
+    assert updated_doc["image"] == new_image
+    assert updated_doc["date"] == "April 2026"
+    assert updated_doc["read_time"] == "12 min read"
+    assert updated_doc["author"] == "PSA Editorial & Advisory Board"
+    assert updated_doc["body"] == update_payload["body"]
+    # TOC should be safely preserved
+    assert len(updated_doc["toc"]) == len(orig_toc)
+
+    # 3. Direct DB verification
+    db_doc = next((d for d in mock_db.insights.docs if d["id"] == article_id), None)
+    assert db_doc is not None
+    assert db_doc["title"] == update_payload["title"]
+    assert db_doc["category"] == "Automotive"
+    assert db_doc["image"] == new_image
+    assert db_doc["read_time"] == "12 min read"
+    assert db_doc["author"] == "PSA Editorial & Advisory Board"
+    assert db_doc["date"] == "April 2026"
+    assert db_doc["body"] == update_payload["body"]
+
+    # 4. Admin list verification
+    res_admin_list = client.get("/api/admin/insights")
+    assert res_admin_list.status_code == 200
+    admin_item = next(a for a in res_admin_list.json() if a["id"] == article_id)
+    assert admin_item["title"] == update_payload["title"]
+    assert admin_item["category"] == "Automotive"
+    assert admin_item["image"] == new_image
+    assert admin_item["read_time"] == "12 min read"
+
+    # 5. Public unauthenticated verification on listing and detail
+    client.cookies.clear()
+
+    # Public listing
+    res_pub_list = client.get("/api/insights")
+    assert res_pub_list.status_code == 200
+    pub_item = next(a for a in res_pub_list.json() if a["id"] == article_id)
+    assert pub_item["title"] == update_payload["title"]
+    assert pub_item["category"] == "Automotive"
+    assert pub_item["excerpt"] == update_payload["excerpt"]
+    assert pub_item["image"] == new_image
+    assert pub_item["read_time"] == "12 min read"
+
+    # Public detail
+    res_pub_detail = client.get(f"/api/insights/{orig_slug}")
+    assert res_pub_detail.status_code == 200
+    detail_data = res_pub_detail.json()
+    assert detail_data["title"] == update_payload["title"]
+    assert detail_data["category"] == "Automotive"
+    assert detail_data["excerpt"] == update_payload["excerpt"]
+    assert detail_data["image"] == new_image
+    assert detail_data["read_time"] == "12 min read"
+    assert detail_data["author"] == "PSA Editorial & Advisory Board"
+    assert detail_data["date"] == "April 2026"
+    assert detail_data["body"] == update_payload["body"]
+    assert len(detail_data["toc"]) == len(orig_toc)
+
+    # 6. Slug modification test
+    client.cookies.set(COOKIE_NAME, admin_token)
+    new_slug = "internal-controls-automotive-expansion-2026"
+    res_slug_update = client.put(f"/api/admin/insights/{article_id}", json={"slug": new_slug})
+    assert res_slug_update.status_code == 200
+    assert res_slug_update.json()["slug"] == new_slug
+
+    # Unauthenticated public request at new slug works; old slug returns 404
+    client.cookies.clear()
+    assert client.get(f"/api/insights/{new_slug}").status_code == 200
+    assert client.get(f"/api/insights/{orig_slug}").status_code == 404
+
+    # 7. Status workflow (Archived & Draft visibility check)
+    client.cookies.set(COOKIE_NAME, admin_token)
+    res_archive = client.patch(f"/api/admin/insights/{article_id}/status", json={"status": "archived"})
+    assert res_archive.status_code == 200
+    assert res_archive.json()["status"] == "archived"
+
+    client.cookies.clear()
+    # Archived article should not appear in public list or detail
+    res_archived_list = client.get("/api/insights")
+    assert not any(a["id"] == article_id for a in res_archived_list.json())
+    assert client.get(f"/api/insights/{new_slug}").status_code == 404
+
+    # 8. Restore original values completely
+    client.cookies.set(COOKIE_NAME, admin_token)
+    restore_payload = {
+        "title": orig_title,
+        "slug": orig_slug,
+        "category": orig_category,
+        "excerpt": orig_excerpt,
+        "image": orig_image,
+        "date": orig_date,
+        "read_time": orig_read_time,
+        "author": orig_author,
+        "body": orig_body,
+        "status": "published",
+    }
+    res_restore = client.put(f"/api/admin/insights/{article_id}", json=restore_payload)
+    assert res_restore.status_code == 200
+
+    # Verify restored state publicly while logged out
+    client.cookies.clear()
+    res_restored_pub = client.get(f"/api/insights/{orig_slug}")
+    assert res_restored_pub.status_code == 200
+    restored_data = res_restored_pub.json()
+    assert restored_data["title"] == orig_title
+    assert restored_data["slug"] == orig_slug
+    assert restored_data["category"] == orig_category
+    assert restored_data["excerpt"] == orig_excerpt
+    assert restored_data["image"] == orig_image
+    assert restored_data["date"] == orig_date
+    assert restored_data["read_time"] == orig_read_time
+    assert restored_data["author"] == orig_author
+    assert restored_data["body"] == orig_body
+
