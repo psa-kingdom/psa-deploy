@@ -81,7 +81,7 @@ export default function Contact() {
         service_of_interest: "",
         message: "",
       });
-      // Automatically open the Cal.com booking modal for the visitor
+      // Automatically open the booking modal for the visitor
       setIsBookingModalOpen(true);
     } catch (err) {
       setStatus("error");
@@ -149,7 +149,7 @@ export default function Contact() {
                         onClick={() => setIsBookingModalOpen(true)}
                         className="btn-primary inline-flex items-center gap-2"
                       >
-                        <Calendar className="w-4 h-4" /> Pick a Time on Cal.com
+                        <Calendar className="w-4 h-4" /> Pick a Time
                       </button>
                       <button
                         type="button"
@@ -233,7 +233,7 @@ export default function Contact() {
                 )}
               </div>
 
-              {/* Direct Cal.com trigger link */}
+              {/* Direct booking trigger link */}
               <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
                 <button
                   type="button"
@@ -243,7 +243,7 @@ export default function Contact() {
                 >
                   <span>Prefer to pick a time slot immediately?</span>
                   <span className="text-sky underline underline-offset-4 inline-flex items-center gap-1 font-semibold">
-                    Open Cal.com Scheduler <ArrowUpRight className="w-3.5 h-3.5" />
+                    Open Scheduler <ArrowUpRight className="w-3.5 h-3.5" />
                   </span>
                 </button>
               </div>
@@ -399,12 +399,12 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* CAL.COM BOOKING MODAL */}
+      {/* BOOKING MODAL */}
       {isBookingModalOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Cal.com Booking Scheduler"
+          aria-label="Booking Scheduler"
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-ink/80 backdrop-blur-sm animate-fade-up"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
