@@ -16,8 +16,10 @@ class InsightStatus(str, Enum):
     ARCHIVED = "archived"
 
 class TocItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str
     label: str
+    level: Optional[int] = 2
 
 class Insight(BaseModel):
     model_config = ConfigDict(extra="ignore")

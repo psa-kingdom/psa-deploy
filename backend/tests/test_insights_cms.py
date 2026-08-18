@@ -370,3 +370,128 @@ def test_all_editorial_fields_multi_field_lifecycle(client, mock_db):
     assert restored_data["author"] == orig_author
     assert restored_data["body"] == orig_body
 
+
+def test_interactive_toc_editorial_lifecycle(client, mock_db):
+    """
+    Phase 05 TOC Editor verification:
+    TEST A — TOC PERSISTENCE: Save structured TOC with levels
+    TEST B — ADMIN RELOAD: Returned in CMS
+    TEST C — PUBLIC RELOAD: Returned publicly
+    TEST D — UNRELATED EDIT: Preserved during title/excerpt/category changes
+    TEST E — BODY EDIT: Preserved during body changes
+    TEST F — STATUS LIFECYCLE: Preserved across draft/publish/archive
+    TEST G — SLUG CHANGE: Preserved across slug changes
+    TEST H — TOC CLEAR: Empty array persists cleanly
+    """
+    slug = "internal-controls-automotive-expansion"
+    admin_token = _create_session_token()
+    client.cookies.set(COOKIE_NAME, admin_token)
+
+    # 1. Fetch initial article
+    res = client.get("/api/admin/insights")
+    assert res.status_code == 200
+    article = next(a for a in res.json() if a["slug"] == slug)
+    article_id = article["id"]
+
+    # TEST A: Admin saves a customized TOC with h2 (level 2) and h3 (level 3)
+    custom_toc = [
+        {"id": "context", "label": "01 Executive Context & Thesis", "level": 2},
+        {"id": "risk", "label": "02 Critical Risk Breakpoints", "level": 2},
+        {"id": "dealer-governance", "label": "02.1 Dealer Network Governance", "level": 3},
+        {"id": "closing", "label": "03 Boardroom Mandates", "level": 2},
+    ]
+
+    res_toc_save = client.put(f"/api/admin/insights/{article_id}", json={"toc": custom_toc})
+    assert res_toc_save.status_code == 200
+    saved_doc = res_toc_save.json()
+    assert len(saved_doc["toc"]) == 4
+    assert saved_doc["toc"][0]["label"] == "01 Executive Context & Thesis"
+    assert saved_doc["toc"][2]["level"] == 3
+    assert saved_doc["toc"][2]["id"] == "dealer-governance"
+
+    # Verify MongoDB contains the exact saved TOC
+    db_doc = next((d for d in mock_db.insights.docs if d["id"] == article_id), None)
+    assert db_doc is not None
+    assert len(db_doc["toc"]) == 4
+    assert db_doc["toc"][2]["id"] == "dealer-governance"
+    assert db_doc["toc"][2]["level"] == 3
+
+    # TEST B: Admin Reload
+    res_admin_reload = client.get(f"/api/admin/insights/{article_id}")
+    assert res_admin_reload.status_code == 200
+    assert len(res_admin_reload.json()["toc"]) == 4
+    assert res_admin_reload.json()["toc"][0]["label"] == "01 Executive Context & Thesis"
+
+    # TEST C: Public Reload (unauthenticated)
+    client.cookies.clear()
+    res_pub_reload = client.get(f"/api/insights/{slug}")
+    assert res_pub_reload.status_code == 200
+    pub_toc = res_pub_reload.json()["toc"]
+    assert len(pub_toc) == 4
+    assert pub_toc[0]["label"] == "01 Executive Context & Thesis"
+    assert pub_toc[2]["level"] == 3
+
+    # TEST D: Unrelated edit (title & category) must not wipe or alter TOC
+    client.cookies.set(COOKIE_NAME, admin_token)
+    res_unrelated = client.put(
+        f"/api/admin/insights/{article_id}",
+        json={"title": "Updated Automotive Controls Title", "category": "Automotive"}
+    )
+    assert res_unrelated.status_code == 200
+    assert res_unrelated.json()["title"] == "Updated Automotive Controls Title"
+    assert len(res_unrelated.json()["toc"]) == 4
+    assert res_unrelated.json()["toc"][0]["label"] == "01 Executive Context & Thesis"
+
+    # TEST E: Body edit must not wipe TOC
+    new_body = "<h2 id=\"context\">Executive Context</h2><p>Updated content...</p>"
+    res_body = client.put(f"/api/admin/insights/{article_id}", json={"body": new_body})
+    assert res_body.status_code == 200
+    assert res_body.json()["body"] == new_body
+    assert len(res_body.json()["toc"]) == 4
+
+    # TEST F: Status transitions must preserve TOC
+    res_draft = client.patch(f"/api/admin/insights/{article_id}/status", json={"status": "draft"})
+    assert res_draft.status_code == 200
+    assert len(res_draft.json()["toc"]) == 4
+
+    res_pub = client.patch(f"/api/admin/insights/{article_id}/status", json={"status": "published"})
+    assert res_pub.status_code == 200
+    assert len(res_pub.json()["toc"]) == 4
+
+    # TEST G: Slug change must preserve TOC
+    new_slug = "internal-controls-automotive-expansion-updated"
+    res_slug = client.put(f"/api/admin/insights/{article_id}", json={"slug": new_slug})
+    assert res_slug.status_code == 200
+    assert res_slug.json()["slug"] == new_slug
+    assert len(res_slug.json()["toc"]) == 4
+
+    # TEST H: Intentionally clearing TOC persists toc = []
+    res_clear = client.put(f"/api/admin/insights/{article_id}", json={"toc": []})
+    assert res_clear.status_code == 200
+    assert res_clear.json()["toc"] == []
+
+    # Verify MongoDB directly has empty TOC
+    db_doc_cleared = next((d for d in mock_db.insights.docs if d["id"] == article_id), None)
+    assert db_doc_cleared["toc"] == []
+
+    # Restore original article values
+    from backend.data.initial_insights import INITIAL_INSIGHTS
+    orig_initial = next(i for i in INITIAL_INSIGHTS if i["slug"] == slug)
+    restore_dict = {
+        "title": orig_initial["title"],
+        "slug": slug,
+        "category": orig_initial["category"],
+        "excerpt": orig_initial["excerpt"],
+        "image": orig_initial["image"],
+        "date": orig_initial["date"],
+        "read_time": orig_initial["read_time"],
+        "author": orig_initial["author"],
+        "body": orig_initial["body"],
+        "toc": orig_initial["toc"],
+        "status": "published"
+    }
+    res_restored = client.put(f"/api/admin/insights/{article_id}", json=restore_dict)
+    assert res_restored.status_code == 200
+    assert len(res_restored.json()["toc"]) == len(orig_initial["toc"])
+
+

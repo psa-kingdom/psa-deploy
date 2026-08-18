@@ -35,6 +35,7 @@ import {
   Layers,
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
+import TocEditor from "../components/admin/TocEditor";
 import { BACKEND_URL } from "../config";
 import { CATEGORIES } from "../data/site";
 
@@ -143,6 +144,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
     read_time: article?.read_time || article?.readTime || "8 min read",
     author: article?.author || "CA Prem Suman",
     body: article?.body || "",
+    toc: article?.toc || [],
     status: article?.status || "published",
   });
 
@@ -172,6 +174,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
     const payload = {
       ...formData,
+      toc: formData.toc || [],
       status: targetStatus || formData.status,
       slug: formData.slug.trim() || slugify(formData.title),
     };
@@ -614,6 +617,14 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 />
               </div>
             )}
+
+            {/* Table of Contents Section */}
+            <TocEditor
+              toc={formData.toc || []}
+              onChange={(newToc) => setFormData((prev) => ({ ...prev, toc: newToc }))}
+              body={formData.body}
+              onUpdateBody={(newBody) => setFormData((prev) => ({ ...prev, body: newBody }))}
+            />
           </div>
         </div>
 

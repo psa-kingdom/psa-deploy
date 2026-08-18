@@ -182,16 +182,17 @@ export default function InsightDetail() {
                 <p className="eyebrow mb-5">In this article</p>
                 <ul className="space-y-3 border-l border-borderline pl-5">
                   {tocList.map((t) => (
-                    <li key={t.id}>
+                    <li key={t.id} className={t.level === 3 ? "pl-3" : ""}>
                       <a
                         href={`#${t.id}`}
                         data-testid={`toc-${t.id}`}
-                        className="font-body text-sm text-ink/65 hover:text-gold transition-colors duration-300 leading-snug block"
+                        className={`font-body text-sm ${t.level === 3 ? "text-ink/50 text-[13px]" : "text-ink/65"} hover:text-gold transition-colors duration-300 leading-snug block`}
                       >
                         {t.label}
                       </a>
                     </li>
                   ))}
+
                 </ul>
               </div>
             </aside>
