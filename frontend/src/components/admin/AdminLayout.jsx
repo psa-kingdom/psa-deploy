@@ -35,6 +35,11 @@ const NAV_ITEMS = [
     exact: true,
   },
   {
+    label: "Insights CMS",
+    path: "/admin/insights",
+    icon: FileText,
+  },
+  {
     label: "Inquiries",
     path: "/admin/inquiries",
     icon: Inbox,
@@ -49,9 +54,9 @@ const NAV_ITEMS = [
 // Search suggestions — prepared for future connections, not wired to real search yet
 const SEARCH_SUGGESTIONS = [
   { group: "Navigation", label: "Dashboard Overview", path: "/admin", icon: LayoutDashboard },
+  { group: "Navigation", label: "Insights CMS", path: "/admin/insights", icon: FileText },
   { group: "Navigation", label: "Inquiries Center", path: "/admin/inquiries", icon: Inbox },
   { group: "Navigation", label: "Communication Center", path: "/admin/communication", icon: Send },
-  { group: "Coming Soon", label: "Search Insights…", path: null, icon: FileText, disabled: true },
   { group: "Coming Soon", label: "Search Contacts…", path: null, icon: Users, disabled: true },
 ];
 

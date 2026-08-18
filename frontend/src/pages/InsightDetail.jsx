@@ -1,14 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import axios from "axios";
 import { ArrowLeft, Linkedin, Link2, ArrowUpRight } from "lucide-react";
 import NewsletterBlock from "../components/NewsletterBlock";
 import { ARTICLES } from "../data/articles";
+import { BACKEND_URL } from "../config";
 
 export default function InsightDetail() {
   const { slug } = useParams();
-  const article = ARTICLES.find((a) => a.slug === slug);
+  const staticArticle = ARTICLES.find((a) => a.slug === slug);
+  const [article, setArticle] = useState(staticArticle || null);
+  const [relatedArticles, setRelatedArticles] = useState(
+    ARTICLES.filter((a) => a.slug !== slug).slice(0, 3)
+  );
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    axios
+      .get(`${BACKEND_URL}/api/insights/${slug}`)
+      .then((res) => {
+        if (isMounted && res.data) {
+          const live = {
+            ...res.data,
+            readTime: res.data.read_time || res.data.readTime || "8 min read",
+            toc: res.data.toc || [],
+          };
+          setArticle(live);
+        }
+      })
+      .catch(() => {
+        // Fallback to static if live fails
+        if (isMounted && staticArticle) {
+          setArticle(staticArticle);
+        }
+      });
+
+    // Also fetch all published for related articles
+    axios
+      .get(`${BACKEND_URL}/api/insights`)
+      .then((res) => {
+        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const others = res.data.filter((a) => a.slug !== slug).slice(0, 3);
+          if (others.length > 0) {
+            setRelatedArticles(others);
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, staticArticle]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -39,8 +84,6 @@ export default function InsightDetail() {
     );
   }
 
-  const related = ARTICLES.filter((a) => a.slug !== slug).slice(0, 3);
-
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -50,6 +93,8 @@ export default function InsightDetail() {
       // clipboard unavailable
     }
   };
+
+  const tocList = article.toc || [];
 
   return (
     <main className="bg-ivory pt-24">
@@ -104,58 +149,64 @@ export default function InsightDetail() {
       </section>
 
       {/* HERO IMAGE */}
-      <section className="container-px mx-auto max-w-[1440px] mb-20">
-        <img src={article.image} alt={article.title} className="w-full aspect-[21/9] object-cover" />
-      </section>
+      {article.image && (
+        <section className="container-px mx-auto max-w-[1440px] mb-20">
+          <img src={article.image} alt={article.title} className="w-full aspect-[21/9] object-cover" />
+        </section>
+      )}
 
       {/* BODY + TOC */}
       <section className="container-px mx-auto max-w-[1280px] pb-24">
         <div className="grid grid-cols-12 gap-10">
-          <aside className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-32">
-              <p className="eyebrow mb-5">In this article</p>
-              <ul className="space-y-3 border-l border-borderline pl-5">
-                {article.toc.map((t) => (
-                  <li key={t.id}>
-                    <a
-                      href={`#${t.id}`}
-                      data-testid={`toc-${t.id}`}
-                      className="font-body text-sm text-ink/65 hover:text-gold transition-colors duration-300 leading-snug block"
-                    >
-                      {t.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </aside>
+          {tocList.length > 0 && (
+            <aside className="hidden lg:block lg:col-span-3">
+              <div className="sticky top-32">
+                <p className="eyebrow mb-5">In this article</p>
+                <ul className="space-y-3 border-l border-borderline pl-5">
+                  {tocList.map((t) => (
+                    <li key={t.id}>
+                      <a
+                        href={`#${t.id}`}
+                        data-testid={`toc-${t.id}`}
+                        className="font-body text-sm text-ink/65 hover:text-gold transition-colors duration-300 leading-snug block"
+                      >
+                        {t.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </aside>
+          )}
 
-          <article className="col-span-12 lg:col-span-8 lg:col-start-5">
+          <article className={tocList.length > 0 ? "col-span-12 lg:col-span-8 lg:col-start-5" : "col-span-12 lg:col-span-10 lg:col-start-2"}>
             <div className="article-prose" dangerouslySetInnerHTML={{ __html: article.body }} />
           </article>
         </div>
       </section>
 
       {/* RELATED */}
-      <section className="py-24 bg-white border-y border-borderline">
-        <div className="container-px mx-auto max-w-[1440px]">
-          <p className="eyebrow mb-10">Related Insights</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {related.map((a) => (
-              <Link key={a.slug} to={`/insights/${a.slug}`} data-testid={`article-related-${a.slug}`} className="group block">
-                <div className="overflow-hidden aspect-[16/10] mb-5">
-                  <img src={a.image} alt={a.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                </div>
-                <p className="eyebrow text-[10px]">{a.category}</p>
-                <h3 className="font-heading text-xl text-ink mt-2 leading-snug group-hover:text-gold transition-colors duration-500">{a.title}</h3>
-                <span className="link-underline mt-4 inline-flex items-center gap-2 font-body text-sm text-ink group-hover:text-gold transition-colors duration-500">
-                  Read <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
-                </span>
-              </Link>
-            ))}
+      {relatedArticles.length > 0 && (
+        <section className="py-24 bg-white border-y border-borderline">
+          <div className="container-px mx-auto max-w-[1440px]">
+            <p className="eyebrow mb-10">Related Insights</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {relatedArticles.map((a) => (
+                <Link key={a.slug} to={`/insights/${a.slug}`} data-testid={`article-related-${a.slug}`} className="group block">
+                  <div className="overflow-hidden aspect-[16/10] mb-5">
+                    <img src={a.image} alt={a.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                  </div>
+                  <p className="eyebrow text-[10px]">{a.category}</p>
+                  <h3 className="font-heading text-xl text-ink mt-2 leading-snug group-hover:text-gold transition-colors duration-500">{a.title}</h3>
+                  <span className="link-underline mt-4 inline-flex items-center gap-2 font-body text-sm text-ink group-hover:text-gold transition-colors duration-500">
+                    Read <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* NEWSLETTER */}
       <section className="py-24 md:py-32">

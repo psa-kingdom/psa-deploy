@@ -160,6 +160,7 @@ try:
         admin_templates,
         admin_logs,
         admin_inquiries,
+        admin_insights,
         webhooks,
         unsubscribe
     )
@@ -170,6 +171,7 @@ except ImportError:
         admin_templates,
         admin_logs,
         admin_inquiries,
+        admin_insights,
         webhooks,
         unsubscribe
     )
@@ -193,6 +195,8 @@ api_router.include_router(admin_campaigns.router)
 api_router.include_router(admin_templates.router)
 api_router.include_router(admin_logs.router)
 api_router.include_router(admin_inquiries.router)
+api_router.include_router(admin_insights.admin_router)
+api_router.include_router(admin_insights.public_router)
 api_router.include_router(webhooks.router)
 api_router.include_router(unsubscribe.router)
 
@@ -246,6 +250,37 @@ async def startup_event():
             await db.contact_submissions.create_index("status")
             await db.contact_submissions.create_index("source")
             await db.contact_submissions.create_index("created_at")
+            # Insights CMS indexes
+            await db.insights.create_index("slug", unique=True)
+            await db.insights.create_index("status")
+            await db.insights.create_index("category")
+            await db.insights.create_index("created_at")
+
+            # Seed initial insights if collection is empty
+            insights_count = await db.insights.count_documents({})
+            if insights_count == 0:
+                try:
+                    try:
+                        from backend.data.initial_insights import INITIAL_INSIGHTS
+                    except ImportError:
+                        from data.initial_insights import INITIAL_INSIGHTS
+                    
+                    seed_docs = []
+                    now_utc = datetime.now(timezone.utc)
+                    for item in INITIAL_INSIGHTS:
+                        doc = dict(item)
+                        doc["id"] = str(uuid.uuid4())
+                        doc["status"] = "published"
+                        doc["published_at"] = now_utc
+                        doc["created_at"] = now_utc
+                        doc["updated_at"] = now_utc
+                        seed_docs.append(doc)
+                    if seed_docs:
+                        await db.insights.insert_many(seed_docs)
+                        logger.info(f"Seeded {len(seed_docs)} initial insights articles into database.")
+                except Exception as seed_err:
+                    logger.warning(f"Note on initial insights seeding: {seed_err}")
+
             logger.info("Database indexes initialized successfully.")
         except Exception as exc:
             logger.warning(f"Note on startup index initialization: {exc}")

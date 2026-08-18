@@ -16,6 +16,7 @@ import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCommunication from "@/pages/AdminCommunication";
 import AdminInquiries from "@/pages/AdminInquiries";
+import AdminInsights from "@/pages/AdminInsights";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 
 function AppContent() {
@@ -65,6 +66,14 @@ function AppContent() {
           element={
             <AdminAuthGuard>
               <AdminInquiries />
+            </AdminAuthGuard>
+          }
+        />
+        <Route
+          path="/admin/insights"
+          element={
+            <AdminAuthGuard>
+              <AdminInsights />
             </AdminAuthGuard>
           }
         />

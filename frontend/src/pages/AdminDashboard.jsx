@@ -26,6 +26,7 @@ import {
   MessageSquare,
   ChevronRight,
   Inbox,
+  FileText,
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
@@ -617,6 +618,20 @@ export default function AdminDashboard() {
             gap: "12px",
           }}
         >
+          <QuickAction
+            to="/admin/insights"
+            icon={FileText}
+            label="Insights CMS"
+            description="Author, edit, and publish editorial thought leadership."
+            accent="#38bdf8"
+          />
+          <QuickAction
+            to="/admin/inquiries"
+            icon={Inbox}
+            label="Inquiries Center"
+            description="Review and track inbound client consultation requests."
+            accent="#a78bfa"
+          />
           <QuickAction
             to="/admin/communication"
             icon={Send}

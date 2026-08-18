@@ -1,17 +1,42 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import { ArrowUpRight } from "lucide-react";
 import Reveal from "../components/Reveal";
 import NewsletterBlock from "../components/NewsletterBlock";
 import { ARTICLES } from "../data/articles";
 import { CATEGORIES } from "../data/site";
+import { BACKEND_URL } from "../config";
 
 export default function Insights() {
+  const [articles, setArticles] = useState(ARTICLES);
   const [active, setActive] = useState("All");
   const [visible, setVisible] = useState(9);
 
-  const featured = ARTICLES[0];
-  const rest = ARTICLES.slice(1);
+  useEffect(() => {
+    let isMounted = true;
+    axios
+      .get(`${BACKEND_URL}/api/insights`)
+      .then((res) => {
+        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          // Normalize fields for compatibility
+          const live = res.data.map((item) => ({
+            ...item,
+            readTime: item.read_time || item.readTime || "8 min read",
+          }));
+          setArticles(live);
+        }
+      })
+      .catch(() => {
+        // Silently preserve static ARTICLES fallback
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const featured = articles[0] || ARTICLES[0];
+  const rest = articles.slice(1);
 
   const filtered = useMemo(() => {
     if (active === "All") return rest;
@@ -39,27 +64,29 @@ export default function Insights() {
       </section>
 
       {/* FEATURED */}
-      <section className="pb-20">
-        <div className="container-px mx-auto max-w-[1440px]">
-          <Reveal>
-            <Link to={`/insights/${featured.slug}`} data-testid={`insights-featured-${featured.slug}`} className="group grid grid-cols-12 gap-10 items-center border-t border-b border-borderline py-12">
-              <div className="col-span-12 lg:col-span-7 overflow-hidden">
-                <img src={featured.image} alt={featured.title} className="w-full aspect-[16/10] object-cover transition-transform duration-1000 group-hover:scale-105" />
-              </div>
-              <div className="col-span-12 lg:col-span-5">
-                <p className="eyebrow text-[10px]">{featured.category} · Featured · {featured.readTime}</p>
-                <h2 className="font-display-bold text-4xl md:text-5xl text-ink mt-4 tracking-[-0.02em] leading-[1.02] group-hover:text-gold transition-colors duration-500">
-                  {featured.title}
-                </h2>
-                <p className="font-body text-base text-ink/65 mt-6 leading-relaxed">{featured.excerpt}</p>
-                <span className="link-underline mt-8 inline-flex items-center gap-2 font-body text-sm text-ink group-hover:text-gold transition-colors duration-500">
-                  Read the article <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-                </span>
-              </div>
-            </Link>
-          </Reveal>
-        </div>
-      </section>
+      {featured && (
+        <section className="pb-20">
+          <div className="container-px mx-auto max-w-[1440px]">
+            <Reveal>
+              <Link to={`/insights/${featured.slug}`} data-testid={`insights-featured-${featured.slug}`} className="group grid grid-cols-12 gap-10 items-center border-t border-b border-borderline py-12">
+                <div className="col-span-12 lg:col-span-7 overflow-hidden">
+                  <img src={featured.image} alt={featured.title} className="w-full aspect-[16/10] object-cover transition-transform duration-1000 group-hover:scale-105" />
+                </div>
+                <div className="col-span-12 lg:col-span-5">
+                  <p className="eyebrow text-[10px]">{featured.category} · Featured · {featured.readTime}</p>
+                  <h2 className="font-display-bold text-4xl md:text-5xl text-ink mt-4 tracking-[-0.02em] leading-[1.02] group-hover:text-gold transition-colors duration-500">
+                    {featured.title}
+                  </h2>
+                  <p className="font-body text-base text-ink/65 mt-6 leading-relaxed">{featured.excerpt}</p>
+                  <span className="link-underline mt-8 inline-flex items-center gap-2 font-body text-sm text-ink group-hover:text-gold transition-colors duration-500">
+                    Read the article <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+                  </span>
+                </div>
+              </Link>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* CATEGORY FILTER */}
       <div className="sticky top-20 z-30 bg-ivory/95 backdrop-blur-md border-y border-borderline">
