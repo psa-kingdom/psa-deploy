@@ -28,6 +28,13 @@ import {
   StickyNote,
   CheckCircle2,
   Filter,
+  Download,
+  Copy,
+  Check,
+  ChevronDown,
+  Lock,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
@@ -37,11 +44,11 @@ const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 /* ─────────────────────── constants ─────────────────────── */
 
 const STATUS_CONFIG = {
-  new:       { label: "New",       color: "#38bdf8", bg: "rgba(56,189,248,0.1)",  dot: "#38bdf8"  },
-  contacted: { label: "Contacted", color: "#a78bfa", bg: "rgba(167,139,250,0.1)", dot: "#a78bfa"  },
-  qualified: { label: "Qualified", color: "#34d399", bg: "rgba(52,211,153,0.1)",  dot: "#34d399"  },
-  converted: { label: "Converted", color: "#22c55e", bg: "rgba(34,197,94,0.12)",  dot: "#22c55e"  },
-  closed:    { label: "Closed",    color: "#64748b", bg: "rgba(100,116,139,0.1)", dot: "#64748b"  },
+  new:       { label: "New",       color: "#38bdf8", bg: "rgba(56,189,248,0.15)",  border: "rgba(56,189,248,0.35)",  dot: "#38bdf8"  },
+  contacted: { label: "Contacted", color: "#c084fc", bg: "rgba(192,132,252,0.15)", border: "rgba(192,132,252,0.35)", dot: "#c084fc"  },
+  qualified: { label: "Qualified", color: "#34d399", bg: "rgba(52,211,153,0.15)",  border: "rgba(52,211,153,0.35)",  dot: "#34d399"  },
+  converted: { label: "Converted", color: "#4ade80", bg: "rgba(74,222,128,0.18)",  border: "rgba(74,222,128,0.4)",   dot: "#4ade80"  },
+  closed:    { label: "Closed",    color: "#94a3b8", bg: "rgba(148,163,184,0.15)", border: "rgba(148,163,184,0.3)",  dot: "#94a3b8"  },
 };
 
 const STATUS_ORDER = ["new", "contacted", "qualified", "converted", "closed"];
@@ -71,7 +78,13 @@ function absDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d)) return "—";
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /* ─────────────────────── sub-components ─────────────────────── */
@@ -83,21 +96,22 @@ function StatusBadge({ status }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "5px",
-        fontSize: "10.5px",
-        fontWeight: "500",
-        padding: "3px 8px",
-        borderRadius: "4px",
+        gap: "6px",
+        fontSize: "11px",
+        fontWeight: "600",
+        padding: "3.5px 9px",
+        borderRadius: "5px",
         color: cfg.color,
         background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
         letterSpacing: "0.02em",
         whiteSpace: "nowrap",
       }}
     >
       <span
         style={{
-          width: "5px",
-          height: "5px",
+          width: "6px",
+          height: "6px",
           borderRadius: "50%",
           background: cfg.dot,
           flexShrink: 0,
@@ -111,34 +125,49 @@ function StatusBadge({ status }) {
 function StatChip({ label, count, active, onClick, color }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "6px",
-        padding: "5px 11px",
-        borderRadius: "6px",
-        border: `1px solid ${active ? color + "40" : "rgba(14,165,233,0.1)"}`,
-        background: active ? color + "12" : "transparent",
-        color: active ? color : "#475569",
-        fontSize: "11.5px",
-        fontWeight: active ? "600" : "400",
+        gap: "8px",
+        padding: "6px 13px",
+        borderRadius: "7px",
+        border: `1px solid ${active ? color + "80" : "rgba(255,255,255,0.08)"}`,
+        background: active ? color + "20" : "rgba(255,255,255,0.02)",
+        color: active ? (color === "#64748b" ? "#cbd5e1" : color) : "#94a3b8",
+        fontSize: "12px",
+        fontWeight: active ? "600" : "500",
         cursor: "pointer",
         fontFamily: "inherit",
         transition: "all 0.15s ease",
         whiteSpace: "nowrap",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+          e.currentTarget.style.color = "#e2e8f0";
+          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+          e.currentTarget.style.color = "#94a3b8";
+          e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+        }
       }}
     >
       {label}
       {count != null && (
         <span
           style={{
-            fontSize: "10px",
-            padding: "1px 5px",
-            borderRadius: "3px",
-            background: active ? color + "20" : "rgba(255,255,255,0.04)",
-            color: active ? color : "#334155",
-            fontWeight: "600",
+            fontSize: "11px",
+            padding: "1px 6px",
+            borderRadius: "4px",
+            background: active ? color + "30" : "rgba(255,255,255,0.06)",
+            color: active ? (color === "#64748b" ? "#ffffff" : color) : "#cbd5e1",
+            fontWeight: "700",
           }}
         >
           {count}
@@ -153,19 +182,19 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
   const [status, setStatus] = useState(inquiry.status || "new");
   const [notes, setNotes] = useState(inquiry.notes || "");
   const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState(null);
   const [savingNotes, setSavingNotes] = useState(false);
-  const [notesDirty, setNotesDirty] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
   const notesTimer = useRef(null);
 
-  // Sync with parent when inquiry changes — intentionally depends only on inquiry.id
-  // so the panel resets when a different inquiry is selected, not on every status update.
-  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     setStatus(inquiry.status || "new");
     setNotes(inquiry.notes || "");
-    setNotesDirty(false);
-  }, [inquiry.id]);
-  /* eslint-enable react-hooks/exhaustive-deps */
+    setStatusError(null);
+    setNotesSaved(false);
+  }, [inquiry.id, inquiry.status, inquiry.notes]);
 
   // Close on Escape
   useEffect(() => {
@@ -175,38 +204,53 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
   }, [onClose]);
 
   const handleStatusChange = async (newStatus) => {
+    if (newStatus === status) return;
     setSavingStatus(true);
+    setStatusError(null);
     try {
       const res = await api.patch(`/api/admin/inquiries/${inquiry.id}/status`, { status: newStatus });
       setStatus(res.data.status);
       onStatusChange(res.data);
-    } catch (_) {
-      // Optimistic update fallback if backend route is pending deployment
-      const updated = { ...inquiry, status: newStatus };
-      setStatus(newStatus);
-      onStatusChange(updated);
+    } catch (err) {
+      setStatusError("Failed to update status on server. Please try again.");
     } finally {
       setSavingStatus(false);
     }
   };
 
+  const saveNotesNow = async (valToSave) => {
+    setSavingNotes(true);
+    try {
+      const res = await api.patch(`/api/admin/inquiries/${inquiry.id}/notes`, { notes: valToSave });
+      onNotesChange(res.data);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2500);
+    } catch (err) {
+      // Keep local notes intact
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
   const handleNotesChange = (val) => {
     setNotes(val);
-    setNotesDirty(true);
+    setNotesSaved(false);
     clearTimeout(notesTimer.current);
-    notesTimer.current = setTimeout(async () => {
-      setSavingNotes(true);
-      try {
-        const res = await api.patch(`/api/admin/inquiries/${inquiry.id}/notes`, { notes: val });
-        onNotesChange(res.data);
-        setNotesDirty(false);
-      } catch (_) {
-        onNotesChange({ ...inquiry, notes: val });
-        setNotesDirty(false);
-      } finally {
-        setSavingNotes(false);
-      }
-    }, 1200);
+    notesTimer.current = setTimeout(() => {
+      saveNotesNow(val);
+    }, 1000);
+  };
+
+  const copyToClipboard = (text, type) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    if (type === "email") {
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2000);
+    } else {
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 2000);
+    }
   };
 
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.new;
@@ -219,8 +263,8 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.4)",
-          backdropFilter: "blur(2px)",
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
           zIndex: 50,
         }}
       />
@@ -232,9 +276,10 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
           top: 0,
           right: 0,
           bottom: 0,
-          width: "min(480px, 100vw)",
+          width: "min(520px, 100vw)",
           background: "#060f1c",
-          borderLeft: "1px solid rgba(14,165,233,0.12)",
+          borderLeft: "1px solid rgba(14,165,233,0.18)",
+          boxShadow: "-8px 0 32px rgba(0,0,0,0.5)",
           zIndex: 51,
           display: "flex",
           flexDirection: "column",
@@ -255,67 +300,103 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid rgba(14,165,233,0.08)",
+            padding: "18px 22px",
+            borderBottom: "1px solid rgba(14,165,233,0.12)",
+            background: "#081324",
             flexShrink: 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
             <div
               style={{
-                width: "30px",
-                height: "30px",
+                width: "36px",
+                height: "36px",
                 borderRadius: "50%",
                 background: cfg.bg,
-                border: `1px solid ${cfg.color}30`,
+                border: `1.5px solid ${cfg.color}60`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "12px",
-                fontWeight: "600",
+                fontSize: "14px",
+                fontWeight: "700",
                 color: cfg.color,
                 flexShrink: 0,
               }}
             >
               {(inquiry.name || "?").charAt(0).toUpperCase()}
             </div>
-            <div>
-              <div style={{ fontSize: "13px", fontWeight: "600", color: "#e2e8f0" }}>
-                {inquiry.name || "—"}
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "15px",
+                  fontWeight: "700",
+                  color: "#f8fafc",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {inquiry.name || "(No name)"}
               </div>
-              <div style={{ fontSize: "11px", color: "#475569" }}>
-                {inquiry.company || inquiry.email}
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: inquiry.company ? "#38bdf8" : "#94a3b8",
+                  fontWeight: inquiry.company ? "500" : "400",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  marginTop: "1px",
+                }}
+              >
+                {inquiry.company ? inquiry.company : inquiry.email}
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close drawer"
             style={{
-              background: "none",
-              border: "none",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
               cursor: "pointer",
-              color: "#475569",
-              padding: "4px",
-              borderRadius: "4px",
+              color: "#cbd5e1",
+              padding: "6px",
+              borderRadius: "6px",
               display: "flex",
               alignItems: "center",
-              transition: "color 0.15s",
+              justifyContent: "center",
+              transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+              e.currentTarget.style.color = "#ffffff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+              e.currentTarget.style.color = "#cbd5e1";
+            }}
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "22px" }}>
 
           {/* Status workflow */}
-          <div style={{ marginBottom: "20px" }}>
-            <div style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
-              Status
+          <div style={{ marginBottom: "22px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Enquiry Status
+              </div>
+              {savingStatus && (
+                <span style={{ fontSize: "11px", color: "#38bdf8", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <RefreshCw size={11} style={{ animation: "spin 1s linear infinite" }} /> Updating…
+                </span>
+              )}
             </div>
+
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {STATUS_ORDER.map((s) => {
                 const c = STATUS_CONFIG[s];
@@ -323,95 +404,214 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
                 return (
                   <button
                     key={s}
+                    type="button"
                     onClick={() => !isActive && !savingStatus && handleStatusChange(s)}
                     disabled={savingStatus}
                     style={{
-                      padding: "5px 12px",
-                      borderRadius: "5px",
-                      border: `1px solid ${isActive ? c.color + "50" : "rgba(255,255,255,0.06)"}`,
-                      background: isActive ? c.bg : "transparent",
-                      color: isActive ? c.color : "#475569",
-                      fontSize: "11.5px",
-                      fontWeight: isActive ? "600" : "400",
+                      padding: "6px 13px",
+                      borderRadius: "6px",
+                      border: `1px solid ${isActive ? c.color + "80" : "rgba(255,255,255,0.08)"}`,
+                      background: isActive ? c.bg : "rgba(255,255,255,0.02)",
+                      color: isActive ? c.color : "#94a3b8",
+                      fontSize: "12px",
+                      fontWeight: isActive ? "700" : "500",
                       cursor: savingStatus || isActive ? "default" : "pointer",
                       fontFamily: "inherit",
                       transition: "all 0.15s",
-                      opacity: savingStatus ? 0.6 : 1,
+                      opacity: savingStatus ? 0.7 : 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isActive && !savingStatus) e.currentTarget.style.color = c.color;
+                      if (!isActive && !savingStatus) {
+                        e.currentTarget.style.color = c.color;
+                        e.currentTarget.style.borderColor = c.color + "40";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.color = "#475569";
+                      if (!isActive) {
+                        e.currentTarget.style.color = "#94a3b8";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                      }
                     }}
                   >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: isActive ? c.dot : "rgba(255,255,255,0.2)",
+                      }}
+                    />
                     {c.label}
                   </button>
                 );
               })}
             </div>
+
+            {statusError && (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#f87171", fontSize: "11.5px", marginTop: "8px" }}>
+                <AlertCircle size={13} />
+                {statusError}
+              </div>
+            )}
           </div>
 
           {/* Divider */}
-          <div style={{ height: "1px", background: "rgba(14,165,233,0.06)", marginBottom: "20px" }} />
+          <div style={{ height: "1px", background: "rgba(14,165,233,0.1)", marginBottom: "22px" }} />
 
-          {/* Contact fields */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
-            <DetailField icon={User} label="Name" value={inquiry.name} />
-            <DetailField icon={Building2} label="Company" value={inquiry.company} />
-            <DetailField icon={Mail} label="Email" value={inquiry.email} link={`mailto:${inquiry.email}`} />
-            <DetailField icon={Phone} label="Phone" value={inquiry.phone} link={inquiry.phone ? `tel:${inquiry.phone}` : null} />
-            <DetailField icon={Briefcase} label="Designation" value={inquiry.designation} />
-            <DetailField icon={Filter} label="Service Interest" value={inquiry.service_of_interest} />
-            <DetailField icon={Clock} label="Received" value={absDate(inquiry.created_at)} fullWidth />
-            <DetailField icon={ArrowRight} label="Source" value={SOURCE_LABELS[inquiry.source] || inquiry.source} />
+          {/* Section: Contact Details */}
+          <div style={{ marginBottom: "22px" }}>
+            <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "14px" }}>
+              Contact Information
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <DetailField icon={User} label="Name" value={inquiry.name} />
+              <DetailField icon={Building2} label="Company" value={inquiry.company} />
+
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
+                  <Mail size={11} style={{ color: "#0ea5e9" }} />
+                  Email Address
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <a
+                    href={`mailto:${inquiry.email}`}
+                    style={{ fontSize: "13.5px", fontWeight: "500", color: "#38bdf8", textDecoration: "none", wordBreak: "break-all" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                    onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                  >
+                    {inquiry.email}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(inquiry.email, "email")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "rgba(14,165,233,0.08)",
+                      border: "1px solid rgba(14,165,233,0.2)",
+                      borderRadius: "4px",
+                      padding: "2px 7px",
+                      color: copiedEmail ? "#34d399" : "#94a3b8",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {copiedEmail ? <Check size={11} /> : <Copy size={11} />}
+                    {copiedEmail ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {inquiry.phone && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <Phone size={11} style={{ color: "#0ea5e9" }} />
+                    Phone Number
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <a
+                      href={`tel:${inquiry.phone}`}
+                      style={{ fontSize: "13.5px", fontWeight: "500", color: "#38bdf8", textDecoration: "none" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                    >
+                      {inquiry.phone}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(inquiry.phone, "phone")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        background: "rgba(14,165,233,0.08)",
+                        border: "1px solid rgba(14,165,233,0.2)",
+                        borderRadius: "4px",
+                        padding: "2px 7px",
+                        color: copiedPhone ? "#34d399" : "#94a3b8",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {copiedPhone ? <Check size={11} /> : <Copy size={11} />}
+                      {copiedPhone ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {inquiry.designation && (
+                <DetailField icon={Briefcase} label="Designation" value={inquiry.designation} />
+              )}
+              <DetailField icon={Filter} label="Service of Interest" value={inquiry.service_of_interest || "General Inquiry"} />
+              <DetailField icon={Clock} label="Received Date" value={absDate(inquiry.created_at)} fullWidth />
+              <DetailField icon={ArrowRight} label="Inquiry Source" value={SOURCE_LABELS[inquiry.source] || inquiry.source} />
+            </div>
           </div>
 
-          {/* Message */}
-          {inquiry.message && (
-            <div style={{ marginBottom: "20px" }}>
-              <div style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <MessageSquare size={11} style={{ color: "#0ea5e9" }} />
-                Message
-              </div>
-              <div
-                style={{
-                  background: "rgba(14,165,233,0.04)",
-                  border: "1px solid rgba(14,165,233,0.08)",
-                  borderRadius: "6px",
-                  padding: "12px 14px",
-                  fontSize: "12.5px",
-                  color: "#94a3b8",
-                  lineHeight: "1.65",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {inquiry.message}
-              </div>
+          {/* Section: Message */}
+          <div style={{ marginBottom: "22px" }}>
+            <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <MessageSquare size={12} style={{ color: "#0ea5e9" }} />
+              Enquiry Message
             </div>
-          )}
+            <div
+              style={{
+                background: "#0a182c",
+                border: "1px solid rgba(14,165,233,0.18)",
+                borderRadius: "8px",
+                padding: "14px 16px",
+                fontSize: "13.5px",
+                color: "#f8fafc",
+                lineHeight: "1.7",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {inquiry.message || "(No message body provided)"}
+            </div>
+          </div>
 
-          {/* Admin notes */}
+          {/* Section: Internal Notes */}
           <div>
-            <div style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <StickyNote size={11} style={{ color: "#f59e0b" }} />
-              Internal Notes
-              {savingNotes && <span style={{ fontSize: "9px", color: "#475569", fontWeight: "400" }}>saving…</span>}
-              {!savingNotes && !notesDirty && notes && <CheckCircle2 size={10} style={{ color: "#22c55e" }} />}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Lock size={12} style={{ color: "#f59e0b" }} />
+                Internal Admin Notes
+              </div>
+              <div style={{ fontSize: "11px" }}>
+                {savingNotes ? (
+                  <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <RefreshCw size={10} style={{ animation: "spin 1s linear infinite" }} /> Saving…
+                  </span>
+                ) : notesSaved ? (
+                  <span style={{ color: "#34d399", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <CheckCircle2 size={12} /> Saved
+                  </span>
+                ) : (
+                  <span style={{ color: "#64748b" }}>Admin only</span>
+                )}
+              </div>
             </div>
+
             <textarea
               value={notes}
               onChange={(e) => handleNotesChange(e.target.value)}
-              placeholder="Add internal notes visible only to admins…"
+              placeholder="Add confidential internal notes, client follow-up remarks, or next action items (visible only to administrators)…"
               rows={4}
               style={{
                 width: "100%",
-                background: "rgba(245,158,11,0.04)",
-                border: "1px solid rgba(245,158,11,0.12)",
-                borderRadius: "6px",
-                padding: "10px 12px",
-                fontSize: "12.5px",
-                color: "#94a3b8",
+                background: "rgba(245,158,11,0.03)",
+                border: "1px solid rgba(245,158,11,0.2)",
+                borderRadius: "8px",
+                padding: "12px 14px",
+                fontSize: "13px",
+                color: "#f8fafc",
                 fontFamily: "inherit",
                 lineHeight: "1.6",
                 resize: "vertical",
@@ -419,9 +619,33 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
                 boxSizing: "border-box",
                 transition: "border-color 0.15s",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.3)")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.12)")}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.5)")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.2)")}
             />
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+              <button
+                type="button"
+                onClick={() => saveNotesNow(notes)}
+                disabled={savingNotes}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: "5px",
+                  border: "1px solid rgba(245,158,11,0.3)",
+                  background: "rgba(245,158,11,0.1)",
+                  color: "#f59e0b",
+                  fontSize: "11.5px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <StickyNote size={12} />
+                Save Note
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -429,26 +653,17 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
   );
 }
 
-function DetailField({ icon: Icon, label, value, link, fullWidth }) {
+function DetailField({ icon: Icon, label, value, fullWidth }) {
   if (!value) return null;
   return (
     <div style={{ gridColumn: fullWidth ? "1 / -1" : undefined }}>
-      <div style={{ fontSize: "9.5px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
-        <Icon size={10} style={{ color: "#0ea5e9" }} />
+      <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
+        <Icon size={11} style={{ color: "#0ea5e9" }} />
         {label}
       </div>
-      {link ? (
-        <a
-          href={link}
-          style={{ fontSize: "12.5px", color: "#0ea5e9", textDecoration: "none", wordBreak: "break-all" }}
-          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-        >
-          {value}
-        </a>
-      ) : (
-        <div style={{ fontSize: "12.5px", color: "#94a3b8", wordBreak: "break-word" }}>{value}</div>
-      )}
+      <div style={{ fontSize: "13px", fontWeight: "500", color: "#f8fafc", wordBreak: "break-word" }}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -464,76 +679,151 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      tabIndex={0}
+      role="button"
+      className="inquiry-row"
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
       style={{
-        display: "grid",
-        gridTemplateColumns: "1fr auto auto auto",
-        gap: "16px",
-        alignItems: "center",
-        padding: "13px 18px",
-        borderBottom: isLast ? "none" : "1px solid rgba(14,165,233,0.05)",
+        borderBottom: isLast ? "none" : "1px solid rgba(14,165,233,0.08)",
         background: selected
-          ? "rgba(14,165,233,0.06)"
+          ? "rgba(14,165,233,0.12)"
           : hovered
-          ? "rgba(14,165,233,0.03)"
-          : "transparent",
+          ? "rgba(14,165,233,0.05)"
+          : "#081324",
         cursor: "pointer",
-        transition: "background 0.12s",
-        borderLeft: selected ? "2px solid #0ea5e9" : "2px solid transparent",
+        transition: "all 0.15s ease",
+        borderLeft: selected ? "3px solid #0ea5e9" : "3px solid transparent",
+        outline: "none",
       }}
     >
       {/* Primary info */}
       <div style={{ minWidth: 0 }}>
+        {/* Mobile Top Row (Name + Status Badge on mobile) */}
+        <div className="inquiry-row-top" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "3px" }}>
+          {/* Name */}
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: "700",
+              color: "#f8fafc",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            {inquiry.name || "(No name)"}
+            {inquiry.status === "new" && (
+              <span
+                style={{
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "50%",
+                  background: "#38bdf8",
+                  boxShadow: "0 0 8px #38bdf8",
+                  display: "inline-block",
+                  flexShrink: 0,
+                }}
+                title="New unread enquiry"
+              />
+            )}
+          </div>
+
+          {/* Status Badge in mobile top row */}
+          <div className="inquiry-row-mobile-badge" style={{ display: "none" }}>
+            <StatusBadge status={inquiry.status || "new"} />
+          </div>
+        </div>
+
+        {/* Company & Email */}
         <div
           style={{
-            fontSize: "13px",
-            fontWeight: "500",
-            color: isActive ? "#e2e8f0" : "#94a3b8",
+            fontSize: "12px",
+            color: "#94a3b8",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            marginBottom: "2px",
-            transition: "color 0.12s",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
           }}
         >
-          {inquiry.name || "(No name)"}
+          {inquiry.company ? (
+            <>
+              <span style={{ color: "#38bdf8", fontWeight: "600" }}>{inquiry.company}</span>
+              <span style={{ color: "#475569" }}>·</span>
+            </>
+          ) : null}
+          <span>{inquiry.email}</span>
         </div>
-        <div
-          style={{
-            fontSize: "11.5px",
-            color: "#475569",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {inquiry.company ? `${inquiry.company} · ` : ""}{inquiry.email}
-        </div>
+
+        {/* Service of Interest */}
         {inquiry.service_of_interest && (
-          <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
-            <Briefcase size={9} />
+          <div
+            style={{
+              fontSize: "11.5px",
+              color: "#38bdf8",
+              marginTop: "4px",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              fontWeight: "500",
+            }}
+          >
+            <Briefcase size={10} style={{ color: "#0ea5e9" }} />
             {inquiry.service_of_interest}
           </div>
         )}
+
+        {/* Mobile Metadata (Source & Date) */}
+        <div className="inquiry-row-mobile-meta">
+          <span>{SOURCE_LABELS[inquiry.source] || inquiry.source || "Contact Form"}</span>
+          <span>·</span>
+          <span>{relTime(inquiry.created_at)}</span>
+        </div>
       </div>
 
-      {/* Source */}
-      <div style={{ fontSize: "10px", color: "#334155", whiteSpace: "nowrap", flexShrink: 0 }}>
-        {SOURCE_LABELS[inquiry.source] || inquiry.source || "—"}
-      </div>
-
-      {/* Status badge */}
-      <StatusBadge status={inquiry.status || "new"} />
-
-      {/* Time + arrow */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>
-        <span style={{ fontSize: "10.5px", color: "#334155", whiteSpace: "nowrap" }}>
-          {relTime(inquiry.created_at)}
+      {/* Source (Desktop) */}
+      <div className="inquiry-row-source" style={{ fontSize: "11.5px", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <span
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            padding: "3px 8px",
+            borderRadius: "4px",
+          }}
+        >
+          {SOURCE_LABELS[inquiry.source] || inquiry.source || "—"}
         </span>
-        <ChevronRight size={13} style={{ color: isActive ? "#0ea5e9" : "#1e293b", transition: "color 0.12s" }} />
+      </div>
+
+      {/* Status badge (Desktop) */}
+      <div className="inquiry-row-desktop-badge">
+        <StatusBadge status={inquiry.status || "new"} />
+      </div>
+
+      {/* Received Date (Desktop) */}
+      <div className="inquiry-row-date" style={{ fontSize: "11.5px", color: "#94a3b8", whiteSpace: "nowrap", textAlign: "right" }}>
+        {relTime(inquiry.created_at)}
+      </div>
+
+      {/* Chevron (Desktop) */}
+      <div className="inquiry-row-chevron" style={{ display: "flex", justifyContent: "flex-end" }}>
+        <ChevronRight
+          size={16}
+          style={{
+            color: isActive ? "#38bdf8" : "#475569",
+            transition: "color 0.15s, transform 0.15s",
+            transform: isActive ? "translateX(2px)" : "none",
+          }}
+        />
       </div>
     </div>
   );
 }
+
 
 /* ─────────────────────────── Page ─────────────────────────── */
 
@@ -551,6 +841,22 @@ export default function AdminInquiries() {
   const [selectedInquiry, setSelectedInquiry] = useState(null);
 
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const exportMenuRef = useRef(null);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const loadAll = useCallback(async (opts = {}) => {
     if (opts.refresh) setRefreshing(true);
@@ -564,7 +870,7 @@ export default function AdminInquiries() {
           params: {
             q: targetQ,
             status: targetStatus,
-            limit: 100,
+            limit: 200,
           },
         }),
       ]);
@@ -579,59 +885,20 @@ export default function AdminInquiries() {
         statsData = statsRes.value.data;
       }
 
-      // If dedicated backend route is unavailable (e.g. 404 before backend branch deployment)
-      if (listRes.status !== "fulfilled" || statsRes.status !== "fulfilled") {
-        try {
-          const fallback = await api.get("/api/contact");
-          const raw = (fallback.data || []).map((d) => ({
-            ...d,
-            source: d.source || "website_contact",
-            status: d.status || "new",
-            service_of_interest: d.service_of_interest || d.service || "",
-          }));
-
-          if (!statsData) {
-            const counts = { new: 0, contacted: 0, qualified: 0, converted: 0, closed: 0 };
-            raw.forEach((d) => {
-              const s = d.status || "new";
-              if (counts[s] !== undefined) counts[s]++;
-              else counts.new++;
-            });
-            statsData = { total: raw.length, by_status: counts };
-          }
-
-          if (items.length === 0 && listRes.status !== "fulfilled") {
-            let filtered = raw;
-            if (targetStatus) {
-              filtered = filtered.filter((d) => (d.status || "new") === targetStatus);
-            }
-            if (targetQ && targetQ.trim()) {
-              const term = targetQ.trim().toLowerCase();
-              filtered = filtered.filter(
-                (d) =>
-                  (d.name && d.name.toLowerCase().includes(term)) ||
-                  (d.email && d.email.toLowerCase().includes(term)) ||
-                  (d.company && d.company.toLowerCase().includes(term))
-              );
-            }
-            items = filtered;
-          }
-        } catch (_) {}
-      }
-
       setStats(statsData);
       setInquiries(items);
       setLastRefresh(new Date());
     } catch (_) {
-      // partial failures silent
+      // Handled cleanly
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [search, statusFilter]);
 
+  // Initial load
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadAll(); }, []);  // initial load only
+  useEffect(() => { loadAll(); }, []);
 
   // Re-fetch when filter changes
   useEffect(() => {
@@ -660,13 +927,57 @@ export default function AdminInquiries() {
     if (selectedInquiry?.id === updatedDoc.id) setSelectedInquiry(updatedDoc);
     // Refresh stats
     api.get("/api/admin/inquiries/stats").then((r) => setStats(r.data)).catch(() => {});
-    // If filtering by a status, also refresh the list so the moved item disappears
+    // If filtering by a specific status, re-filter
     if (statusFilter) loadAll({ status: statusFilter, q: search });
+    showToast(`Status updated to ${STATUS_CONFIG[updatedDoc.status]?.label || updatedDoc.status}`);
   };
 
   const handleNotesChange = (updatedDoc) => {
     setInquiries((prev) => prev.map((i) => (i.id === updatedDoc.id ? updatedDoc : i)));
     if (selectedInquiry?.id === updatedDoc.id) setSelectedInquiry(updatedDoc);
+  };
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleExport = async (format, mode) => {
+    setExporting(true);
+    setShowExportMenu(false);
+    try {
+      const params = { format };
+      if (mode === "current") {
+        if (statusFilter) params.status = statusFilter;
+        if (search && search.trim()) params.q = search.trim();
+      }
+
+      const response = await api.get("/api/admin/inquiries/export", {
+        params,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: format === "xlsx"
+          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          : "text/csv;charset=utf-8;",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const nowStr = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      link.setAttribute("download", `psa_enquiries_${mode}_${nowStr}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast(`Exported ${mode === "current" ? "current results" : "all enquiries"} (.${format.toUpperCase()})`);
+    } catch (err) {
+      showToast("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -688,77 +999,246 @@ export default function AdminInquiries() {
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              marginBottom: "8px",
-              background: "rgba(14,165,233,0.06)",
-              border: "1px solid rgba(14,165,233,0.15)",
+              marginBottom: "10px",
+              background: "rgba(14,165,233,0.1)",
+              border: "1px solid rgba(14,165,233,0.25)",
               borderRadius: "6px",
-              padding: "3px 10px",
+              padding: "4px 11px",
             }}
           >
-            <Inbox size={11} style={{ color: "#0ea5e9" }} />
-            <span style={{ fontSize: "10px", color: "#0ea5e9", fontWeight: "500", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <Inbox size={12} style={{ color: "#38bdf8" }} />
+            <span style={{ fontSize: "11px", color: "#38bdf8", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Inquiries Center
             </span>
           </div>
           <h1
             style={{
-              fontSize: "20px",
+              fontSize: "24px",
               fontWeight: "700",
-              color: "#e2e8f0",
+              color: "#f8fafc",
               margin: 0,
               letterSpacing: "-0.02em",
             }}
           >
             Website Enquiries
           </h1>
-          <p style={{ fontSize: "12px", color: "#475569", marginTop: "4px", marginBottom: 0 }}>
-            Manage and track inbound enquiries from the PSA website contact form.
+          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px", marginBottom: 0 }}>
+            Manage, respond to, and track inbound business enquiries from the PSA website contact form.
           </p>
         </div>
 
-        {/* Refresh */}
-        <button
-          onClick={() => loadAll({ refresh: true, status: statusFilter, q: search })}
-          disabled={refreshing}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "7px 13px",
-            background: "rgba(14,165,233,0.05)",
-            border: "1px solid rgba(14,165,233,0.12)",
-            borderRadius: "7px",
-            cursor: refreshing ? "default" : "pointer",
-            color: "#475569",
-            fontSize: "11.5px",
-            fontFamily: "inherit",
-            transition: "border-color 0.15s, color 0.15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            if (!refreshing) {
-              e.currentTarget.style.borderColor = "rgba(14,165,233,0.3)";
-              e.currentTarget.style.color = "#94a3b8";
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(14,165,233,0.12)";
-            e.currentTarget.style.color = "#475569";
-          }}
-        >
-          <RefreshCw size={12} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
-          {lastRefresh ? `Updated ${relTime(lastRefresh)}` : "Refresh"}
-        </button>
+        {/* Top Right Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Refresh */}
+          <button
+            type="button"
+            onClick={() => loadAll({ refresh: true, status: statusFilter, q: search })}
+            disabled={refreshing}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 14px",
+              background: "rgba(14,165,233,0.06)",
+              border: "1px solid rgba(14,165,233,0.2)",
+              borderRadius: "7px",
+              cursor: refreshing ? "default" : "pointer",
+              color: "#e2e8f0",
+              fontSize: "12px",
+              fontWeight: "500",
+              fontFamily: "inherit",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!refreshing) {
+                e.currentTarget.style.borderColor = "rgba(14,165,233,0.4)";
+                e.currentTarget.style.background = "rgba(14,165,233,0.12)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "rgba(14,165,233,0.2)";
+              e.currentTarget.style.background = "rgba(14,165,233,0.06)";
+            }}
+          >
+            <RefreshCw size={13} style={{ animation: refreshing ? "spin 1s linear infinite" : "none", color: "#38bdf8" }} />
+            {lastRefresh ? `Updated ${relTime(lastRefresh)}` : "Refresh"}
+          </button>
+
+          {/* Export Dropdown */}
+          <div style={{ position: "relative" }} ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowExportMenu((prev) => !prev)}
+              disabled={exporting}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 14px",
+                background: "rgba(14,165,233,0.1)",
+                border: "1px solid rgba(14,165,233,0.3)",
+                borderRadius: "7px",
+                cursor: exporting ? "default" : "pointer",
+                color: "#38bdf8",
+                fontSize: "12px",
+                fontWeight: "600",
+                fontFamily: "inherit",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                if (!exporting) {
+                  e.currentTarget.style.background = "rgba(14,165,233,0.18)";
+                  e.currentTarget.style.borderColor = "rgba(14,165,233,0.5)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(14,165,233,0.1)";
+                e.currentTarget.style.borderColor = "rgba(14,165,233,0.3)";
+              }}
+            >
+              <Download size={13} />
+              {exporting ? "Exporting…" : "Export"}
+              <ChevronDown size={12} />
+            </button>
+
+            {showExportMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: "6px",
+                  width: "220px",
+                  background: "#081324",
+                  border: "1px solid rgba(14,165,233,0.25)",
+                  borderRadius: "8px",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                  zIndex: 40,
+                  padding: "6px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Current Filtered Results
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleExport("xlsx", "current")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "5px",
+                    color: "#f8fafc",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ color: "#34d399", fontWeight: "700" }}>📊</span>
+                  Export Current (.xlsx)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("csv", "current")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "5px",
+                    color: "#f8fafc",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ color: "#38bdf8", fontWeight: "700" }}>📄</span>
+                  Export Current (.csv)
+                </button>
+
+                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  All Database Enquiries
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleExport("xlsx", "all")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "5px",
+                    color: "#f8fafc",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ color: "#34d399", fontWeight: "700" }}>📊</span>
+                  Export All (.xlsx)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("csv", "all")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "5px",
+                    color: "#f8fafc",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ color: "#38bdf8", fontWeight: "700" }}>📄</span>
+                  Export All (.csv)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ─── Status summary chips ─── */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "7px", marginBottom: "18px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "18px" }}>
         <StatChip
           label="All"
           count={stats?.total ?? null}
           active={statusFilter === null}
           onClick={() => setStatusFilter(null)}
-          color="#0ea5e9"
+          color="#38bdf8"
         />
         {STATUS_ORDER.map((s) => (
           <StatChip
@@ -772,38 +1252,51 @@ export default function AdminInquiries() {
         ))}
       </div>
 
-      {/* ─── Search ─── */}
+      {/* ─── Search Bar ─── */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "10px",
-          padding: "9px 14px",
-          background: "rgba(14,165,233,0.03)",
-          border: "1px solid rgba(14,165,233,0.08)",
-          borderRadius: "8px",
+          gap: "12px",
+          padding: "10px 16px",
+          background: "#081324",
+          border: "1px solid rgba(14,165,233,0.18)",
+          borderRadius: "9px",
           marginBottom: "16px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
         }}
       >
-        <Search size={14} style={{ color: "#334155", flexShrink: 0 }} />
+        <Search size={16} style={{ color: "#38bdf8", flexShrink: 0 }} />
         <input
           value={searchInput}
           onChange={(e) => handleSearchInput(e.target.value)}
-          placeholder="Search by name, email, or company…"
+          placeholder="Search by client name, email address, or company…"
           style={{
             flex: 1,
             background: "transparent",
             border: "none",
             outline: "none",
-            fontSize: "13px",
-            color: "#e2e8f0",
+            fontSize: "13.5px",
+            color: "#f8fafc",
             fontFamily: "inherit",
           }}
         />
         {searchInput && (
           <button
+            type="button"
             onClick={clearSearch}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 0, display: "flex", alignItems: "center" }}
+            aria-label="Clear search"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "none",
+              borderRadius: "50%",
+              cursor: "pointer",
+              color: "#cbd5e1",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <X size={13} />
           </button>
@@ -813,46 +1306,58 @@ export default function AdminInquiries() {
       {/* ─── List panel ─── */}
       <div
         style={{
-          background: "#07101f",
-          border: "1px solid rgba(14,165,233,0.08)",
+          background: "#081324",
+          border: "1px solid rgba(14,165,233,0.18)",
           borderRadius: "12px",
           overflow: "hidden",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
         }}
       >
         {/* Panel header */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto auto auto",
-            gap: "16px",
-            padding: "10px 18px",
-            borderBottom: "1px solid rgba(14,165,233,0.06)",
-          }}
-        >
-          <span style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            {loading ? "Loading…" : `${inquiries.length} enquir${inquiries.length === 1 ? "y" : "ies"}`}
+        <div className="inquiry-table-header">
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {loading ? "Loading…" : `${inquiries.length} Enquir${inquiries.length === 1 ? "y" : "ies"}`}
           </span>
-          <span style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em" }}>Source</span>
-          <span style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em" }}>Status</span>
-          <span style={{ fontSize: "10px", fontWeight: "600", color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em" }}>Received</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Source</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Status</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Received</span>
+          <span />
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "#334155", fontSize: "12px" }}>
-            Loading enquiries…
+          <div style={{ padding: "50px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
+            <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: "#38bdf8", margin: "0 auto 12px" }} />
+            Loading website enquiries…
           </div>
         ) : inquiries.length === 0 ? (
-          <div style={{ padding: "48px", textAlign: "center" }}>
-            <Inbox size={28} style={{ color: "#1e293b", margin: "0 auto 10px" }} />
-            <div style={{ fontSize: "13px", color: "#334155" }}>
-              {search || statusFilter ? "No enquiries match your filters." : "No enquiries yet."}
+          <div style={{ padding: "54px 20px", textAlign: "center" }}>
+            <Inbox size={32} style={{ color: "#334155", margin: "0 auto 14px" }} />
+            <div style={{ fontSize: "14px", fontWeight: "600", color: "#e2e8f0", marginBottom: "4px" }}>
+              {search || statusFilter ? "No matching enquiries found" : "No website enquiries yet"}
+            </div>
+            <div style={{ fontSize: "12px", color: "#94a3b8" }}>
+              {search || statusFilter
+                ? "Try searching for a different name, email, or clear the active status filter."
+                : "New client enquiries submitted through the contact form will appear here automatically."}
             </div>
             {(search || statusFilter) && (
               <button
+                type="button"
                 onClick={() => { clearSearch(); setStatusFilter(null); }}
-                style={{ marginTop: "10px", fontSize: "11px", color: "#0ea5e9", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+                style={{
+                  marginTop: "14px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  color: "#38bdf8",
+                  background: "rgba(14,165,233,0.1)",
+                  border: "1px solid rgba(14,165,233,0.3)",
+                  borderRadius: "6px",
+                  padding: "6px 14px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
               >
-                Clear filters
+                Clear all filters
               </button>
             )}
           </div>
@@ -869,8 +1374,89 @@ export default function AdminInquiries() {
         )}
       </div>
 
-      {/* Spin style */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {/* ─── Toast Feedback ─── */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            background: "#081324",
+            border: "1px solid #38bdf8",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
+            color: "#f8fafc",
+            padding: "12px 18px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "600",
+            zIndex: 60,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            animation: "fadeInUp 0.2s ease-out",
+          }}
+        >
+          <CheckCircle2 size={16} style={{ color: "#34d399" }} />
+          {toastMessage}
+        </div>
+      )}
+
+      {/* CSS Animations & Responsive Styles */}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .inquiry-table-header {
+          display: grid;
+          grid-template-columns: 1fr 140px 110px 110px 24px;
+          gap: 16px;
+          padding: 12px 20px;
+          border-bottom: 1px solid rgba(14,165,233,0.12);
+          background: #060f1c;
+        }
+
+        .inquiry-row {
+          display: grid;
+          grid-template-columns: 1fr 140px 110px 110px 24px;
+          gap: 16px;
+          align-items: center;
+          padding: 15px 20px;
+        }
+
+        .inquiry-row-mobile-meta {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .inquiry-table-header {
+            display: none !important;
+          }
+          .inquiry-row {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+            padding: 14px 16px !important;
+          }
+          .inquiry-row-source,
+          .inquiry-row-desktop-badge,
+          .inquiry-row-date,
+          .inquiry-row-chevron {
+            display: none !important;
+          }
+          .inquiry-row-mobile-badge {
+            display: block !important;
+          }
+          .inquiry-row-mobile-meta {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            font-size: 11.5px !important;
+            color: #94a3b8 !important;
+            margin-top: 5px !important;
+          }
+        }
+      `}</style>
 
       {/* ─── Detail panel ─── */}
       {selectedInquiry && (
@@ -884,3 +1470,4 @@ export default function AdminInquiries() {
     </AdminLayout>
   );
 }
+
