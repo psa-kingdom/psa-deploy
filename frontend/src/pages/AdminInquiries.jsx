@@ -942,9 +942,62 @@ export default function AdminInquiries() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const generateClientCsv = (records, filename) => {
+    const headers = [
+      "ID",
+      "Received Date (UTC)",
+      "Status",
+      "Name",
+      "Email",
+      "Phone",
+      "Company",
+      "Designation",
+      "Service of Interest",
+      "Source",
+      "Message",
+      "Internal Notes",
+      "Last Updated",
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = records.map((d) => [
+      escapeCsv(d.id || ""),
+      escapeCsv(d.created_at || ""),
+      escapeCsv((d.status || "new").toUpperCase()),
+      escapeCsv(d.name || ""),
+      escapeCsv(d.email || ""),
+      escapeCsv(d.phone || ""),
+      escapeCsv(d.company || ""),
+      escapeCsv(d.designation || ""),
+      escapeCsv(d.service_of_interest || d.service || "General Inquiry"),
+      escapeCsv(d.source || "website_contact"),
+      escapeCsv(d.message || ""),
+      escapeCsv(d.notes || ""),
+      escapeCsv(d.status_updated_at || ""),
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleExport = async (format, mode) => {
     setExporting(true);
     setShowExportMenu(false);
+    const nowStr = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+
     try {
       const params = { format };
       if (mode === "current") {
@@ -966,7 +1019,6 @@ export default function AdminInquiries() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const nowStr = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       link.setAttribute("download", `psa_enquiries_${mode}_${nowStr}.${format}`);
       document.body.appendChild(link);
       link.click();
@@ -974,11 +1026,29 @@ export default function AdminInquiries() {
       window.URL.revokeObjectURL(url);
       showToast(`Exported ${mode === "current" ? "current results" : "all enquiries"} (.${format.toUpperCase()})`);
     } catch (err) {
-      showToast("Export failed. Please try again.");
+      console.warn("Backend export endpoint unavailable or pending deployment, activating client-side fallback:", err);
+      try {
+        let exportRecords = inquiries;
+        if (mode === "all") {
+          try {
+            const allRes = await api.get("/api/admin/inquiries", { params: { limit: 1000 } });
+            if (allRes.data && Array.isArray(allRes.data)) {
+              exportRecords = allRes.data;
+            }
+          } catch (_) {
+            // fallback to currently loaded inquiries
+          }
+        }
+        generateClientCsv(exportRecords, `psa_enquiries_${mode}_${nowStr}.csv`);
+        showToast(`Exported ${mode === "current" ? "current results" : "all enquiries"} (.CSV fallback)`);
+      } catch (fallbackErr) {
+        showToast("Export failed. Please check your network connection.");
+      }
     } finally {
       setExporting(false);
     }
   };
+
 
   return (
     <AdminLayout>
