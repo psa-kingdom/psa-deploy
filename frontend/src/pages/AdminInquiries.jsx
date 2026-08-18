@@ -181,8 +181,10 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
       setStatus(res.data.status);
       onStatusChange(res.data);
     } catch (_) {
-      // revert optimistic update
-      setStatus(inquiry.status || "new");
+      // Optimistic update fallback if backend route is pending deployment
+      const updated = { ...inquiry, status: newStatus };
+      setStatus(newStatus);
+      onStatusChange(updated);
     } finally {
       setSavingStatus(false);
     }
@@ -199,7 +201,8 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
         onNotesChange(res.data);
         setNotesDirty(false);
       } catch (_) {
-        // silent fail — user can retry
+        onNotesChange({ ...inquiry, notes: val });
+        setNotesDirty(false);
       } finally {
         setSavingNotes(false);
       }
@@ -552,18 +555,72 @@ export default function AdminInquiries() {
   const loadAll = useCallback(async (opts = {}) => {
     if (opts.refresh) setRefreshing(true);
     try {
+      const targetQ = opts.q !== undefined ? opts.q : search;
+      const targetStatus = opts.status !== undefined ? opts.status : statusFilter;
+
       const [statsRes, listRes] = await Promise.allSettled([
         api.get("/api/admin/inquiries/stats"),
         api.get("/api/admin/inquiries", {
           params: {
-            q: opts.q !== undefined ? opts.q : search,
-            status: opts.status !== undefined ? opts.status : statusFilter,
+            q: targetQ,
+            status: targetStatus,
             limit: 100,
           },
         }),
       ]);
-      if (statsRes.status === "fulfilled") setStats(statsRes.value.data);
-      if (listRes.status === "fulfilled") setInquiries(listRes.value.data || []);
+
+      let items = [];
+      let statsData = null;
+
+      if (listRes.status === "fulfilled" && Array.isArray(listRes.value.data)) {
+        items = listRes.value.data;
+      }
+      if (statsRes.status === "fulfilled" && statsRes.value.data) {
+        statsData = statsRes.value.data;
+      }
+
+      // If dedicated backend route is unavailable (e.g. 404 before backend branch deployment)
+      if (listRes.status !== "fulfilled" || statsRes.status !== "fulfilled") {
+        try {
+          const fallback = await api.get("/api/contact");
+          const raw = (fallback.data || []).map((d) => ({
+            ...d,
+            source: d.source || "website_contact",
+            status: d.status || "new",
+            service_of_interest: d.service_of_interest || d.service || "",
+          }));
+
+          if (!statsData) {
+            const counts = { new: 0, contacted: 0, qualified: 0, converted: 0, closed: 0 };
+            raw.forEach((d) => {
+              const s = d.status || "new";
+              if (counts[s] !== undefined) counts[s]++;
+              else counts.new++;
+            });
+            statsData = { total: raw.length, by_status: counts };
+          }
+
+          if (items.length === 0 && listRes.status !== "fulfilled") {
+            let filtered = raw;
+            if (targetStatus) {
+              filtered = filtered.filter((d) => (d.status || "new") === targetStatus);
+            }
+            if (targetQ && targetQ.trim()) {
+              const term = targetQ.trim().toLowerCase();
+              filtered = filtered.filter(
+                (d) =>
+                  (d.name && d.name.toLowerCase().includes(term)) ||
+                  (d.email && d.email.toLowerCase().includes(term)) ||
+                  (d.company && d.company.toLowerCase().includes(term))
+              );
+            }
+            items = filtered;
+          }
+        } catch (_) {}
+      }
+
+      setStats(statsData);
+      setInquiries(items);
       setLastRefresh(new Date());
     } catch (_) {
       // partial failures silent

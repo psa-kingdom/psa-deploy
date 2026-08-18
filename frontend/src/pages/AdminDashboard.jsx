@@ -247,7 +247,7 @@ function EnquiryRow({ enquiry, isLast }) {
             textOverflow: "ellipsis",
           }}
         >
-          {enquiry.email || ""}{enquiry.service ? ` · ${enquiry.service}` : ""}
+          {enquiry.email || ""}{(enquiry.service_of_interest || enquiry.service) ? ` · ${enquiry.service_of_interest || enquiry.service}` : ""}
         </div>
       </div>
       <div style={{ fontSize: "10px", color: "#334155", whiteSpace: "nowrap" }}>
@@ -343,17 +343,43 @@ export default function AdminDashboard() {
         axios.get(`${BACKEND_URL}/api/admin/inquiries/stats`, { withCredentials: true }),
       ]);
 
-      if (statsRes.status === "fulfilled") {
-        setStats({ ...statsRes.value.data, inqTotal: inqStatsRes.status === "fulfilled" ? inqStatsRes.value.data.total : null });
+      // Handle Inquiries with graceful fallback to /api/contact if /api/admin/inquiries is not yet deployed on backend
+      let inqList = [];
+      let inqCount = null;
+
+      if (enquiriesRes.status === "fulfilled" && Array.isArray(enquiriesRes.value.data)) {
+        inqList = enquiriesRes.value.data.slice(0, 5);
       }
+      if (inqStatsRes.status === "fulfilled" && inqStatsRes.value.data?.total != null) {
+        inqCount = inqStatsRes.value.data.total;
+      }
+
+      // If dedicated admin route failed (e.g. 404 on preview environment), fall back to public /api/contact
+      if (enquiriesRes.status !== "fulfilled" || inqStatsRes.status !== "fulfilled") {
+        try {
+          const contactFallback = await axios.get(`${BACKEND_URL}/api/contact`, { withCredentials: true });
+          const rawItems = contactFallback.data || [];
+          if (inqList.length === 0) {
+            inqList = rawItems.slice(0, 5);
+          }
+          if (inqCount === null) {
+            inqCount = rawItems.length;
+          }
+        } catch (_) {}
+      }
+
+      if (statsRes.status === "fulfilled") {
+        setStats({ ...statsRes.value.data, inqTotal: inqCount });
+      } else {
+        setStats((prev) => ({ ...(prev || {}), inqTotal: inqCount }));
+      }
+
       if (campaignsRes.status === "fulfilled") {
         const all = campaignsRes.value.data || [];
         setCampaigns(all.slice(0, 5));
       }
-      if (enquiriesRes.status === "fulfilled") {
-        const all = enquiriesRes.value.data || [];
-        setEnquiries(all.slice(0, 5));
-      }
+
+      setEnquiries(inqList);
 
       setLastRefresh(new Date());
     } catch (_) {
