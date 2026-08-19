@@ -7,6 +7,9 @@
  * - Main content area
  *
  * Only renders the modules that exist in V1. Future modules are added here.
+ *
+ * Design: light/hybrid enterprise SaaS. Dark sidebar with deliberate contrast;
+ * light topbar and content area for readability.
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
@@ -26,6 +29,31 @@ import {
   Inbox,
 } from "lucide-react";
 import { BACKEND_URL } from "../../config";
+
+import {
+  PAGE_BG,
+  SURFACE,
+  SURFACE_ALT,
+  BORDER,
+  TOPBAR_BG,
+  TOPBAR_BORDER,
+  SIDEBAR_BG,
+  SIDEBAR_ACTIVE_BG,
+  SIDEBAR_ACTIVE_BORDER,
+  SIDEBAR_ACTIVE_TEXT,
+  SIDEBAR_INACTIVE_TEXT,
+  SIDEBAR_INACTIVE_HOVER_TEXT,
+  SIDEBAR_INACTIVE_HOVER_BG,
+  SIDEBAR_DIVIDER,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_MUTED,
+  TEXT_DISABLED,
+  ACCENT,
+  ACCENT_BG,
+  SHADOW_SM,
+  RADIUS_MD,
+} from "../../utils/adminTheme";
 
 const NAV_ITEMS = [
   {
@@ -118,23 +146,23 @@ function AdminSearch({ onNavigate }) {
           alignItems: "center",
           gap: "8px",
           padding: "6px 12px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "6px",
+          background: SURFACE_ALT,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_MD,
           cursor: "pointer",
-          color: "#6b7280",
+          color: TEXT_MUTED,
           fontSize: "12px",
           fontFamily: "inherit",
           transition: "border-color 0.15s, color 0.15s",
           minWidth: "200px",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = "rgba(14,165,233,0.3)";
-          e.currentTarget.style.color = "#9ca3af";
+          e.currentTarget.style.borderColor = ACCENT;
+          e.currentTarget.style.color = TEXT_SECONDARY;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
-          e.currentTarget.style.color = "#6b7280";
+          e.currentTarget.style.borderColor = BORDER;
+          e.currentTarget.style.color = TEXT_MUTED;
         }}
       >
         <Search size={13} />
@@ -143,10 +171,10 @@ function AdminSearch({ onNavigate }) {
           style={{
             fontSize: "10px",
             padding: "1px 5px",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: SURFACE_ALT,
+            border: `1px solid ${BORDER}`,
             borderRadius: "3px",
-            color: "#4b5563",
+            color: TEXT_DISABLED,
             fontFamily: "monospace",
           }}
         >
@@ -163,10 +191,10 @@ function AdminSearch({ onNavigate }) {
             left: 0,
             right: 0,
             minWidth: "320px",
-            background: "#0d1117",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
             borderRadius: "10px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.08)",
+            boxShadow: "0 16px 48px rgba(10,37,64,0.12), 0 4px 12px rgba(10,37,64,0.06)",
             overflow: "hidden",
             zIndex: 100,
           }}
@@ -178,10 +206,10 @@ function AdminSearch({ onNavigate }) {
               alignItems: "center",
               gap: "10px",
               padding: "12px 14px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              borderBottom: `1px solid ${BORDER}`,
             }}
           >
-            <Search size={14} style={{ color: "#0ea5e9", flexShrink: 0 }} />
+            <Search size={14} style={{ color: ACCENT, flexShrink: 0 }} />
             <input
               ref={inputRef}
               value={query}
@@ -193,14 +221,14 @@ function AdminSearch({ onNavigate }) {
                 border: "none",
                 outline: "none",
                 fontSize: "13px",
-                color: "#e5e7eb",
+                color: TEXT_PRIMARY,
                 fontFamily: "inherit",
               }}
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#4b5563", padding: 0 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, padding: 0 }}
               >
                 <X size={13} />
               </button>
@@ -217,7 +245,7 @@ function AdminSearch({ onNavigate }) {
                     style={{
                       fontSize: "10px",
                       fontWeight: "600",
-                      color: "#4b5563",
+                      color: TEXT_DISABLED,
                       textTransform: "uppercase",
                       letterSpacing: "0.1em",
                       padding: "6px 8px 4px",
@@ -237,8 +265,8 @@ function AdminSearch({ onNavigate }) {
                             alignItems: "center",
                             gap: "10px",
                             padding: "8px 10px",
-                            borderRadius: "6px",
-                            color: "#374151",
+                            borderRadius: RADIUS_MD,
+                            color: TEXT_DISABLED,
                             fontSize: "12px",
                             cursor: "default",
                           }}
@@ -259,24 +287,24 @@ function AdminSearch({ onNavigate }) {
                             alignItems: "center",
                             gap: "10px",
                             padding: "8px 10px",
-                            borderRadius: "6px",
-                            color: "#9ca3af",
+                            borderRadius: RADIUS_MD,
+                            color: TEXT_SECONDARY,
                             fontSize: "12px",
                             textDecoration: "none",
                             transition: "background 0.1s, color 0.1s",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "rgba(14,165,233,0.08)";
-                            e.currentTarget.style.color = "#e5e7eb";
+                            e.currentTarget.style.background = ACCENT_BG;
+                            e.currentTarget.style.color = TEXT_PRIMARY;
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = "transparent";
-                            e.currentTarget.style.color = "#9ca3af";
+                            e.currentTarget.style.color = TEXT_SECONDARY;
                           }}
                         >
-                          <Icon size={13} style={{ color: "#0ea5e9" }} />
+                          <Icon size={13} style={{ color: ACCENT }} />
                           <span style={{ flex: 1 }}>{s.label}</span>
-                          <ArrowRight size={11} style={{ color: "#374151" }} />
+                          <ArrowRight size={11} style={{ color: TEXT_DISABLED }} />
                         </Link>
                       );
                     })}
@@ -288,7 +316,7 @@ function AdminSearch({ onNavigate }) {
                 style={{
                   padding: "24px",
                   textAlign: "center",
-                  color: "#4b5563",
+                  color: TEXT_MUTED,
                   fontSize: "12px",
                 }}
               >
@@ -333,9 +361,9 @@ export default function AdminLayout({ children }) {
       style={{
         display: "flex",
         minHeight: "100vh",
-        background: "#07101f",
+        background: PAGE_BG,
         fontFamily: "'DM Sans', 'Inter', -apple-system, sans-serif",
-        color: "#cbd5e1",
+        color: TEXT_PRIMARY,
         position: "relative",
       }}
     >
@@ -346,7 +374,7 @@ export default function AdminLayout({ children }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "rgba(10,37,64,0.5)",
             backdropFilter: "blur(2px)",
             zIndex: 35,
           }}
@@ -354,7 +382,7 @@ export default function AdminLayout({ children }) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* ─── Sidebar ─── */}
       <aside
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
@@ -363,8 +391,8 @@ export default function AdminLayout({ children }) {
           height: "100vh",
           position: "sticky",
           top: 0,
-          background: "#050d1a",
-          borderRight: "1px solid rgba(14,165,233,0.1)",
+          background: SIDEBAR_BG,
+          borderRight: `1px solid ${SIDEBAR_DIVIDER}`,
           display: "flex",
           flexDirection: "column",
           transition: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
@@ -382,7 +410,7 @@ export default function AdminLayout({ children }) {
             display: "flex",
             alignItems: "center",
             paddingLeft: "15px",
-            borderBottom: "1px solid rgba(14,165,233,0.08)",
+            borderBottom: `1px solid ${SIDEBAR_DIVIDER}`,
             gap: "11px",
             flexShrink: 0,
             cursor: "pointer",
@@ -409,10 +437,10 @@ export default function AdminLayout({ children }) {
           </div>
           {expanded && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#e2e8f0", whiteSpace: "nowrap", letterSpacing: "0.01em" }}>
+              <span style={{ fontSize: "12px", fontWeight: "600", color: "#E2E8F0", whiteSpace: "nowrap", letterSpacing: "0.01em" }}>
                 PSA Admin
               </span>
-              <span style={{ fontSize: "9.5px", color: "#475569", whiteSpace: "nowrap", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              <span style={{ fontSize: "9.5px", color: SIDEBAR_INACTIVE_TEXT, whiteSpace: "nowrap", letterSpacing: "0.04em", textTransform: "uppercase" }}>
                 Portal
               </span>
             </div>
@@ -437,28 +465,30 @@ export default function AdminLayout({ children }) {
                   gap: "10px",
                   padding: "9px 15px",
                   textDecoration: "none",
-                  color: active ? "#38bdf8" : "#64748b",
-                  background: active ? "rgba(14,165,233,0.08)" : "transparent",
-                  borderLeft: active ? "2px solid #0ea5e9" : "2px solid transparent",
+                  color: active ? SIDEBAR_ACTIVE_TEXT : SIDEBAR_INACTIVE_TEXT,
+                  background: active ? SIDEBAR_ACTIVE_BG : "transparent",
+                  borderLeft: active
+                    ? `3px solid ${SIDEBAR_ACTIVE_BORDER}`
+                    : "3px solid transparent",
                   transition: "all 0.15s ease",
                   whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.color = "#94a3b8";
-                    e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                    e.currentTarget.style.color = SIDEBAR_INACTIVE_HOVER_TEXT;
+                    e.currentTarget.style.background = SIDEBAR_INACTIVE_HOVER_BG;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
-                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.color = SIDEBAR_INACTIVE_TEXT;
                     e.currentTarget.style.background = "transparent";
                   }
                 }}
               >
                 <Icon size={15} style={{ flexShrink: 0 }} />
                 {expanded && (
-                  <span style={{ fontSize: "12.5px", fontWeight: active ? "500" : "400" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: active ? "600" : "400" }}>
                     {item.label}
                   </span>
                 )}
@@ -468,7 +498,7 @@ export default function AdminLayout({ children }) {
         </nav>
 
         {/* Logout */}
-        <div style={{ padding: "10px 0", borderTop: "1px solid rgba(14,165,233,0.08)", flexShrink: 0 }}>
+        <div style={{ padding: "10px 0", borderTop: `1px solid ${SIDEBAR_DIVIDER}`, flexShrink: 0 }}>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
@@ -481,13 +511,13 @@ export default function AdminLayout({ children }) {
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              color: "#374151",
+              color: SIDEBAR_INACTIVE_TEXT,
               whiteSpace: "nowrap",
               transition: "color 0.15s",
               fontFamily: "inherit",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#374151")}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#F87171")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = SIDEBAR_INACTIVE_TEXT)}
             title="Logout"
           >
             <LogOut size={14} style={{ flexShrink: 0 }} />
@@ -498,19 +528,20 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main content viewport */}
+      {/* ─── Main content viewport ─── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Top bar */}
         <header
           style={{
             height: "58px",
-            borderBottom: "1px solid rgba(14,165,233,0.08)",
+            borderBottom: `1px solid ${TOPBAR_BORDER}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0 24px",
             flexShrink: 0,
-            background: "#07101f",
+            background: TOPBAR_BG,
+            boxShadow: SHADOW_SM,
             position: "sticky",
             top: 0,
             zIndex: 30,
@@ -519,11 +550,11 @@ export default function AdminLayout({ children }) {
         >
           {/* Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: "7px", flexShrink: 0 }}>
-            <span style={{ fontSize: "11px", color: "#334155", fontWeight: "500", letterSpacing: "0.02em" }}>
+            <span style={{ fontSize: "11px", color: TEXT_MUTED, fontWeight: "500", letterSpacing: "0.02em" }}>
               PSA Admin
             </span>
-            <ChevronRight size={11} style={{ color: "#1e293b" }} />
-            <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "500" }}>
+            <ChevronRight size={11} style={{ color: TEXT_DISABLED }} />
+            <span style={{ fontSize: "12px", color: TEXT_PRIMARY, fontWeight: "600" }}>
               {activePage}
             </span>
           </div>
@@ -545,7 +576,7 @@ export default function AdminLayout({ children }) {
             <div
               style={{
                 fontSize: "10px",
-                color: "#334155",
+                color: TEXT_SECONDARY,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 fontWeight: "600",
@@ -558,8 +589,8 @@ export default function AdminLayout({ children }) {
                 width: "6px",
                 height: "6px",
                 borderRadius: "50%",
-                background: "#22c55e",
-                boxShadow: "0 0 6px rgba(34,197,94,0.5)",
+                background: "#22C55E",
+                boxShadow: "0 0 5px rgba(34,197,94,0.5)",
               }}
               title="Portal operational"
             />

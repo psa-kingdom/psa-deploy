@@ -7,6 +7,8 @@
  * Status workflow: new → contacted → qualified → converted → closed
  *
  * Data source: /api/admin/inquiries (authenticated)
+ *
+ * Visual theme: light/hybrid enterprise SaaS (adminTheme tokens).
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -38,6 +40,16 @@ import {
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
+import {
+  SURFACE, SURFACE_ALT, SURFACE_HOVER, BORDER,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED, TEXT_DISABLED,
+  ACCENT, ACCENT_BG, ACCENT_BORDER,
+  SUCCESS_DARK, SUCCESS_BG, SUCCESS_BORDER_STRONG,
+  WARNING_DARK, WARNING_BG, WARNING_BORDER_STRONG,
+  DANGER, DANGER_BG, DANGER_BORDER_STRONG,
+  SHADOW_SM, SHADOW_MD, RADIUS_MD, RADIUS_LG,
+  BTN_SECONDARY_STYLE, CARD_STYLE,
+} from "../utils/adminTheme";
 
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 
@@ -133,28 +145,29 @@ function StatChip({ label, count, active, onClick, color }) {
         gap: "8px",
         padding: "6px 13px",
         borderRadius: "7px",
-        border: `1px solid ${active ? color + "80" : "rgba(255,255,255,0.08)"}`,
-        background: active ? color + "20" : "rgba(255,255,255,0.02)",
-        color: active ? (color === "#64748b" ? "#cbd5e1" : color) : "#94a3b8",
+        border: `1px solid ${active ? color + "70" : BORDER}`,
+        background: active ? color + "15" : SURFACE,
+        color: active ? color : TEXT_SECONDARY,
         fontSize: "12px",
         fontWeight: active ? "600" : "500",
         cursor: "pointer",
         fontFamily: "inherit",
         transition: "all 0.15s ease",
         whiteSpace: "nowrap",
+        boxShadow: SHADOW_SM,
       }}
       onMouseEnter={(e) => {
         if (!active) {
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
-          e.currentTarget.style.color = "#e2e8f0";
-          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          e.currentTarget.style.borderColor = color + "50";
+          e.currentTarget.style.color = color;
+          e.currentTarget.style.background = color + "08";
         }
       }}
       onMouseLeave={(e) => {
         if (!active) {
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-          e.currentTarget.style.color = "#94a3b8";
-          e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+          e.currentTarget.style.borderColor = BORDER;
+          e.currentTarget.style.color = TEXT_SECONDARY;
+          e.currentTarget.style.background = SURFACE;
         }
       }}
     >
@@ -162,12 +175,13 @@ function StatChip({ label, count, active, onClick, color }) {
       {count != null && (
         <span
           style={{
-            fontSize: "11px",
+            fontSize: "10.5px",
             padding: "1px 6px",
             borderRadius: "4px",
-            background: active ? color + "30" : "rgba(255,255,255,0.06)",
-            color: active ? (color === "#64748b" ? "#ffffff" : color) : "#cbd5e1",
+            background: active ? color + "20" : SURFACE_ALT,
+            color: active ? color : TEXT_MUTED,
             fontWeight: "700",
+            border: `1px solid ${active ? color + "30" : BORDER}`,
           }}
         >
           {count}
@@ -263,8 +277,8 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
+          background: "rgba(10,37,64,0.45)",
+          backdropFilter: "blur(3px)",
           zIndex: 50,
         }}
       />
@@ -277,9 +291,9 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
           right: 0,
           bottom: 0,
           width: "min(520px, 100vw)",
-          background: "#060f1c",
-          borderLeft: "1px solid rgba(14,165,233,0.18)",
-          boxShadow: "-8px 0 32px rgba(0,0,0,0.5)",
+          background: SURFACE,
+          borderLeft: `1px solid ${BORDER}`,
+          boxShadow: "-8px 0 40px rgba(10,37,64,0.12), -2px 0 8px rgba(10,37,64,0.06)",
           zIndex: 51,
           display: "flex",
           flexDirection: "column",
@@ -301,8 +315,8 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "18px 22px",
-            borderBottom: "1px solid rgba(14,165,233,0.12)",
-            background: "#081324",
+            borderBottom: `1px solid ${BORDER}`,
+            background: SURFACE_ALT,
             flexShrink: 0,
           }}
         >
@@ -330,7 +344,7 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
                 style={{
                   fontSize: "15px",
                   fontWeight: "700",
-                  color: "#f8fafc",
+                  color: TEXT_PRIMARY,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -341,7 +355,7 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
               <div
                 style={{
                   fontSize: "12px",
-                  color: inquiry.company ? "#38bdf8" : "#94a3b8",
+                  color: inquiry.company ? ACCENT : TEXT_MUTED,
                   fontWeight: inquiry.company ? "500" : "400",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -357,10 +371,10 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
             onClick={onClose}
             aria-label="Close drawer"
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: SURFACE,
+              border: `1px solid ${BORDER}`,
               cursor: "pointer",
-              color: "#cbd5e1",
+              color: TEXT_MUTED,
               padding: "6px",
               borderRadius: "6px",
               display: "flex",
@@ -369,12 +383,14 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
               transition: "all 0.15s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.background = SURFACE_ALT;
+              e.currentTarget.style.color = TEXT_PRIMARY;
+              e.currentTarget.style.borderColor = BORDER;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-              e.currentTarget.style.color = "#cbd5e1";
+              e.currentTarget.style.background = SURFACE;
+              e.currentTarget.style.color = TEXT_MUTED;
+              e.currentTarget.style.borderColor = BORDER;
             }}
           >
             <X size={16} />
@@ -387,7 +403,7 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
           {/* Status workflow */}
           <div style={{ marginBottom: "22px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-              <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Enquiry Status
               </div>
               {savingStatus && (
@@ -459,11 +475,11 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
           </div>
 
           {/* Divider */}
-          <div style={{ height: "1px", background: "rgba(14,165,233,0.1)", marginBottom: "22px" }} />
+          <div style={{ height: "1px", background: BORDER, marginBottom: "22px" }} />
 
           {/* Section: Contact Details */}
           <div style={{ marginBottom: "22px" }}>
-            <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "14px" }}>
+            <div style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "14px" }}>
               Contact Information
             </div>
 
@@ -556,18 +572,18 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
 
           {/* Section: Message */}
           <div style={{ marginBottom: "22px" }}>
-            <div style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <MessageSquare size={12} style={{ color: "#0ea5e9" }} />
+            <div style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <MessageSquare size={12} style={{ color: ACCENT }} />
               Enquiry Message
             </div>
             <div
               style={{
-                background: "#0a182c",
-                border: "1px solid rgba(14,165,233,0.18)",
-                borderRadius: "8px",
+                background: SURFACE_ALT,
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS_MD,
                 padding: "14px 16px",
                 fontSize: "13.5px",
-                color: "#f8fafc",
+                color: TEXT_PRIMARY,
                 lineHeight: "1.7",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
@@ -606,21 +622,27 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
               rows={4}
               style={{
                 width: "100%",
-                background: "rgba(245,158,11,0.03)",
-                border: "1px solid rgba(245,158,11,0.2)",
-                borderRadius: "8px",
+                background: SURFACE,
+                border: `1px solid ${WARNING_BORDER_STRONG}40`,
+                borderRadius: RADIUS_MD,
                 padding: "12px 14px",
                 fontSize: "13px",
-                color: "#f8fafc",
+                color: TEXT_PRIMARY,
                 fontFamily: "inherit",
                 lineHeight: "1.6",
                 resize: "vertical",
                 outline: "none",
                 boxSizing: "border-box",
-                transition: "border-color 0.15s",
+                transition: "border-color 0.15s, box-shadow 0.15s",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.5)")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(245,158,11,0.2)")}
+              onFocus={(e) => {
+                e.target.style.borderColor = WARNING_BORDER_STRONG;
+                e.target.style.boxShadow = `0 0 0 3px ${WARNING_BG}`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = `${WARNING_BORDER_STRONG}40`;
+                e.target.style.boxShadow = "none";
+              }}
             />
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
@@ -629,11 +651,11 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
                 onClick={() => saveNotesNow(notes)}
                 disabled={savingNotes}
                 style={{
-                  padding: "5px 12px",
-                  borderRadius: "5px",
-                  border: "1px solid rgba(245,158,11,0.3)",
-                  background: "rgba(245,158,11,0.1)",
-                  color: "#f59e0b",
+                  padding: "6px 14px",
+                  borderRadius: RADIUS_MD,
+                  border: `1px solid ${WARNING_BORDER_STRONG}`,
+                  background: WARNING_BG,
+                  color: WARNING_DARK,
                   fontSize: "11.5px",
                   fontWeight: "600",
                   cursor: "pointer",
@@ -657,11 +679,11 @@ function DetailField({ icon: Icon, label, value, fullWidth }) {
   if (!value) return null;
   return (
     <div style={{ gridColumn: fullWidth ? "1 / -1" : undefined }}>
-      <div style={{ fontSize: "10.5px", fontWeight: "600", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
-        <Icon size={11} style={{ color: "#0ea5e9" }} />
+      <div style={{ fontSize: "10.5px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
+        <Icon size={11} style={{ color: ACCENT }} />
         {label}
       </div>
-      <div style={{ fontSize: "13px", fontWeight: "500", color: "#f8fafc", wordBreak: "break-word" }}>
+      <div style={{ fontSize: "13px", fontWeight: "500", color: TEXT_PRIMARY, wordBreak: "break-word" }}>
         {value}
       </div>
     </div>
@@ -684,15 +706,15 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
       className="inquiry-row"
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
       style={{
-        borderBottom: isLast ? "none" : "1px solid rgba(14,165,233,0.08)",
+        borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
         background: selected
-          ? "rgba(14,165,233,0.12)"
+          ? SURFACE_HOVER
           : hovered
-          ? "rgba(14,165,233,0.05)"
-          : "#081324",
+          ? "#F8FAFC"
+          : SURFACE,
         cursor: "pointer",
         transition: "all 0.15s ease",
-        borderLeft: selected ? "3px solid #0ea5e9" : "3px solid transparent",
+        borderLeft: selected ? `3px solid ${ACCENT}` : "3px solid transparent",
         outline: "none",
       }}
     >
@@ -704,8 +726,8 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
           <div
             style={{
               fontSize: "14px",
-              fontWeight: "700",
-              color: "#f8fafc",
+              fontWeight: "600",
+              color: TEXT_PRIMARY,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -741,7 +763,7 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
         <div
           style={{
             fontSize: "12px",
-            color: "#94a3b8",
+            color: TEXT_MUTED,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -752,8 +774,8 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
         >
           {inquiry.company ? (
             <>
-              <span style={{ color: "#38bdf8", fontWeight: "600" }}>{inquiry.company}</span>
-              <span style={{ color: "#475569" }}>·</span>
+              <span style={{ color: ACCENT, fontWeight: "600" }}>{inquiry.company}</span>
+              <span style={{ color: TEXT_DISABLED }}>·</span>
             </>
           ) : null}
           <span>{inquiry.email}</span>
@@ -764,7 +786,7 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
           <div
             style={{
               fontSize: "11.5px",
-              color: "#38bdf8",
+              color: ACCENT,
               marginTop: "4px",
               display: "flex",
               alignItems: "center",
@@ -772,7 +794,7 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
               fontWeight: "500",
             }}
           >
-            <Briefcase size={10} style={{ color: "#0ea5e9" }} />
+            <Briefcase size={10} style={{ color: ACCENT }} />
             {inquiry.service_of_interest}
           </div>
         )}
@@ -786,11 +808,11 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
       </div>
 
       {/* Source (Desktop) */}
-      <div className="inquiry-row-source" style={{ fontSize: "11.5px", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+      <div className="inquiry-row-source" style={{ fontSize: "11.5px", color: TEXT_MUTED, whiteSpace: "nowrap", flexShrink: 0 }}>
         <span
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: SURFACE_ALT,
+            border: `1px solid ${BORDER}`,
             padding: "3px 8px",
             borderRadius: "4px",
           }}
@@ -805,7 +827,7 @@ function InquiryRow({ inquiry, selected, onClick, isLast }) {
       </div>
 
       {/* Received Date (Desktop) */}
-      <div className="inquiry-row-date" style={{ fontSize: "11.5px", color: "#94a3b8", whiteSpace: "nowrap", textAlign: "right" }}>
+      <div className="inquiry-row-date" style={{ fontSize: "11.5px", color: TEXT_MUTED, whiteSpace: "nowrap", textAlign: "right" }}>
         {relTime(inquiry.created_at)}
       </div>
 
@@ -1070,29 +1092,29 @@ export default function AdminInquiries() {
               alignItems: "center",
               gap: "6px",
               marginBottom: "10px",
-              background: "rgba(14,165,233,0.1)",
-              border: "1px solid rgba(14,165,233,0.25)",
+              background: ACCENT_BG,
+              border: `1px solid ${ACCENT_BORDER}`,
               borderRadius: "6px",
               padding: "4px 11px",
             }}
           >
-            <Inbox size={12} style={{ color: "#38bdf8" }} />
-            <span style={{ fontSize: "11px", color: "#38bdf8", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <Inbox size={12} style={{ color: ACCENT }} />
+            <span style={{ fontSize: "11px", color: ACCENT, fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Inquiries Center
             </span>
           </div>
           <h1
             style={{
-              fontSize: "24px",
+              fontSize: "22px",
               fontWeight: "700",
-              color: "#f8fafc",
+              color: TEXT_PRIMARY,
               margin: 0,
               letterSpacing: "-0.02em",
             }}
           >
             Website Enquiries
           </h1>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px", marginBottom: 0 }}>
+          <p style={{ fontSize: "12.5px", color: TEXT_MUTED, marginTop: "4px", marginBottom: 0 }}>
             Manage, respond to, and track inbound business enquiries from the PSA website contact form.
           </p>
         </div>
@@ -1105,32 +1127,22 @@ export default function AdminInquiries() {
             onClick={() => loadAll({ refresh: true, status: statusFilter, q: search })}
             disabled={refreshing}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 14px",
-              background: "rgba(14,165,233,0.06)",
-              border: "1px solid rgba(14,165,233,0.2)",
-              borderRadius: "7px",
+              ...BTN_SECONDARY_STYLE,
+              opacity: refreshing ? 0.6 : 1,
               cursor: refreshing ? "default" : "pointer",
-              color: "#e2e8f0",
-              fontSize: "12px",
-              fontWeight: "500",
-              fontFamily: "inherit",
-              transition: "all 0.15s ease",
             }}
             onMouseEnter={(e) => {
               if (!refreshing) {
-                e.currentTarget.style.borderColor = "rgba(14,165,233,0.4)";
-                e.currentTarget.style.background = "rgba(14,165,233,0.12)";
+                e.currentTarget.style.borderColor = ACCENT;
+                e.currentTarget.style.color = ACCENT;
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(14,165,233,0.2)";
-              e.currentTarget.style.background = "rgba(14,165,233,0.06)";
+              e.currentTarget.style.borderColor = BORDER;
+              e.currentTarget.style.color = TEXT_SECONDARY;
             }}
           >
-            <RefreshCw size={13} style={{ animation: refreshing ? "spin 1s linear infinite" : "none", color: "#38bdf8" }} />
+            <RefreshCw size={13} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
             {lastRefresh ? `Updated ${relTime(lastRefresh)}` : "Refresh"}
           </button>
 
@@ -1145,11 +1157,11 @@ export default function AdminInquiries() {
                 alignItems: "center",
                 gap: "7px",
                 padding: "8px 14px",
-                background: "rgba(14,165,233,0.1)",
-                border: "1px solid rgba(14,165,233,0.3)",
+                background: ACCENT_BG,
+                border: `1px solid ${ACCENT_BORDER}`,
                 borderRadius: "7px",
                 cursor: exporting ? "default" : "pointer",
-                color: "#38bdf8",
+                color: ACCENT,
                 fontSize: "12px",
                 fontWeight: "600",
                 fontFamily: "inherit",
@@ -1157,13 +1169,13 @@ export default function AdminInquiries() {
               }}
               onMouseEnter={(e) => {
                 if (!exporting) {
-                  e.currentTarget.style.background = "rgba(14,165,233,0.18)";
-                  e.currentTarget.style.borderColor = "rgba(14,165,233,0.5)";
+                  e.currentTarget.style.background = `${ACCENT}18`;
+                  e.currentTarget.style.borderColor = `${ACCENT}50`;
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(14,165,233,0.1)";
-                e.currentTarget.style.borderColor = "rgba(14,165,233,0.3)";
+                e.currentTarget.style.background = ACCENT_BG;
+                e.currentTarget.style.borderColor = ACCENT_BORDER;
               }}
             >
               <Download size={13} />
@@ -1179,10 +1191,10 @@ export default function AdminInquiries() {
                   right: 0,
                   marginTop: "6px",
                   width: "220px",
-                  background: "#081324",
-                  border: "1px solid rgba(14,165,233,0.25)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "8px",
-                  boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                  boxShadow: SHADOW_MD,
                   zIndex: 40,
                   padding: "6px",
                   display: "flex",
@@ -1190,7 +1202,7 @@ export default function AdminInquiries() {
                   gap: "2px",
                 }}
               >
-                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Current Filtered Results
                 </div>
                 <button
@@ -1205,16 +1217,16 @@ export default function AdminInquiries() {
                     background: "transparent",
                     border: "none",
                     borderRadius: "5px",
-                    color: "#f8fafc",
+                    color: TEXT_SECONDARY,
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = SURFACE_ALT)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <span style={{ color: "#34d399", fontWeight: "700" }}>📊</span>
+                  <span style={{ color: SUCCESS_DARK, fontWeight: "700" }}>📊</span>
                   Export Current (.xlsx)
                 </button>
                 <button
@@ -1229,22 +1241,22 @@ export default function AdminInquiries() {
                     background: "transparent",
                     border: "none",
                     borderRadius: "5px",
-                    color: "#f8fafc",
+                    color: TEXT_SECONDARY,
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = SURFACE_ALT)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <span style={{ color: "#38bdf8", fontWeight: "700" }}>📄</span>
+                  <span style={{ color: ACCENT, fontWeight: "700" }}>📄</span>
                   Export Current (.csv)
                 </button>
 
-                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+                <div style={{ height: "1px", background: BORDER, margin: "4px 0" }} />
 
-                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <div style={{ padding: "6px 10px", fontSize: "10px", fontWeight: "700", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   All Database Enquiries
                 </div>
                 <button
@@ -1259,16 +1271,16 @@ export default function AdminInquiries() {
                     background: "transparent",
                     border: "none",
                     borderRadius: "5px",
-                    color: "#f8fafc",
+                    color: TEXT_SECONDARY,
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = SURFACE_ALT)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <span style={{ color: "#34d399", fontWeight: "700" }}>📊</span>
+                  <span style={{ color: SUCCESS_DARK, fontWeight: "700" }}>📊</span>
                   Export All (.xlsx)
                 </button>
                 <button
@@ -1283,16 +1295,16 @@ export default function AdminInquiries() {
                     background: "transparent",
                     border: "none",
                     borderRadius: "5px",
-                    color: "#f8fafc",
+                    color: TEXT_SECONDARY,
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = SURFACE_ALT)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <span style={{ color: "#38bdf8", fontWeight: "700" }}>📄</span>
+                  <span style={{ color: ACCENT, fontWeight: "700" }}>📄</span>
                   Export All (.csv)
                 </button>
               </div>
@@ -1328,15 +1340,15 @@ export default function AdminInquiries() {
           display: "flex",
           alignItems: "center",
           gap: "12px",
-          padding: "10px 16px",
-          background: "#081324",
-          border: "1px solid rgba(14,165,233,0.18)",
-          borderRadius: "9px",
+          padding: "9px 14px",
+          background: SURFACE,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_LG,
           marginBottom: "16px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          boxShadow: SHADOW_SM,
         }}
       >
-        <Search size={16} style={{ color: "#38bdf8", flexShrink: 0 }} />
+        <Search size={16} style={{ color: ACCENT, flexShrink: 0 }} />
         <input
           value={searchInput}
           onChange={(e) => handleSearchInput(e.target.value)}
@@ -1346,8 +1358,8 @@ export default function AdminInquiries() {
             background: "transparent",
             border: "none",
             outline: "none",
-            fontSize: "13.5px",
-            color: "#f8fafc",
+            fontSize: "13px",
+            color: TEXT_PRIMARY,
             fontFamily: "inherit",
           }}
         />
@@ -1357,11 +1369,11 @@ export default function AdminInquiries() {
             onClick={clearSearch}
             aria-label="Clear search"
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "none",
+              background: SURFACE_ALT,
+              border: `1px solid ${BORDER}`,
               borderRadius: "50%",
               cursor: "pointer",
-              color: "#cbd5e1",
+              color: TEXT_MUTED,
               padding: "4px",
               display: "flex",
               alignItems: "center",
@@ -1376,36 +1388,36 @@ export default function AdminInquiries() {
       {/* ─── List panel ─── */}
       <div
         style={{
-          background: "#081324",
-          border: "1px solid rgba(14,165,233,0.18)",
-          borderRadius: "12px",
+          background: SURFACE,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_LG,
           overflow: "hidden",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
+          boxShadow: SHADOW_SM,
         }}
       >
         {/* Panel header */}
         <div className="inquiry-table-header">
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             {loading ? "Loading…" : `${inquiries.length} Enquir${inquiries.length === 1 ? "y" : "ies"}`}
           </span>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Source</span>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Status</span>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Received</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em" }}>Source</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em" }}>Status</span>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: TEXT_SECONDARY, textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Received</span>
           <span />
         </div>
 
         {loading ? (
-          <div style={{ padding: "50px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
-            <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: "#38bdf8", margin: "0 auto 12px" }} />
+          <div style={{ padding: "50px", textAlign: "center", color: TEXT_MUTED, fontSize: "13px" }}>
+            <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: ACCENT, margin: "0 auto 12px" }} />
             Loading website enquiries…
           </div>
         ) : inquiries.length === 0 ? (
           <div style={{ padding: "54px 20px", textAlign: "center" }}>
-            <Inbox size={32} style={{ color: "#334155", margin: "0 auto 14px" }} />
-            <div style={{ fontSize: "14px", fontWeight: "600", color: "#e2e8f0", marginBottom: "4px" }}>
+            <Inbox size={32} style={{ color: TEXT_DISABLED, margin: "0 auto 14px" }} />
+            <div style={{ fontSize: "14px", fontWeight: "600", color: TEXT_PRIMARY, marginBottom: "4px" }}>
               {search || statusFilter ? "No matching enquiries found" : "No website enquiries yet"}
             </div>
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>
+            <div style={{ fontSize: "12px", color: TEXT_MUTED }}>
               {search || statusFilter
                 ? "Try searching for a different name, email, or clear the active status filter."
                 : "New client enquiries submitted through the contact form will appear here automatically."}
@@ -1418,10 +1430,10 @@ export default function AdminInquiries() {
                   marginTop: "14px",
                   fontSize: "12px",
                   fontWeight: "600",
-                  color: "#38bdf8",
-                  background: "rgba(14,165,233,0.1)",
-                  border: "1px solid rgba(14,165,233,0.3)",
-                  borderRadius: "6px",
+                  color: ACCENT,
+                  background: ACCENT_BG,
+                  border: `1px solid ${ACCENT_BORDER}`,
+                  borderRadius: RADIUS_MD,
                   padding: "6px 14px",
                   cursor: "pointer",
                   fontFamily: "inherit",
@@ -1451,14 +1463,15 @@ export default function AdminInquiries() {
             position: "fixed",
             bottom: "24px",
             right: "24px",
-            background: "#081324",
-            border: "1px solid #38bdf8",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
-            color: "#f8fafc",
+            background: SURFACE,
+            borderLeft: `4px solid ${ACCENT}`,
+            border: `1px solid ${BORDER}`,
+            boxShadow: SHADOW_MD,
+            color: TEXT_PRIMARY,
             padding: "12px 18px",
-            borderRadius: "8px",
+            borderRadius: RADIUS_MD,
             fontSize: "13px",
-            fontWeight: "600",
+            fontWeight: "500",
             zIndex: 60,
             display: "flex",
             alignItems: "center",
@@ -1466,7 +1479,7 @@ export default function AdminInquiries() {
             animation: "fadeInUp 0.2s ease-out",
           }}
         >
-          <CheckCircle2 size={16} style={{ color: "#34d399" }} />
+          <CheckCircle2 size={16} style={{ color: SUCCESS_DARK }} />
           {toastMessage}
         </div>
       )}
@@ -1476,13 +1489,16 @@ export default function AdminInquiries() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .inquiry-table-header {
           display: grid;
           grid-template-columns: 1fr 140px 110px 110px 24px;
           gap: 16px;
           padding: 12px 20px;
-          border-bottom: 1px solid rgba(14,165,233,0.12);
-          background: #060f1c;
+          border-bottom: 1px solid #DDE3EC;
+          background: #F8FAFC;
         }
 
         .inquiry-row {
@@ -1490,7 +1506,7 @@ export default function AdminInquiries() {
           grid-template-columns: 1fr 140px 110px 110px 24px;
           gap: 16px;
           align-items: center;
-          padding: 15px 20px;
+          padding: 14px 20px;
         }
 
         .inquiry-row-mobile-meta {
@@ -1522,7 +1538,7 @@ export default function AdminInquiries() {
             align-items: center !important;
             gap: 8px !important;
             font-size: 11.5px !important;
-            color: #94a3b8 !important;
+            color: #6B8099 !important;
             margin-top: 5px !important;
           }
         }

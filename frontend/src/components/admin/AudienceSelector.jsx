@@ -18,6 +18,16 @@ import {
   AlertTriangle,
   RotateCcw
 } from "lucide-react";
+import {
+  SURFACE, SURFACE_ALT, BORDER,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED, TEXT_DISABLED,
+  ACCENT, ACCENT_BG, ACCENT_BORDER,
+  SUCCESS, SUCCESS_BG, SUCCESS_BORDER, SUCCESS_DARK,
+  WARNING, WARNING_BG, WARNING_BORDER, WARNING_DARK,
+  DANGER, DANGER_BG, DANGER_BORDER, DANGER_DARK,
+  SHADOW_SM, SHADOW_MD, RADIUS_MD, RADIUS_LG,
+  INPUT_STYLE, LABEL_STYLE,
+} from "../../utils/adminTheme";
 
 export default function AudienceSelector({
   backendUrl = "",
@@ -220,17 +230,7 @@ export default function AudienceSelector({
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* 1. Recipient Audience Source */}
       <div>
-        <label
-          style={{
-            display: "block",
-            fontSize: "11px",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "#6b7280",
-            marginBottom: "8px",
-          }}
-        >
+        <label style={LABEL_STYLE}>
           Recipient Audience Source
         </label>
         <div
@@ -250,27 +250,29 @@ export default function AudienceSelector({
                 style={{
                   position: "relative",
                   cursor: "pointer",
-                  borderRadius: "8px",
+                  borderRadius: RADIUS_MD,
                   padding: "14px 16px",
-                  border: isSelected ? "1px solid #6366f1" : "1px solid #252535",
-                  background: isSelected ? "rgba(99,102,241,0.12)" : "#131320",
+                  border: isSelected ? `1.5px solid ${ACCENT}` : `1px solid ${BORDER}`,
+                  background: isSelected ? ACCENT_BG : SURFACE,
                   transition: "all 0.15s ease",
                   display: "flex",
                   alignItems: "flex-start",
                   gap: "12px",
+                  boxShadow: isSelected ? SHADOW_SM : "none",
                 }}
               >
                 <div
                   style={{
-                    padding: "6px",
+                    padding: "7px",
                     borderRadius: "6px",
-                    background: isSelected ? "#6366f1" : "#1f1f2e",
-                    color: "#fff",
+                    background: isSelected ? ACCENT : SURFACE_ALT,
+                    color: isSelected ? "#fff" : TEXT_SECONDARY,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
                     marginTop: "2px",
+                    border: isSelected ? "none" : `1px solid ${BORDER}`,
                   }}
                 >
                   <Icon size={16} />
@@ -290,7 +292,7 @@ export default function AudienceSelector({
                       style={{
                         fontSize: "13px",
                         fontWeight: "600",
-                        color: isSelected ? "#f9fafb" : "#d1d5db",
+                        color: isSelected ? TEXT_PRIMARY : TEXT_PRIMARY,
                         whiteSpace: "normal",
                         wordBreak: "break-word",
                       }}
@@ -306,8 +308,9 @@ export default function AudienceSelector({
                           textTransform: "uppercase",
                           padding: "2px 6px",
                           borderRadius: "4px",
-                          background: isSelected ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.06)",
-                          color: isSelected ? "#a5b4fc" : "#9ca3af",
+                          background: isSelected ? "rgba(14,165,233,0.15)" : SURFACE_ALT,
+                          color: isSelected ? ACCENT : TEXT_MUTED,
+                          border: `1px solid ${isSelected ? ACCENT_BORDER : BORDER}`,
                           flexShrink: 0,
                         }}
                       >
@@ -317,8 +320,8 @@ export default function AudienceSelector({
                   </div>
                   <div
                     style={{
-                      fontSize: "11px",
-                      color: isSelected ? "#a5b4fc" : "#6b7280",
+                      fontSize: "11.5px",
+                      color: isSelected ? TEXT_SECONDARY : TEXT_MUTED,
                       lineHeight: "1.4",
                     }}
                   >
@@ -335,9 +338,9 @@ export default function AudienceSelector({
       {isManualActive && (
         <div
           style={{
-            background: "#131320",
-            border: "1px solid #252535",
-            borderRadius: "8px",
+            background: SURFACE_ALT,
+            border: `1px solid ${BORDER}`,
+            borderRadius: RADIUS_MD,
             padding: "16px",
           }}
         >
@@ -352,10 +355,10 @@ export default function AudienceSelector({
             }}
           >
             <div>
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#f3f4f6" }}>
+              <span style={{ fontSize: "12.5px", fontWeight: "600", color: TEXT_PRIMARY }}>
                 Manual Recipients List
               </span>
-              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "8px" }}>
+              <span style={{ fontSize: "11px", color: TEXT_MUTED, marginLeft: "8px" }}>
                 ({manualEmails.length} entered)
               </span>
             </div>
@@ -368,13 +371,13 @@ export default function AudienceSelector({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
-                  background: "rgba(16,185,129,0.15)",
-                  border: "1px solid rgba(16,185,129,0.3)",
-                  color: "#6ee7b7",
+                  background: SUCCESS_BG,
+                  border: `1px solid ${SUCCESS_BORDER}`,
+                  color: SUCCESS_DARK,
                   fontSize: "11px",
-                  fontWeight: "500",
+                  fontWeight: "600",
                   padding: "4px 8px",
-                  borderRadius: "4px",
+                  borderRadius: "5px",
                   cursor: "pointer",
                 }}
               >
@@ -388,13 +391,13 @@ export default function AudienceSelector({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
-                  background: "rgba(99,102,241,0.15)",
-                  border: "1px solid rgba(99,102,241,0.3)",
-                  color: "#a5b4fc",
+                  background: ACCENT_BG,
+                  border: `1px solid ${ACCENT_BORDER}`,
+                  color: ACCENT,
                   fontSize: "11px",
-                  fontWeight: "500",
+                  fontWeight: "600",
                   padding: "4px 8px",
-                  borderRadius: "4px",
+                  borderRadius: "5px",
                   cursor: "pointer",
                 }}
               >
@@ -409,13 +412,13 @@ export default function AudienceSelector({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "4px",
-                    background: "rgba(239,68,68,0.1)",
-                    border: "1px solid rgba(239,68,68,0.25)",
-                    color: "#fca5a5",
+                    background: DANGER_BG,
+                    border: `1px solid ${DANGER_BORDER}`,
+                    color: DANGER,
                     fontSize: "11px",
-                    fontWeight: "500",
+                    fontWeight: "600",
                     padding: "4px 8px",
-                    borderRadius: "4px",
+                    borderRadius: "5px",
                     cursor: "pointer",
                   }}
                 >
@@ -437,11 +440,11 @@ export default function AudienceSelector({
               onChange={(e) => setNewEmailInput(e.target.value)}
               style={{
                 flex: 1,
-                background: "#0d0d14",
-                border: "1px solid #252535",
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
                 borderRadius: "6px",
                 padding: "8px 12px",
-                color: "#f3f4f6",
+                color: TEXT_PRIMARY,
                 fontSize: "12px",
                 outline: "none",
               }}
@@ -453,15 +456,14 @@ export default function AudienceSelector({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                background: newEmailInput.trim() ? "#6366f1" : "#1f1f2e",
-                color: "#fff",
-                border: "none",
+                background: newEmailInput.trim() ? ACCENT : SURFACE_ALT,
+                color: newEmailInput.trim() ? "#fff" : TEXT_DISABLED,
+                border: newEmailInput.trim() ? "none" : `1px solid ${BORDER}`,
                 borderRadius: "6px",
                 padding: "8px 14px",
                 fontSize: "12px",
-                fontWeight: "500",
+                fontWeight: "600",
                 cursor: newEmailInput.trim() ? "pointer" : "not-allowed",
-                opacity: newEmailInput.trim() ? 1 : 0.6,
               }}
             >
               <Plus size={13} /> Add
@@ -478,9 +480,9 @@ export default function AudienceSelector({
                 maxHeight: "150px",
                 overflowY: "auto",
                 padding: "8px",
-                background: "#0d0d14",
+                background: SURFACE,
                 borderRadius: "6px",
-                border: "1px solid #1f1f2e",
+                border: `1px solid ${BORDER}`,
               }}
             >
               {manualEmails.map((email, idx) => (
@@ -490,9 +492,9 @@ export default function AudienceSelector({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    background: "#1a1a2e",
-                    border: "1px solid #2e2e48",
-                    color: "#e2e8f0",
+                    background: SURFACE_ALT,
+                    border: `1px solid ${BORDER}`,
+                    color: TEXT_PRIMARY,
                     fontSize: "11px",
                     fontFamily: "monospace",
                     padding: "3px 8px",
@@ -506,7 +508,7 @@ export default function AudienceSelector({
                     style={{
                       background: "transparent",
                       border: "none",
-                      color: "#94a3b8",
+                      color: TEXT_MUTED,
                       cursor: "pointer",
                       padding: 0,
                       display: "flex",
@@ -523,12 +525,12 @@ export default function AudienceSelector({
             <div
               style={{
                 padding: "14px",
-                background: "#0d0d14",
+                background: SURFACE,
                 borderRadius: "6px",
-                border: "1px dashed #252535",
+                border: `1px dashed ${BORDER}`,
                 textAlign: "center",
-                fontSize: "11px",
-                color: "#6b7280",
+                fontSize: "11.5px",
+                color: TEXT_MUTED,
               }}
             >
               No manual recipients added yet. Type an email above, paste a list, or import a spreadsheet.
@@ -546,7 +548,8 @@ export default function AudienceSelector({
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.75)",
+            background: "rgba(10,37,64,0.45)",
+            backdropFilter: "blur(3px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
@@ -558,17 +561,18 @@ export default function AudienceSelector({
             style={{
               width: "100%",
               maxWidth: "520px",
-              background: "#0d0d14",
-              border: "1px solid #252535",
-              borderRadius: "10px",
+              background: SURFACE,
+              border: `1px solid ${BORDER}`,
+              borderRadius: RADIUS_LG,
               padding: "24px",
-              color: "#f3f4f6",
+              color: TEXT_PRIMARY,
+              boxShadow: SHADOW_MD,
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <FileSpreadsheet className="text-emerald-400" size={18} />
-                <h3 style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>Import CSV / Excel Spreadsheet</h3>
+                <FileSpreadsheet className="text-emerald-600" size={18} />
+                <h3 style={{ fontSize: "14px", fontWeight: "600", color: TEXT_PRIMARY, margin: 0 }}>Import CSV / Excel Spreadsheet</h3>
               </div>
               <button
                 type="button"
@@ -577,7 +581,7 @@ export default function AudienceSelector({
                   setSelectedFile(null);
                   setFileImportResult(null);
                 }}
-                style={{ background: "transparent", border: "none", color: "#9ca3af", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: TEXT_MUTED, cursor: "pointer" }}
               >
                 <X size={16} />
               </button>
@@ -585,27 +589,27 @@ export default function AudienceSelector({
 
             {!fileImportResult ? (
               <>
-                <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "16px" }}>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "16px" }}>
                   Upload a <strong>.csv</strong> or <strong>.xlsx</strong> file. The system will automatically detect the email column, normalize addresses, and deduplicate entries.
                 </p>
 
                 <div
                   style={{
-                    border: "2px dashed #2e2e48",
+                    border: `2px dashed ${ACCENT_BORDER}`,
                     borderRadius: "8px",
                     padding: "24px",
                     textAlign: "center",
-                    background: "#131320",
+                    background: SURFACE_ALT,
                     marginBottom: "16px",
                     cursor: "pointer",
                   }}
                   onClick={() => document.getElementById("csv-file-input")?.click()}
                 >
-                  <UploadCloud size={32} style={{ margin: "0 auto 8px auto", color: "#6366f1" }} />
-                  <div style={{ fontSize: "13px", fontWeight: "500", color: "#e2e8f0" }}>
+                  <UploadCloud size={32} style={{ margin: "0 auto 8px auto", color: ACCENT }} />
+                  <div style={{ fontSize: "13px", fontWeight: "500", color: TEXT_PRIMARY }}>
                     {selectedFile ? selectedFile.name : "Click to select or drag & drop CSV/XLSX file"}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px" }}>
+                  <div style={{ fontSize: "11px", color: TEXT_MUTED, marginTop: "4px" }}>
                     Supports CSV, Excel (.xlsx, .xls) up to 10MB
                   </div>
                   <input
@@ -618,7 +622,7 @@ export default function AudienceSelector({
                 </div>
 
                 {fileError && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#fca5a5", fontSize: "12px", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: DANGER, fontSize: "12px", marginBottom: "14px" }}>
                     <AlertCircle size={14} /> {fileError}
                   </div>
                 )}
@@ -627,7 +631,7 @@ export default function AudienceSelector({
                   <button
                     type="button"
                     onClick={() => setShowFileModal(false)}
-                    style={{ background: "#131320", border: "1px solid #252535", color: "#9ca3af", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
+                    style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT_MUTED, borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
                   >
                     Cancel
                   </button>
@@ -636,7 +640,7 @@ export default function AudienceSelector({
                     onClick={handleUploadFile}
                     disabled={!selectedFile || uploadingFile}
                     style={{
-                      background: "#10b981",
+                      background: SUCCESS_DARK,
                       border: "none",
                       color: "#fff",
                       borderRadius: "6px",
@@ -653,25 +657,25 @@ export default function AudienceSelector({
               </>
             ) : (
               <div>
-                <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: "8px", padding: "14px", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#6ee7b7", fontWeight: "600", fontSize: "13px", marginBottom: "10px" }}>
+                <div style={{ background: SUCCESS_BG, border: `1px solid ${SUCCESS_BORDER}`, borderRadius: "8px", padding: "14px", marginBottom: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: SUCCESS_DARK, fontWeight: "600", fontSize: "13px", marginBottom: "10px" }}>
                     <CheckCircle2 size={16} /> Import Summary for {fileImportResult.filename}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px", color: TEXT_PRIMARY }}>
                     <div>Total Rows: <strong>{fileImportResult.total_rows}</strong></div>
                     <div>Detected Column: <strong>{fileImportResult.email_column || "N/A"}</strong></div>
-                    <div>Valid Addresses: <strong style={{ color: "#6ee7b7" }}>{fileImportResult.valid_count}</strong></div>
+                    <div>Valid Addresses: <strong style={{ color: SUCCESS_DARK }}>{fileImportResult.valid_count}</strong></div>
                     <div>Duplicates Filtered: <strong>{fileImportResult.duplicate_count}</strong></div>
-                    <div>Invalid Tokens: <strong style={{ color: "#fca5a5" }}>{fileImportResult.invalid_count}</strong></div>
+                    <div>Invalid Tokens: <strong style={{ color: DANGER }}>{fileImportResult.invalid_count}</strong></div>
                     <div>Suppressed Filtered: <strong>{fileImportResult.suppressed_count}</strong></div>
                   </div>
-                  <div style={{ borderTop: "1px solid rgba(16,185,129,0.2)", marginTop: "10px", paddingTop: "8px", fontSize: "13px" }}>
-                    Net Unique Recipients to Add: <strong style={{ color: "#86efac", fontSize: "15px" }}>{fileImportResult.net_count}</strong>
+                  <div style={{ borderTop: `1px solid ${SUCCESS_BORDER}`, marginTop: "10px", paddingTop: "8px", fontSize: "13px", color: TEXT_PRIMARY }}>
+                    Net Unique Recipients to Add: <strong style={{ color: SUCCESS_DARK, fontSize: "15px" }}>{fileImportResult.net_count}</strong>
                   </div>
                 </div>
 
                 {fileImportResult.invalid_samples?.length > 0 && (
-                  <div style={{ marginBottom: "14px", fontSize: "11px", color: "#fca5a5" }}>
+                  <div style={{ marginBottom: "14px", fontSize: "11px", color: DANGER }}>
                     <strong>Invalid samples:</strong> {fileImportResult.invalid_samples.join(", ")}
                   </div>
                 )}
@@ -680,14 +684,14 @@ export default function AudienceSelector({
                   <button
                     type="button"
                     onClick={() => { setFileImportResult(null); setSelectedFile(null); }}
-                    style={{ background: "#131320", border: "1px solid #252535", color: "#9ca3af", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
+                    style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT_MUTED, borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer" }}
                   >
                     Select Another
                   </button>
                   <button
                     type="button"
                     onClick={handleApplyImportedEmails}
-                    style={{ background: "#10b981", border: "none", color: "#fff", borderRadius: "6px", padding: "8px 18px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                    style={{ background: SUCCESS_DARK, border: "none", color: "#fff", borderRadius: "6px", padding: "8px 18px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
                   >
                     Add {fileImportResult.net_count} Recipients to Campaign
                   </button>
@@ -707,7 +711,8 @@ export default function AudienceSelector({
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "rgba(10,37,64,0.45)",
+            backdropFilter: "blur(3px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
@@ -719,10 +724,11 @@ export default function AudienceSelector({
             style={{
               width: "100%",
               maxWidth: "500px",
-              background: "#0d0d14",
-              border: "1px solid #252535",
-              borderRadius: "10px",
+              background: SURFACE,
+              border: `1px solid ${BORDER}`,
+              borderRadius: RADIUS_LG,
               padding: "24px",
+              boxShadow: SHADOW_MD,
             }}
           >
             <div
@@ -733,7 +739,7 @@ export default function AudienceSelector({
                 marginBottom: "12px",
               }}
             >
-              <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#f3f4f6", margin: 0 }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "600", color: TEXT_PRIMARY, margin: 0 }}>
                 Bulk Paste Recipients
               </h3>
               <button
@@ -742,14 +748,14 @@ export default function AudienceSelector({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#9ca3af",
+                  color: TEXT_MUTED,
                   cursor: "pointer",
                 }}
               >
                 <X size={16} />
               </button>
             </div>
-            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px" }}>
+            <p style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "12px" }}>
               Paste a list of email addresses separated by commas, semicolons, spaces, or newlines.
             </p>
             <textarea
@@ -759,11 +765,11 @@ export default function AudienceSelector({
               placeholder={"partner1@domain.com\npartner2@domain.com, partner3@domain.com"}
               style={{
                 width: "100%",
-                background: "#131320",
-                border: "1px solid #252535",
+                background: SURFACE_ALT,
+                border: `1px solid ${BORDER}`,
                 borderRadius: "6px",
                 padding: "10px",
-                color: "#f3f4f6",
+                color: TEXT_PRIMARY,
                 fontSize: "12px",
                 fontFamily: "monospace",
                 outline: "none",
@@ -775,9 +781,9 @@ export default function AudienceSelector({
                 type="button"
                 onClick={() => setShowBulkModal(false)}
                 style={{
-                  background: "#131320",
-                  border: "1px solid #252535",
-                  color: "#9ca3af",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT_MUTED,
                   borderRadius: "6px",
                   padding: "8px 14px",
                   fontSize: "12px",
@@ -790,7 +796,7 @@ export default function AudienceSelector({
                 type="button"
                 onClick={handleApplyBulk}
                 style={{
-                  background: "#6366f1",
+                  background: ACCENT,
                   border: "none",
                   color: "#fff",
                   borderRadius: "6px",
@@ -810,10 +816,11 @@ export default function AudienceSelector({
       {/* 5. Authoritative Audience Estimation Card with Detailed Metrics */}
       <div
         style={{
-          background: "#0d0d14",
-          border: "1px solid #1f1f2e",
-          borderRadius: "8px",
+          background: SURFACE,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_MD,
           padding: "16px 20px",
+          boxShadow: SHADOW_SM,
         }}
       >
         <div
@@ -830,11 +837,12 @@ export default function AudienceSelector({
               style={{
                 padding: "8px",
                 borderRadius: "6px",
-                background: "rgba(245,158,11,0.12)",
-                color: "#f59e0b",
+                background: ACCENT_BG,
+                color: ACCENT,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                border: `1px solid ${ACCENT_BORDER}`,
               }}
             >
               <ListFilter size={18} />
@@ -842,10 +850,10 @@ export default function AudienceSelector({
             <div>
               <span
                 style={{
-                  fontSize: "10px",
+                  fontSize: "10.5px",
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
-                  color: "#6b7280",
+                  color: TEXT_MUTED,
                   fontWeight: "700",
                   display: "block",
                 }}
@@ -857,13 +865,13 @@ export default function AudienceSelector({
                   style={{
                     fontSize: "22px",
                     fontWeight: "800",
-                    color: "#f9fafb",
+                    color: TEXT_PRIMARY,
                     fontFamily: "monospace",
                   }}
                 >
                   {loading ? "…" : estimate ? estimate.net_target_count : 0}
                 </span>
-                <span style={{ fontSize: "12px", color: "#a5b4fc", fontWeight: "500" }}>
+                <span style={{ fontSize: "12px", color: ACCENT, fontWeight: "600" }}>
                   Net Verified Recipients
                 </span>
               </div>
@@ -874,24 +882,24 @@ export default function AudienceSelector({
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "11px" }}>
               <div
                 style={{
-                  background: "#131320",
+                  background: SURFACE_ALT,
                   padding: "6px 10px",
                   borderRadius: "6px",
-                  border: "1px solid #252535",
-                  color: "#9ca3af",
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT_SECONDARY,
                 }}
               >
-                Raw Tokens: <strong style={{ color: "#f3f4f6" }}>{estimate.raw_count}</strong>
+                Raw Tokens: <strong style={{ color: TEXT_PRIMARY }}>{estimate.raw_count}</strong>
               </div>
 
               {estimate.invalid_count > 0 && (
                 <div
                   style={{
-                    background: "rgba(239,68,68,0.1)",
+                    background: DANGER_BG,
                     padding: "6px 10px",
                     borderRadius: "6px",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    color: "#fca5a5",
+                    border: `1px solid ${DANGER_BORDER}`,
+                    color: DANGER,
                   }}
                   title={estimate.sample_recipients ? "Invalid syntax addresses filtered out" : ""}
                 >
@@ -902,11 +910,11 @@ export default function AudienceSelector({
               {estimate.duplicate_count > 0 && (
                 <div
                   style={{
-                    background: "rgba(245,158,11,0.1)",
+                    background: WARNING_BG,
                     padding: "6px 10px",
                     borderRadius: "6px",
-                    border: "1px solid rgba(245,158,11,0.3)",
-                    color: "#fde68a",
+                    border: `1px solid ${WARNING_BORDER}`,
+                    color: WARNING_DARK,
                   }}
                 >
                   Duplicates: <strong>{estimate.duplicate_count}</strong>
@@ -915,24 +923,24 @@ export default function AudienceSelector({
 
               <div
                 style={{
-                  background: "#131320",
+                  background: SURFACE_ALT,
                   padding: "6px 10px",
                   borderRadius: "6px",
-                  border: "1px solid #252535",
-                  color: "#9ca3af",
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT_SECONDARY,
                 }}
               >
-                Suppressed: <strong style={{ color: "#f3f4f6" }}>{estimate.suppressed_count}</strong>
+                Suppressed: <strong style={{ color: TEXT_PRIMARY }}>{estimate.suppressed_count}</strong>
               </div>
 
               {estimate.excluded_count > 0 && (
                 <div
                   style={{
-                    background: "rgba(239,68,68,0.1)",
+                    background: DANGER_BG,
                     padding: "6px 10px",
                     borderRadius: "6px",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    color: "#fca5a5",
+                    border: `1px solid ${DANGER_BORDER}`,
+                    color: DANGER,
                   }}
                 >
                   Campaign Excluded: <strong>{estimate.excluded_count}</strong>
@@ -941,11 +949,11 @@ export default function AudienceSelector({
 
               <div
                 style={{
-                  background: "rgba(22,163,74,0.1)",
+                  background: SUCCESS_BG,
                   padding: "6px 10px",
                   borderRadius: "6px",
-                  border: "1px solid rgba(22,163,74,0.3)",
-                  color: "#86efac",
+                  border: `1px solid ${SUCCESS_BORDER}`,
+                  color: SUCCESS_DARK,
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
@@ -960,7 +968,7 @@ export default function AudienceSelector({
         </div>
 
         {/* 6. Recipient Exclusion / Search Panel */}
-        <div style={{ marginTop: "14px", borderTop: "1px solid #1f1f2e", paddingTop: "12px" }}>
+        <div style={{ marginTop: "14px", borderTop: `1px solid ${BORDER}`, paddingTop: "12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <button
               type="button"
@@ -968,9 +976,9 @@ export default function AudienceSelector({
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#a5b4fc",
+                color: ACCENT,
                 fontSize: "11px",
-                fontWeight: "500",
+                fontWeight: "600",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -983,15 +991,15 @@ export default function AudienceSelector({
             </button>
 
             {excludedEmails.length > 0 && !showExcludeSearch && (
-              <span style={{ fontSize: "11px", color: "#fca5a5" }}>
+              <span style={{ fontSize: "11px", color: DANGER, fontWeight: "500" }}>
                 {excludedEmails.length} email(s) excluded from this send
               </span>
             )}
           </div>
 
           {showExcludeSearch && (
-            <div style={{ marginTop: "10px", background: "#131320", border: "1px solid #252535", borderRadius: "6px", padding: "12px" }}>
-              <div style={{ fontSize: "11px", color: "#9ca3af", marginBottom: "8px" }}>
+            <div style={{ marginTop: "10px", background: SURFACE_ALT, border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "12px" }}>
+              <div style={{ fontSize: "11px", color: TEXT_MUTED, marginBottom: "8px" }}>
                 Exclude specific recipients from this campaign without deleting them permanently from subscribers or raw lists:
               </div>
 
@@ -1010,11 +1018,11 @@ export default function AudienceSelector({
                   }}
                   style={{
                     flex: 1,
-                    background: "#0d0d14",
-                    border: "1px solid #2e2e48",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
                     borderRadius: "4px",
                     padding: "6px 10px",
-                    color: "#f3f4f6",
+                    color: TEXT_PRIMARY,
                     fontSize: "11px",
                     outline: "none",
                   }}
@@ -1027,7 +1035,7 @@ export default function AudienceSelector({
                   }}
                   disabled={!excludeSearch.trim()}
                   style={{
-                    background: "#ef4444",
+                    background: DANGER,
                     border: "none",
                     color: "#fff",
                     borderRadius: "4px",
@@ -1045,7 +1053,7 @@ export default function AudienceSelector({
               {/* Excluded chips */}
               {excludedEmails.length > 0 ? (
                 <div>
-                  <div style={{ fontSize: "10px", textTransform: "uppercase", color: "#ef4444", fontWeight: "700", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "10px", textTransform: "uppercase", color: DANGER, fontWeight: "700", marginBottom: "6px" }}>
                     Currently Excluded:
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -1056,9 +1064,9 @@ export default function AudienceSelector({
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "6px",
-                          background: "rgba(239,68,68,0.12)",
-                          border: "1px solid rgba(239,68,68,0.3)",
-                          color: "#fca5a5",
+                          background: DANGER_BG,
+                          border: `1px solid ${DANGER_BORDER}`,
+                          color: DANGER,
                           fontSize: "11px",
                           fontFamily: "monospace",
                           padding: "2px 6px",
@@ -1072,7 +1080,7 @@ export default function AudienceSelector({
                           style={{
                             background: "transparent",
                             border: "none",
-                            color: "#fca5a5",
+                            color: DANGER,
                             cursor: "pointer",
                             padding: 0,
                             display: "flex",
@@ -1087,7 +1095,7 @@ export default function AudienceSelector({
                   </div>
                 </div>
               ) : (
-                <div style={{ fontSize: "11px", color: "#6b7280", fontStyle: "italic" }}>
+                <div style={{ fontSize: "11px", color: TEXT_MUTED, fontStyle: "italic" }}>
                   No recipients excluded.
                 </div>
               )}
@@ -1103,7 +1111,7 @@ export default function AudienceSelector({
               alignItems: "center",
               gap: "6px",
               fontSize: "12px",
-              color: "#fca5a5",
+              color: DANGER,
             }}
           >
             <AlertCircle size={14} /> {error}

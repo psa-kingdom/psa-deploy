@@ -37,6 +37,14 @@ import CampaignProgress from "../components/admin/CampaignProgress";
 import DeliveryLogsTable from "../components/admin/DeliveryLogsTable";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
+import {
+  SURFACE, SURFACE_ALT, BORDER,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+  ACCENT, ACCENT_BG, ACCENT_BORDER,
+  WARNING_DARK, WARNING_BG, WARNING_BORDER_STRONG,
+  SHADOW_SM, SHADOW_MD, RADIUS_MD, RADIUS_LG,
+  BTN_PRIMARY_STYLE, BTN_SECONDARY_STYLE, BTN_SUCCESS_STYLE, CARD_STYLE,
+} from "../utils/adminTheme";
 
 // Axios instance that always sends the HttpOnly session cookie
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
@@ -329,16 +337,19 @@ export default function AdminCommunication() {
   // ---- Styles ----
   const styles = {
     card: {
-      background: "#0d0d14",
-      border: "1px solid #1f1f2e",
-      borderRadius: "10px",
+      background: SURFACE,
+      border: `1px solid ${BORDER}`,
+      borderRadius: RADIUS_LG,
       padding: "24px",
+      boxShadow: SHADOW_SM,
     },
+    // TEST MODE card: intentionally green — critical safety indicator, DO NOT change
     testModeCard: {
-      background: "#0d1a0d",
-      border: "1px solid #166534",
-      borderRadius: "10px",
+      background: "rgba(22,163,74,0.06)",
+      border: "1px solid #16a34a",
+      borderRadius: RADIUS_LG,
       padding: "20px 24px",
+      boxShadow: "0 0 0 1px rgba(22,163,74,0.1)",
     },
     label: {
       display: "block",
@@ -346,19 +357,20 @@ export default function AdminCommunication() {
       fontWeight: "600",
       textTransform: "uppercase",
       letterSpacing: "0.08em",
-      color: "#6b7280",
+      color: TEXT_SECONDARY,
       marginBottom: "8px",
     },
     input: {
       width: "100%",
-      background: "#131320",
-      border: "1px solid #252535",
-      borderRadius: "8px",
+      background: SURFACE,
+      border: `1px solid ${BORDER}`,
+      borderRadius: RADIUS_MD,
       padding: "10px 12px",
-      color: "#f3f4f6",
+      color: TEXT_PRIMARY,
       fontSize: "13px",
       outline: "none",
       boxSizing: "border-box",
+      transition: "border-color 0.15s, box-shadow 0.15s",
     },
     tab: (active) => ({
       padding: "8px 16px",
@@ -367,53 +379,25 @@ export default function AdminCommunication() {
       cursor: "pointer",
       background: "transparent",
       border: "none",
-      color: active ? "#a78bfa" : "#6b7280",
-      borderBottom: active ? "2px solid #8b5cf6" : "2px solid transparent",
+      color: active ? ACCENT : TEXT_MUTED,
+      borderBottom: active ? `2px solid ${ACCENT}` : "2px solid transparent",
       transition: "all 0.15s",
+      fontFamily: "inherit",
     }),
+    // Primary action: PSA blue — replaces old indigo/purple gradient
     btnPrimary: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "8px",
-      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-      color: "#fff",
-      border: "none",
-      borderRadius: "8px",
+      ...BTN_PRIMARY_STYLE,
       padding: "10px 20px",
       fontSize: "13px",
-      fontWeight: "600",
-      cursor: "pointer",
     },
-    btnSecondary: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      background: "#131320",
-      border: "1px solid #252535",
-      borderRadius: "8px",
-      padding: "8px 14px",
-      fontSize: "12px",
-      color: "#9ca3af",
-      cursor: "pointer",
-    },
-    btnGreen: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      background: "rgba(22, 163, 74, 0.15)",
-      border: "1px solid #166534",
-      borderRadius: "8px",
-      padding: "8px 14px",
-      fontSize: "12px",
-      color: "#86efac",
-      cursor: "pointer",
-      transition: "all 0.15s",
-    },
+    btnSecondary: BTN_SECONDARY_STYLE,
+    // Green send button: intentionally green — test-mode safety action, DO NOT change
+    btnGreen: BTN_SUCCESS_STYLE,
   };
 
   return (
     <AdminLayout>
-      {/* Toast */}
+      {/* Toast — light-themed with colored left border accent */}
       {toastMsg && (
         <div
           style={{
@@ -421,33 +405,26 @@ export default function AdminCommunication() {
             top: "16px",
             right: "16px",
             zIndex: 9999,
-            background:
-              toastMsg.type === "error"
-                ? "#1a0a0a"
-                : toastMsg.type === "info"
-                ? "#0a0f1a"
-                : "#0a1a0a",
-            border: `1px solid ${
-              toastMsg.type === "error"
-                ? "#dc2626"
-                : toastMsg.type === "info"
-                ? "#3b82f6"
-                : "#16a34a"
+            background: SURFACE,
+            borderLeft: `4px solid ${
+              toastMsg.type === "error" ? "#dc2626"
+              : toastMsg.type === "info" ? ACCENT
+              : "#16a34a"
             }`,
+            border: `1px solid ${BORDER}`,
             color:
-              toastMsg.type === "error"
-                ? "#fca5a5"
-                : toastMsg.type === "info"
-                ? "#93c5fd"
-                : "#86efac",
-            borderRadius: "8px",
+              toastMsg.type === "error" ? "#dc2626"
+              : toastMsg.type === "info" ? ACCENT
+              : "#15803d",
+            borderRadius: RADIUS_MD,
             padding: "12px 16px",
             fontSize: "13px",
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            maxWidth: "360px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            maxWidth: "380px",
+            boxShadow: SHADOW_MD,
+            fontWeight: "500",
           }}
         >
           {toastMsg.type === "error" ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
@@ -467,10 +444,10 @@ export default function AdminCommunication() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#f9fafb", marginBottom: "4px" }}>
+          <h1 style={{ fontSize: "22px", fontWeight: "700", color: TEXT_PRIMARY, marginBottom: "4px", letterSpacing: "-0.02em" }}>
             Communication Center
           </h1>
-          <p style={{ fontSize: "13px", color: "#9ca3af" }}>
+          <p style={{ fontSize: "12.5px", color: TEXT_MUTED }}>
             Compose, test, review, and dispatch verified email campaigns to your audience.
           </p>
         </div>
@@ -514,7 +491,7 @@ export default function AdminCommunication() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid #1f1f2e", marginBottom: "24px" }}>
+      <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}`, marginBottom: "24px" }}>
         <button style={styles.tab(activeTab === "campaigns")} onClick={() => setActiveTab("campaigns")}>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <Send size={13} /> Campaigns
@@ -622,12 +599,13 @@ export default function AdminCommunication() {
                     style={{
                       ...styles.input,
                       flex: 1,
-                      borderColor: testRecipientSaved ? "#166534" : "#252535",
-                      background: "#0a140a",
+                      // Green border on saved: intentional safety indicator, do not change
+                      borderColor: testRecipientSaved ? "#16a34a" : BORDER,
+                      background: SURFACE,
                     }}
                     onFocus={(e) => (e.target.style.borderColor = "#22c55e")}
                     onBlur={(e) =>
-                      (e.target.style.borderColor = testRecipientSaved ? "#166534" : "#252535")
+                      (e.target.style.borderColor = testRecipientSaved ? "#16a34a" : BORDER)
                     }
                     onKeyDown={(e) => e.key === "Enter" && handleSaveTestRecipient()}
                   />
@@ -649,13 +627,14 @@ export default function AdminCommunication() {
                       type="button"
                       onClick={() => setIsEditingTestRecipient(false)}
                       style={{
-                        background: "#131320",
-                        border: "1px solid #252535",
-                        color: "#9ca3af",
-                        borderRadius: "6px",
+                        background: SURFACE,
+                        border: `1px solid ${BORDER}`,
+                        color: TEXT_MUTED,
+                        borderRadius: RADIUS_MD,
                         padding: "6px 10px",
                         fontSize: "11px",
                         cursor: "pointer",
+                        fontFamily: "inherit",
                       }}
                     >
                       Cancel
@@ -697,6 +676,7 @@ export default function AdminCommunication() {
             {/* Runtime Send Mode Switcher */}
             <div style={{ marginBottom: "20px" }}>
               <label style={styles.label}>Campaign Send Mode</label>
+              {/* Test Mode / Production Mode option cards */}
               <div
                 style={{
                   display: "grid",
@@ -706,7 +686,7 @@ export default function AdminCommunication() {
                   marginBottom: "12px",
                 }}
               >
-                {/* Test Mode Option */}
+                {/* Test Mode Option — green selected state is intentional safety indicator */}
                 <div
                   id="btn-mode-test"
                   onClick={() => setSendMode("test")}
@@ -716,10 +696,10 @@ export default function AdminCommunication() {
                     alignItems: "center",
                     gap: "12px",
                     padding: "12px 14px",
-                    borderRadius: "8px",
+                    borderRadius: RADIUS_MD,
                     cursor: "pointer",
-                    border: sendMode === "test" ? "1px solid #10b981" : "1px solid #252535",
-                    background: sendMode === "test" ? "rgba(16,185,129,0.12)" : "#131320",
+                    border: sendMode === "test" ? "1px solid #10b981" : `1px solid ${BORDER}`,
+                    background: sendMode === "test" ? "rgba(16,185,129,0.08)" : SURFACE_ALT,
                     transition: "all 0.15s ease",
                   }}
                 >
@@ -727,8 +707,8 @@ export default function AdminCommunication() {
                     style={{
                       padding: "6px",
                       borderRadius: "6px",
-                      background: sendMode === "test" ? "#10b981" : "#1f1f2e",
-                      color: "#fff",
+                      background: sendMode === "test" ? "#10b981" : "#e2e8f0",
+                      color: sendMode === "test" ? "#fff" : "#64748b",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -741,7 +721,7 @@ export default function AdminCommunication() {
                       style={{
                         fontSize: "13px",
                         fontWeight: "700",
-                        color: sendMode === "test" ? "#6ee7b7" : "#d1d5db",
+                        color: sendMode === "test" ? "#059669" : TEXT_PRIMARY,
                       }}
                     >
                       TEST MODE (Sandbox)
@@ -749,7 +729,7 @@ export default function AdminCommunication() {
                     <div
                       style={{
                         fontSize: "11px",
-                        color: sendMode === "test" ? "#a7f3d0" : "#6b7280",
+                        color: sendMode === "test" ? "#10b981" : TEXT_MUTED,
                         marginTop: "2px",
                       }}
                     >
@@ -758,7 +738,7 @@ export default function AdminCommunication() {
                   </div>
                 </div>
 
-                {/* Production Mode Option */}
+                {/* Production Mode Option — amber selected state is intentional safety indicator */}
                 <div
                   id="btn-mode-production"
                   onClick={() => setSendMode("production")}
@@ -768,10 +748,10 @@ export default function AdminCommunication() {
                     alignItems: "center",
                     gap: "12px",
                     padding: "12px 14px",
-                    borderRadius: "8px",
+                    borderRadius: RADIUS_MD,
                     cursor: "pointer",
-                    border: sendMode === "production" ? "1px solid #f59e0b" : "1px solid #252535",
-                    background: sendMode === "production" ? "rgba(245,158,11,0.12)" : "#131320",
+                    border: sendMode === "production" ? "1px solid #f59e0b" : `1px solid ${BORDER}`,
+                    background: sendMode === "production" ? "rgba(245,158,11,0.08)" : SURFACE_ALT,
                     transition: "all 0.15s ease",
                   }}
                 >
@@ -779,8 +759,8 @@ export default function AdminCommunication() {
                     style={{
                       padding: "6px",
                       borderRadius: "6px",
-                      background: sendMode === "production" ? "#f59e0b" : "#1f1f2e",
-                      color: "#fff",
+                      background: sendMode === "production" ? "#f59e0b" : "#e2e8f0",
+                      color: sendMode === "production" ? "#fff" : "#64748b",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -793,7 +773,7 @@ export default function AdminCommunication() {
                       style={{
                         fontSize: "13px",
                         fontWeight: "700",
-                        color: sendMode === "production" ? "#fde68a" : "#d1d5db",
+                        color: sendMode === "production" ? "#b45309" : TEXT_PRIMARY,
                       }}
                     >
                       PRODUCTION MODE
@@ -801,11 +781,11 @@ export default function AdminCommunication() {
                     <div
                       style={{
                         fontSize: "11px",
-                        color: sendMode === "production" ? "#fef3c7" : "#6b7280",
+                        color: sendMode === "production" ? "#d97706" : TEXT_MUTED,
                         marginTop: "2px",
                       }}
                     >
-                      Live broadcast — requires 2-step verification & freeze
+                      Live broadcast — requires 2-step verification &amp; freeze
                     </div>
                   </div>
                 </div>
@@ -866,7 +846,7 @@ export default function AdminCommunication() {
             </div>
 
             {/* Unified Audience Selection & Chip Recipient Management */}
-            <div style={{ borderTop: "1px solid #1f1f2e", paddingTop: "20px", marginBottom: "20px" }}>
+            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: "20px", marginBottom: "20px" }}>
               <AudienceSelector
                 backendUrl={BACKEND_URL}
                 selectedSource={selectedSource}
@@ -880,7 +860,7 @@ export default function AdminCommunication() {
             </div>
 
             {/* Template & Content Editor */}
-            <div style={{ borderTop: "1px solid #1f1f2e", paddingTop: "20px", marginBottom: "20px" }}>
+            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: "20px", marginBottom: "20px" }}>
               <TemplateEditor
                 backendUrl={BACKEND_URL}
                 templates={templates}
@@ -896,7 +876,7 @@ export default function AdminCommunication() {
             {/* Actions row */}
             <div
               style={{
-                borderTop: "1px solid #1f1f2e",
+                borderTop: `1px solid ${BORDER}`,
                 paddingTop: "20px",
                 display: "flex",
                 flexWrap: "wrap",
@@ -951,8 +931,8 @@ export default function AdminCommunication() {
                   {loading ? "Preparing Snapshot…" : "Review & Freeze Audience →"}
                 </button>
               ) : (
-                <div style={{ fontSize: "11px", color: "#6b7280", fontStyle: "italic" }}>
-                  Switch Send Mode to Production above to freeze & broadcast to the full audience.
+                <div style={{ fontSize: "11px", color: TEXT_MUTED, fontStyle: "italic" }}>
+                  Switch Send Mode to Production above to freeze &amp; broadcast to the full audience.
                 </div>
               )}
             </div>
@@ -961,14 +941,14 @@ export default function AdminCommunication() {
               <div
                 style={{
                   fontSize: "11px",
-                  color: "#6b7280",
+                  color: TEXT_MUTED,
                   marginTop: "12px",
                   paddingTop: "12px",
-                  borderTop: "1px solid #1f1f2e",
+                  borderTop: `1px solid ${BORDER}`,
                 }}
               >
                 Production campaign dispatch is guarded in Test Mode. Set{" "}
-                <code style={{ background: "#131320", padding: "1px 4px", borderRadius: "3px" }}>
+                <code style={{ background: SURFACE_ALT, border: `1px solid ${BORDER}`, padding: "1px 4px", borderRadius: "3px", fontFamily: "monospace", fontSize: "11px", color: TEXT_SECONDARY }}>
                   EMAIL_ENVIRONMENT=production
                 </code>{" "}
                 in Railway to enable live audience broadcast.

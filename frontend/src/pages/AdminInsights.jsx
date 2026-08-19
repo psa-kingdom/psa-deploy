@@ -37,6 +37,13 @@ import {
 import AdminLayout from "../components/admin/AdminLayout";
 import TocEditor from "../components/admin/TocEditor";
 import { BACKEND_URL } from "../config";
+import {
+  SURFACE, SURFACE_ALT, BORDER,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED, TEXT_DISABLED,
+  ACCENT, ACCENT_BG, ACCENT_BORDER,
+  SHADOW_SM, SHADOW_MD, RADIUS_MD, RADIUS_LG,
+  BTN_SECONDARY_STYLE,
+} from "../utils/adminTheme";
 import { CATEGORIES } from "../data/site";
 
 const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
@@ -84,34 +91,49 @@ function StatusBadge({ status }) {
 function StatChip({ label, count, active, onClick, color }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "6px",
-        padding: "5px 11px",
-        borderRadius: "6px",
-        border: `1px solid ${active ? color + "40" : "rgba(14,165,233,0.1)"}`,
-        background: active ? color + "12" : "transparent",
-        color: active ? color : "#475569",
-        fontSize: "11.5px",
-        fontWeight: active ? "600" : "400",
+        gap: "8px",
+        padding: "6px 13px",
+        borderRadius: "7px",
+        border: `1px solid ${active ? color + "70" : BORDER}`,
+        background: active ? color + "15" : SURFACE,
+        color: active ? color : TEXT_SECONDARY,
+        fontSize: "12px",
+        fontWeight: active ? "600" : "500",
         cursor: "pointer",
         fontFamily: "inherit",
         transition: "all 0.15s ease",
         whiteSpace: "nowrap",
+        boxShadow: SHADOW_SM,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = color + "50";
+          e.currentTarget.style.color = color;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = BORDER;
+          e.currentTarget.style.color = TEXT_SECONDARY;
+        }
       }}
     >
       {label}
       {count != null && (
         <span
           style={{
-            fontSize: "10px",
-            padding: "1px 5px",
-            borderRadius: "3px",
-            background: active ? color + "20" : "rgba(255,255,255,0.04)",
-            color: active ? color : "#334155",
-            fontWeight: "600",
+            fontSize: "10.5px",
+            padding: "1px 6px",
+            borderRadius: "4px",
+            background: active ? color + "20" : SURFACE_ALT,
+            color: active ? color : TEXT_MUTED,
+            fontWeight: "700",
+            border: `1px solid ${active ? color + "30" : BORDER}`,
           }}
         >
           {count}
@@ -206,26 +228,26 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.75)",
+        background: "rgba(10,37,64,0.5)",
         backdropFilter: "blur(4px)",
         zIndex: 60,
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
-        padding: "16px",
+        padding: "32px 16px",
+        overflowY: "auto",
       }}
     >
       <div
         style={{
-          background: "#060f1c",
-          border: "1px solid rgba(14,165,233,0.2)",
-          borderRadius: "14px",
+          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_LG,
           width: "min(960px, 98vw)",
-          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
+          boxShadow: SHADOW_MD,
         }}
       >
         {/* Modal Header */}
@@ -234,9 +256,10 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 24px",
-            borderBottom: "1px solid rgba(14,165,233,0.1)",
-            background: "#071324",
+            padding: "18px 24px",
+            borderBottom: `1px solid ${BORDER}`,
+            background: SURFACE_ALT,
+            flexShrink: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -245,26 +268,25 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 width: "28px",
                 height: "28px",
                 borderRadius: "6px",
-                background: "rgba(14,165,233,0.1)",
+                background: ACCENT_BG,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <FileText size={14} style={{ color: "#0ea5e9" }} />
+              <FileText size={14} style={{ color: ACCENT }} />
             </div>
             <div>
-              <h2 style={{ fontSize: "14px", fontWeight: "700", color: "#e2e8f0", margin: 0 }}>
+              <h2 style={{ fontSize: "14px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
                 {isNew ? "Create New Insight" : "Edit Insight Article"}
               </h2>
-              <span style={{ fontSize: "11px", color: "#475569" }}>
+              <span style={{ fontSize: "11px", color: TEXT_MUTED }}>
                 {formData.slug ? `/insights/${formData.slug}` : "Draft article"}
               </span>
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {/* View live public page if published */}
             {!isNew && formData.status === "published" && (
               <a
                 href={`/insights/${formData.slug}`}
@@ -275,12 +297,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                   alignItems: "center",
                   gap: "4px",
                   fontSize: "11px",
-                  color: "#0ea5e9",
+                  color: ACCENT,
                   textDecoration: "none",
                   padding: "5px 9px",
                   borderRadius: "5px",
-                  border: "1px solid rgba(14,165,233,0.2)",
-                  background: "rgba(14,165,233,0.05)",
+                  border: `1px solid ${ACCENT_BORDER}`,
+                  background: ACCENT_BG,
                 }}
               >
                 View Public <ExternalLink size={11} />
@@ -289,15 +311,28 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             <button
               onClick={onClose}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: "4px" }}
+              style={{
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                cursor: "pointer",
+                color: TEXT_MUTED,
+                padding: "6px",
+                borderRadius: RADIUS_MD,
+                display: "flex",
+                alignItems: "center",
+                fontFamily: "inherit",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = TEXT_PRIMARY; e.currentTarget.style.background = SURFACE_ALT; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = SURFACE; }}
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <div style={{ padding: "24px", overflowY: "auto" }}>
           {error && (
             <div
               style={{
@@ -322,7 +357,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "16px", marginBottom: "20px" }}>
             {/* Title */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Title *
               </label>
               <input
@@ -331,12 +366,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 placeholder="e.g. Internal Controls in the Age of Rapid Automotive Expansion"
                 style={{
                   width: "100%",
-                  background: "rgba(14,165,233,0.04)",
-                  border: "1px solid rgba(14,165,233,0.12)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "6px",
                   padding: "10px 12px",
                   fontSize: "13.5px",
-                  color: "#e2e8f0",
+                  color: TEXT_PRIMARY,
                   fontFamily: "inherit",
                   outline: "none",
                   boxSizing: "border-box",
@@ -346,11 +381,11 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Slug */}
             <div>
-              <label style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 <span>Slug / URL Path</span>
                 <span
                   onClick={() => setAutoSlug(!autoSlug)}
-                  style={{ cursor: "pointer", color: autoSlug ? "#0ea5e9" : "#475569", textTransform: "none", fontWeight: "400" }}
+                  style={{ cursor: "pointer", color: autoSlug ? ACCENT : TEXT_SECONDARY, textTransform: "none", fontWeight: "400" }}
                 >
                   {autoSlug ? "Auto-sync ON" : "Custom"}
                 </span>
@@ -364,12 +399,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 placeholder="url-friendly-slug"
                 style={{
                   width: "100%",
-                  background: "rgba(14,165,233,0.04)",
-                  border: "1px solid rgba(14,165,233,0.12)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "6px",
                   padding: "8px 12px",
                   fontSize: "12.5px",
-                  color: "#94a3b8",
+                  color: TEXT_SECONDARY,
                   fontFamily: "monospace",
                   outline: "none",
                   boxSizing: "border-box",
@@ -379,7 +414,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Category */}
             <div>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Category
               </label>
               <select
@@ -387,12 +422,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 style={{
                   width: "100%",
-                  background: "#081324",
-                  border: "1px solid rgba(14,165,233,0.12)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "6px",
                   padding: "8px 12px",
                   fontSize: "12.5px",
-                  color: "#e2e8f0",
+                  color: TEXT_PRIMARY,
                   fontFamily: "inherit",
                   outline: "none",
                   boxSizing: "border-box",
@@ -408,7 +443,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Author */}
             <div>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Author
               </label>
               <input
@@ -417,12 +452,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 placeholder="CA Prem Suman"
                 style={{
                   width: "100%",
-                  background: "rgba(14,165,233,0.04)",
-                  border: "1px solid rgba(14,165,233,0.12)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "6px",
                   padding: "8px 12px",
                   fontSize: "12.5px",
-                  color: "#e2e8f0",
+                  color: TEXT_PRIMARY,
                   fontFamily: "inherit",
                   outline: "none",
                   boxSizing: "border-box",
@@ -432,7 +467,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Read Time & Date */}
             <div>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Publication Date & Read Time
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
@@ -441,12 +476,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   placeholder="March 2026"
                   style={{
-                    background: "rgba(14,165,233,0.04)",
-                    border: "1px solid rgba(14,165,233,0.12)",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
                     borderRadius: "6px",
                     padding: "8px 10px",
                     fontSize: "12px",
-                    color: "#e2e8f0",
+                    color: TEXT_PRIMARY,
                     fontFamily: "inherit",
                     outline: "none",
                   }}
@@ -456,12 +491,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                   onChange={(e) => setFormData({ ...formData, read_time: e.target.value })}
                   placeholder="8 min read"
                   style={{
-                    background: "rgba(14,165,233,0.04)",
-                    border: "1px solid rgba(14,165,233,0.12)",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
                     borderRadius: "6px",
                     padding: "8px 10px",
                     fontSize: "12px",
-                    color: "#e2e8f0",
+                    color: TEXT_PRIMARY,
                     fontFamily: "inherit",
                     outline: "none",
                   }}
@@ -471,7 +506,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Excerpt */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Excerpt / Summary *
               </label>
               <textarea
@@ -481,12 +516,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 placeholder="A compelling executive overview of the article…"
                 style={{
                   width: "100%",
-                  background: "rgba(14,165,233,0.04)",
-                  border: "1px solid rgba(14,165,233,0.12)",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "6px",
                   padding: "8px 12px",
                   fontSize: "12.5px",
-                  color: "#cbd5e1",
+                  color: TEXT_PRIMARY,
                   fontFamily: "inherit",
                   outline: "none",
                   boxSizing: "border-box",
@@ -497,7 +532,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
 
             {/* Image URL & Thumbnail Preview */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                 Cover Image URL
               </label>
               <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -507,12 +542,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                   placeholder="https://images.unsplash.com/..."
                   style={{
                     flex: 1,
-                    background: "rgba(14,165,233,0.04)",
-                    border: "1px solid rgba(14,165,233,0.12)",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
                     borderRadius: "6px",
                     padding: "8px 12px",
                     fontSize: "12.5px",
-                    color: "#94a3b8",
+                    color: TEXT_SECONDARY,
                     fontFamily: "inherit",
                     outline: "none",
                   }}
@@ -526,7 +561,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                       height: "40px",
                       objectFit: "cover",
                       borderRadius: "4px",
-                      border: "1px solid rgba(14,165,233,0.2)",
+                      border: `1px solid ${BORDER}`,
                     }}
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
@@ -538,11 +573,11 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
           {/* Article Body Editor with Tabs */}
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-              <label style={{ fontSize: "11px", fontWeight: "600", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Article Body (HTML / Formatted Content)
               </label>
 
-              <div style={{ display: "flex", gap: "4px", background: "rgba(14,165,233,0.06)", padding: "2px", borderRadius: "5px" }}>
+              <div style={{ display: "flex", gap: "4px", background: SURFACE_ALT, padding: "2px", borderRadius: "5px" }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab("write")}
@@ -550,8 +585,8 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                     padding: "4px 10px",
                     borderRadius: "4px",
                     border: "none",
-                    background: activeTab === "write" ? "#0ea5e9" : "transparent",
-                    color: activeTab === "write" ? "#fff" : "#64748b",
+                    background: activeTab === "write" ? ACCENT : "transparent",
+                    color: activeTab === "write" ? "#fff" : TEXT_SECONDARY,
                     fontSize: "11px",
                     fontWeight: "600",
                     cursor: "pointer",
@@ -566,8 +601,8 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                     padding: "4px 10px",
                     borderRadius: "4px",
                     border: "none",
-                    background: activeTab === "preview" ? "#0ea5e9" : "transparent",
-                    color: activeTab === "preview" ? "#fff" : "#64748b",
+                    background: activeTab === "preview" ? ACCENT : "transparent",
+                    color: activeTab === "preview" ? "#fff" : TEXT_SECONDARY,
                     fontSize: "11px",
                     fontWeight: "600",
                     cursor: "pointer",
@@ -586,12 +621,12 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 placeholder="<h2 id='intro'>Introduction</h2>\n<p>Your editorial article content here...</p>"
                 style={{
                   width: "100%",
-                  background: "#040b14",
-                  border: "1px solid rgba(14,165,233,0.15)",
+                  background: "#f8fafc",
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "8px",
                   padding: "14px",
                   fontSize: "13px",
-                  color: "#cbd5e1",
+                  color: "#1e293b",
                   fontFamily: "'Fira Code', 'Monaco', 'Courier New', monospace",
                   lineHeight: "1.6",
                   outline: "none",
@@ -605,6 +640,7 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                   background: "#fff",
                   color: "#0a1118",
                   padding: "24px 32px",
+                  border: `1px solid ${BORDER}`,
                   borderRadius: "8px",
                   maxHeight: "360px",
                   overflowY: "auto",
@@ -635,8 +671,8 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "16px 24px",
-            borderTop: "1px solid rgba(14,165,233,0.1)",
-            background: "#071324",
+            borderTop: `1px solid ${BORDER}`,
+            background: SURFACE_ALT,
             flexWrap: "wrap",
             gap: "12px",
           }}
@@ -669,18 +705,19 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
             )}
           </div>
 
-          <div style={{ display: "flex", itemsCenter: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <button
               type="button"
               onClick={onClose}
               style={{
                 padding: "8px 16px",
                 borderRadius: "6px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "transparent",
-                color: "#94a3b8",
+                border: `1px solid ${BORDER}`,
+                background: SURFACE,
+                color: TEXT_SECONDARY,
                 fontSize: "12px",
                 cursor: "pointer",
+                fontWeight: "500",
               }}
             >
               Cancel
@@ -693,9 +730,9 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
               style={{
                 padding: "8px 16px",
                 borderRadius: "6px",
-                border: "1px solid rgba(245,158,11,0.3)",
-                background: "rgba(245,158,11,0.1)",
-                color: "#fbbf24",
+                border: "1px solid #fbbf24",
+                background: "rgba(251,191,36,0.1)",
+                color: "#b45309",
                 fontSize: "12px",
                 fontWeight: "600",
                 cursor: saving ? "default" : "pointer",
@@ -715,12 +752,11 @@ function ArticleEditorModal({ article, onClose, onSave, onDelete }) {
                 padding: "8px 20px",
                 borderRadius: "6px",
                 border: "none",
-                background: "linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)",
+                background: ACCENT,
                 color: "#fff",
                 fontSize: "12px",
                 fontWeight: "600",
                 cursor: saving ? "default" : "pointer",
-                boxShadow: "0 2px 8px rgba(14,165,233,0.3)",
               }}
             >
               <Send size={13} />
@@ -860,29 +896,29 @@ export default function AdminInsights() {
               alignItems: "center",
               gap: "6px",
               marginBottom: "8px",
-              background: "rgba(14,165,233,0.06)",
-              border: "1px solid rgba(14,165,233,0.15)",
+              background: ACCENT_BG,
+              border: `1px solid ${ACCENT_BORDER}`,
               borderRadius: "6px",
               padding: "3px 10px",
             }}
           >
-            <BookOpen size={11} style={{ color: "#0ea5e9" }} />
-            <span style={{ fontSize: "10px", color: "#0ea5e9", fontWeight: "500", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <BookOpen size={11} style={{ color: ACCENT }} />
+            <span style={{ fontSize: "10px", color: ACCENT, fontWeight: "500", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Insights CMS
             </span>
           </div>
           <h1
             style={{
-              fontSize: "20px",
+              fontSize: "22px",
               fontWeight: "700",
-              color: "#e2e8f0",
+              color: TEXT_PRIMARY,
               margin: 0,
               letterSpacing: "-0.02em",
             }}
           >
             Editorial Insights Management
           </h1>
-          <p style={{ fontSize: "12px", color: "#475569", marginTop: "4px", marginBottom: 0 }}>
+          <p style={{ fontSize: "12.5px", color: TEXT_MUTED, marginTop: "4px", marginBottom: 0 }}>
             Publish and curate thought leadership articles for India&apos;s senior finance leaders.
           </p>
         </div>
@@ -892,20 +928,9 @@ export default function AdminInsights() {
           <button
             onClick={() => loadAll({ refresh: true })}
             disabled={refreshing}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 13px",
-              background: "rgba(14,165,233,0.05)",
-              border: "1px solid rgba(14,165,233,0.12)",
-              borderRadius: "7px",
-              cursor: refreshing ? "default" : "pointer",
-              color: "#475569",
-              fontSize: "11.5px",
-              fontFamily: "inherit",
-              transition: "border-color 0.15s, color 0.15s",
-            }}
+            style={{ ...BTN_SECONDARY_STYLE, opacity: refreshing ? 0.6 : 1, cursor: refreshing ? "default" : "pointer" }}
+            onMouseEnter={(e) => { if (!refreshing) { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.color = ACCENT; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SECONDARY; }}
           >
             <RefreshCw size={12} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
             {lastRefresh ? "Refresh" : "Reload"}
@@ -983,12 +1008,13 @@ export default function AdminInsights() {
             alignItems: "center",
             gap: "10px",
             padding: "8px 14px",
-            background: "rgba(14,165,233,0.03)",
-            border: "1px solid rgba(14,165,233,0.08)",
-            borderRadius: "8px",
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
+            borderRadius: RADIUS_MD,
+            boxShadow: SHADOW_SM,
           }}
         >
-          <Search size={14} style={{ color: "#334155", flexShrink: 0 }} />
+          <Search size={14} style={{ color: ACCENT, flexShrink: 0 }} />
           <input
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
@@ -999,7 +1025,7 @@ export default function AdminInsights() {
               border: "none",
               outline: "none",
               fontSize: "12.5px",
-              color: "#e2e8f0",
+              color: TEXT_PRIMARY,
               fontFamily: "inherit",
             }}
           />
@@ -1010,7 +1036,7 @@ export default function AdminInsights() {
                 setSearch("");
                 loadAll({ q: "" });
               }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, padding: 0 }}
             >
               <X size={13} />
             </button>
@@ -1022,12 +1048,12 @@ export default function AdminInsights() {
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           style={{
-            background: "#071220",
-            border: "1px solid rgba(14,165,233,0.12)",
-            borderRadius: "8px",
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
+            borderRadius: RADIUS_MD,
             padding: "8px 12px",
             fontSize: "12px",
-            color: "#94a3b8",
+            color: TEXT_SECONDARY,
             fontFamily: "inherit",
             outline: "none",
           }}
@@ -1043,10 +1069,11 @@ export default function AdminInsights() {
       {/* ─── Articles List Table ─── */}
       <div
         style={{
-          background: "#07101f",
-          border: "1px solid rgba(14,165,233,0.08)",
-          borderRadius: "12px",
+          background: SURFACE,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_LG,
           overflowX: "auto",
+          boxShadow: SHADOW_SM,
         }}
       >
         {/* Table Header */}
@@ -1056,13 +1083,14 @@ export default function AdminInsights() {
             gridTemplateColumns: "60px 1fr 140px 100px 120px 100px",
             gap: "16px",
             padding: "12px 18px",
-            borderBottom: "1px solid rgba(14,165,233,0.06)",
+            borderBottom: `1px solid ${BORDER}`,
             fontSize: "10px",
             fontWeight: "600",
-            color: "#334155",
+            color: TEXT_SECONDARY,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
             minWidth: "700px",
+            background: SURFACE_ALT,
           }}
         >
           <span>Cover</span>
@@ -1074,13 +1102,13 @@ export default function AdminInsights() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "#334155", fontSize: "12px", minWidth: "700px" }}>
+          <div style={{ padding: "48px", textAlign: "center", color: TEXT_MUTED, fontSize: "12px", minWidth: "700px" }}>
             Loading editorial insights…
           </div>
         ) : insights.length === 0 ? (
           <div style={{ padding: "54px", textAlign: "center", minWidth: "700px" }}>
-            <BookOpen size={30} style={{ color: "#1e293b", margin: "0 auto 12px" }} />
-            <div style={{ fontSize: "13px", color: "#475569" }}>
+            <BookOpen size={30} style={{ color: TEXT_DISABLED, margin: "0 auto 12px" }} />
+            <div style={{ fontSize: "13px", color: TEXT_MUTED }}>
               {search || statusFilter !== "all" || categoryFilter !== "All"
                 ? "No articles match the selected filters."
                 : "No insights found. Click '+ New Insight' to publish your first piece."}
@@ -1095,13 +1123,13 @@ export default function AdminInsights() {
                 gridTemplateColumns: "60px 1fr 140px 100px 120px 100px",
                 gap: "16px",
                 alignItems: "center",
-                padding: "14px 18px",
-                borderBottom: idx === insights.length - 1 ? "none" : "1px solid rgba(14,165,233,0.05)",
+                padding: "13px 18px",
+                borderBottom: idx === insights.length - 1 ? "none" : `1px solid ${BORDER}`,
                 background: "transparent",
                 transition: "background 0.12s",
                 minWidth: "700px",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(14,165,233,0.03)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = SURFACE_ALT)}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {/* Thumbnail */}
@@ -1111,8 +1139,8 @@ export default function AdminInsights() {
                   height: "34px",
                   borderRadius: "4px",
                   overflow: "hidden",
-                  background: "#081324",
-                  border: "1px solid rgba(14,165,233,0.1)",
+                  background: SURFACE_ALT,
+                  border: `1px solid ${BORDER}`,
                 }}
               >
                 {item.image ? (
@@ -1135,7 +1163,7 @@ export default function AdminInsights() {
                   style={{
                     fontSize: "13px",
                     fontWeight: "600",
-                    color: "#e2e8f0",
+                    color: TEXT_PRIMARY,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -1147,7 +1175,7 @@ export default function AdminInsights() {
                 <div
                   style={{
                     fontSize: "11px",
-                    color: "#475569",
+                    color: TEXT_MUTED,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -1158,7 +1186,7 @@ export default function AdminInsights() {
               </div>
 
               {/* Category */}
-              <div style={{ fontSize: "11px", color: "#38bdf8", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "11px", color: ACCENT, whiteSpace: "nowrap", fontWeight: "500" }}>
                 {item.category}
               </div>
 
@@ -1168,7 +1196,7 @@ export default function AdminInsights() {
               </div>
 
               {/* Date */}
-              <div style={{ fontSize: "11px", color: "#475569", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "11px", color: TEXT_MUTED, whiteSpace: "nowrap" }}>
                 {item.date || "—"}
               </div>
 
@@ -1178,11 +1206,11 @@ export default function AdminInsights() {
                   onClick={() => setEditingArticle(item)}
                   title="Edit article"
                   style={{
-                    background: "rgba(14,165,233,0.08)",
-                    border: "1px solid rgba(14,165,233,0.15)",
+                    background: ACCENT_BG,
+                    border: `1px solid ${ACCENT_BORDER}`,
                     borderRadius: "5px",
                     padding: "5px 7px",
-                    color: "#38bdf8",
+                    color: ACCENT,
                     cursor: "pointer",
                   }}
                 >
@@ -1195,11 +1223,11 @@ export default function AdminInsights() {
                   rel="noreferrer"
                   title="View live"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: SURFACE_ALT,
+                    border: `1px solid ${BORDER}`,
                     borderRadius: "5px",
                     padding: "5px 7px",
-                    color: "#94a3b8",
+                    color: TEXT_MUTED,
                     display: "inline-flex",
                     alignItems: "center",
                     textDecoration: "none",

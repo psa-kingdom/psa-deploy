@@ -30,6 +30,24 @@ import {
 } from "lucide-react";
 import AdminLayout from "../components/admin/AdminLayout";
 import { BACKEND_URL } from "../config";
+import {
+  SURFACE,
+  SURFACE_ALT,
+  SURFACE_HOVER,
+  BORDER,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_MUTED,
+  TEXT_DISABLED,
+  ACCENT,
+  ACCENT_BG,
+  ACCENT_BORDER,
+  CARD_STYLE,
+  SHADOW_SM,
+  RADIUS_LG,
+  RADIUS_MD,
+  BTN_SECONDARY_STYLE,
+} from "../utils/adminTheme";
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -50,22 +68,23 @@ function relTime(iso) {
 
 function statusBadge(status) {
   const map = {
-    draft: { label: "Draft", color: "#94a3b8", bg: "rgba(148,163,184,0.08)" },
-    sent: { label: "Sent", color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
-    sending: { label: "Sending", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-    failed: { label: "Failed", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
-    cancelled: { label: "Cancelled", color: "#64748b", bg: "rgba(100,116,139,0.08)" },
+    draft:     { label: "Draft",     color: "#6B8099",  bg: "rgba(107,128,153,0.1)",  border: "rgba(107,128,153,0.25)" },
+    sent:      { label: "Sent",      color: "#15803D",  bg: "rgba(22,163,74,0.08)",   border: "rgba(22,163,74,0.25)"  },
+    sending:   { label: "Sending",   color: "#D97706",  bg: "rgba(217,119,6,0.08)",   border: "rgba(217,119,6,0.25)"  },
+    failed:    { label: "Failed",    color: "#DC2626",  bg: "rgba(220,38,38,0.08)",   border: "rgba(220,38,38,0.25)"  },
+    cancelled: { label: "Cancelled", color: "#6B8099",  bg: "rgba(107,128,153,0.08)", border: "rgba(107,128,153,0.2)" },
   };
-  const s = map[status] || { label: status, color: "#6b7280", bg: "rgba(107,114,128,0.08)" };
+  const s = map[status] || { label: status, color: "#6B8099", bg: "rgba(107,128,153,0.08)", border: "rgba(107,128,153,0.2)" };
   return (
     <span
       style={{
         fontSize: "10px",
-        fontWeight: "500",
-        padding: "2px 7px",
+        fontWeight: "600",
+        padding: "2px 8px",
         borderRadius: "4px",
         color: s.color,
         background: s.bg,
+        border: `1px solid ${s.border}`,
         letterSpacing: "0.02em",
         textTransform: "capitalize",
       }}
@@ -88,56 +107,58 @@ function KPICard({ label, value, icon: Icon, accent, loading, sublabel }) {
       style={{
         position: "relative",
         overflow: "hidden",
-        background: "#07101f",
-        border: `1px solid ${hovered ? accent + "30" : "rgba(14,165,233,0.08)"}`,
-        borderRadius: "12px",
+        background: SURFACE,
+        border: `1px solid ${hovered ? accent + "50" : BORDER}`,
+        borderRadius: RADIUS_LG,
         padding: "20px 22px",
         cursor: "default",
-        transition: "border-color 0.25s ease, box-shadow 0.25s ease",
-        boxShadow: hovered ? `0 0 28px ${accent}14` : "none",
+        transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+        boxShadow: hovered
+          ? `0 4px 16px ${accent}14, ${SHADOW_SM}`
+          : SHADOW_SM,
       }}
     >
-      {/* Subtle spotlight radial */}
+      {/* Subtle top-right radial accent */}
       <div
         style={{
           position: "absolute",
-          top: "-30px",
-          right: "-30px",
-          width: "100px",
-          height: "100px",
+          top: "-20px",
+          right: "-20px",
+          width: "80px",
+          height: "80px",
           borderRadius: "50%",
           background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`,
           pointerEvents: "none",
-          opacity: hovered ? 1 : 0.5,
+          opacity: hovered ? 1 : 0.6,
           transition: "opacity 0.3s",
         }}
       />
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "14px" }}>
         <div
           style={{
-            width: "34px",
-            height: "34px",
+            width: "36px",
+            height: "36px",
             borderRadius: "8px",
-            background: `${accent}14`,
+            background: `${accent}12`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            border: `1px solid ${accent}20`,
+            border: `1px solid ${accent}25`,
           }}
         >
-          <Icon size={15} style={{ color: accent }} />
+          <Icon size={16} style={{ color: accent }} />
         </div>
       </div>
 
-      <div style={{ fontSize: "24px", fontWeight: "700", color: "#e2e8f0", letterSpacing: "-0.02em", lineHeight: 1 }}>
+      <div style={{ fontSize: "28px", fontWeight: "700", color: TEXT_PRIMARY, letterSpacing: "-0.03em", lineHeight: 1 }}>
         {loading ? (
           <div
             style={{
               width: "52px",
-              height: "24px",
+              height: "28px",
               borderRadius: "4px",
-              background: "linear-gradient(90deg, #0f1e35 0%, #162032 50%, #0f1e35 100%)",
+              background: "linear-gradient(90deg, #E2E8F0 0%, #F0F4F8 50%, #E2E8F0 100%)",
               backgroundSize: "200% 100%",
               animation: "shimmer 1.5s infinite",
             }}
@@ -147,11 +168,11 @@ function KPICard({ label, value, icon: Icon, accent, loading, sublabel }) {
         )}
       </div>
 
-      <div style={{ marginTop: "6px", fontSize: "11.5px", color: "#475569", fontWeight: "400" }}>
+      <div style={{ marginTop: "6px", fontSize: "12px", color: TEXT_SECONDARY, fontWeight: "500" }}>
         {label}
       </div>
       {sublabel && (
-        <div style={{ marginTop: "2px", fontSize: "10px", color: "#334155" }}>
+        <div style={{ marginTop: "2px", fontSize: "10.5px", color: TEXT_MUTED }}>
           {sublabel}
         </div>
       )}
@@ -175,9 +196,9 @@ function CampaignRow({ campaign, isLast }) {
           gridTemplateColumns: "1fr auto auto",
           gap: "16px",
           alignItems: "center",
-          padding: "12px 16px",
-          borderBottom: isLast ? "none" : "1px solid rgba(14,165,233,0.05)",
-          background: hovered ? "rgba(14,165,233,0.03)" : "transparent",
+          padding: "11px 16px",
+          borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+          background: hovered ? SURFACE_HOVER : "transparent",
           transition: "background 0.15s",
           cursor: "pointer",
         }}
@@ -185,9 +206,9 @@ function CampaignRow({ campaign, isLast }) {
         <div style={{ minWidth: 0 }}>
           <div
             style={{
-              fontSize: "12.5px",
+              fontSize: "13px",
               fontWeight: "500",
-              color: "#94a3b8",
+              color: TEXT_PRIMARY,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -196,12 +217,12 @@ function CampaignRow({ campaign, isLast }) {
           >
             {campaign.subject || "(No subject)"}
           </div>
-          <div style={{ fontSize: "11px", color: "#334155" }}>
+          <div style={{ fontSize: "11px", color: TEXT_MUTED }}>
             {relTime(campaign.created_at)}
           </div>
         </div>
         <div>{statusBadge(campaign.status)}</div>
-        <ChevronRight size={13} style={{ color: hovered ? "#0ea5e9" : "#1e293b", transition: "color 0.15s" }} />
+        <ChevronRight size={13} style={{ color: hovered ? ACCENT : TEXT_DISABLED, transition: "color 0.15s" }} />
       </div>
     </Link>
   );
@@ -219,18 +240,18 @@ function EnquiryRow({ enquiry, isLast }) {
         gridTemplateColumns: "1fr auto",
         gap: "16px",
         alignItems: "center",
-        padding: "12px 16px",
-        borderBottom: isLast ? "none" : "1px solid rgba(14,165,233,0.05)",
-        background: hovered ? "rgba(14,165,233,0.03)" : "transparent",
+        padding: "11px 16px",
+        borderBottom: isLast ? "none" : `1px solid ${BORDER}`,
+        background: hovered ? SURFACE_HOVER : "transparent",
         transition: "background 0.15s",
       }}
     >
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontSize: "12.5px",
+            fontSize: "13px",
             fontWeight: "500",
-            color: "#94a3b8",
+            color: TEXT_PRIMARY,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -242,7 +263,7 @@ function EnquiryRow({ enquiry, isLast }) {
         <div
           style={{
             fontSize: "11px",
-            color: "#475569",
+            color: TEXT_MUTED,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -251,7 +272,7 @@ function EnquiryRow({ enquiry, isLast }) {
           {enquiry.email || ""}{(enquiry.service_of_interest || enquiry.service) ? ` · ${enquiry.service_of_interest || enquiry.service}` : ""}
         </div>
       </div>
-      <div style={{ fontSize: "10px", color: "#334155", whiteSpace: "nowrap" }}>
+      <div style={{ fontSize: "11px", color: TEXT_MUTED, whiteSpace: "nowrap" }}>
         {relTime(enquiry.created_at)}
       </div>
     </div>
@@ -263,9 +284,7 @@ function Panel({ title, icon: Icon, children, action, actionLabel }) {
   return (
     <div
       style={{
-        background: "#07101f",
-        border: "1px solid rgba(14,165,233,0.08)",
-        borderRadius: "12px",
+        ...CARD_STYLE,
         overflow: "hidden",
       }}
     >
@@ -276,24 +295,26 @@ function Panel({ title, icon: Icon, children, action, actionLabel }) {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "14px 16px",
-          borderBottom: "1px solid rgba(14,165,233,0.05)",
+          borderBottom: `1px solid ${BORDER}`,
+          background: SURFACE_ALT,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div
             style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "5px",
-              background: "rgba(14,165,233,0.1)",
+              width: "26px",
+              height: "26px",
+              borderRadius: "6px",
+              background: ACCENT_BG,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              border: `1px solid ${ACCENT_BORDER}`,
             }}
           >
-            <Icon size={12} style={{ color: "#0ea5e9" }} />
+            <Icon size={12} style={{ color: ACCENT }} />
           </div>
-          <span style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", letterSpacing: "0.02em" }}>
+          <span style={{ fontSize: "12.5px", fontWeight: "600", color: TEXT_PRIMARY, letterSpacing: "0.01em" }}>
             {title}
           </span>
         </div>
@@ -304,13 +325,14 @@ function Panel({ title, icon: Icon, children, action, actionLabel }) {
               display: "flex",
               alignItems: "center",
               gap: "4px",
-              fontSize: "11px",
-              color: "#334155",
+              fontSize: "11.5px",
+              color: ACCENT,
               textDecoration: "none",
+              fontWeight: "500",
               transition: "color 0.15s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#0ea5e9")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#334155")}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#0284C7")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = ACCENT)}
           >
             {actionLabel || "View all"}
             <ArrowRight size={11} />
@@ -401,28 +423,28 @@ export default function AdminDashboard() {
       label: "Total Campaigns",
       value: stats?.total_campaigns ?? null,
       icon: LayoutGrid,
-      accent: "#0ea5e9",
+      accent: "#0EA5E9",
       sublabel: "All time",
     },
     {
       label: "Total Enquiries",
       value: stats?.inqTotal ?? null,
       icon: Inbox,
-      accent: "#a78bfa",
+      accent: "#8B5CF6",
       sublabel: "Website enquiries",
     },
     {
       label: "Emails Sent",
       value: stats?.sent_count ?? null,
       icon: CheckCircle2,
-      accent: "#22c55e",
+      accent: "#16A34A",
       sublabel: "All time deliveries",
     },
     {
       label: "Failed Deliveries",
       value: stats?.failed_count ?? null,
       icon: XCircle,
-      accent: "#ef4444",
+      accent: "#DC2626",
       sublabel: "All time failures",
     },
   ];
@@ -435,10 +457,14 @@ export default function AdminDashboard() {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       {/* ─── Header ─── */}
-      <div style={{ marginBottom: "28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px" }}>
+      <div style={{ marginBottom: "28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
         <div>
           <div
             style={{
@@ -446,8 +472,8 @@ export default function AdminDashboard() {
               alignItems: "center",
               gap: "6px",
               marginBottom: "8px",
-              background: "rgba(14,165,233,0.06)",
-              border: "1px solid rgba(14,165,233,0.15)",
+              background: ACCENT_BG,
+              border: `1px solid ${ACCENT_BORDER}`,
               borderRadius: "6px",
               padding: "3px 10px",
             }}
@@ -457,26 +483,26 @@ export default function AdminDashboard() {
                 width: "5px",
                 height: "5px",
                 borderRadius: "50%",
-                background: "#22c55e",
-                boxShadow: "0 0 5px rgba(34,197,94,0.6)",
+                background: "#22C55E",
+                boxShadow: "0 0 5px rgba(34,197,94,0.5)",
               }}
             />
-            <span style={{ fontSize: "10px", color: "#0ea5e9", fontWeight: "500", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <span style={{ fontSize: "10px", color: ACCENT, fontWeight: "600", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Admin Portal
             </span>
           </div>
           <h1
             style={{
-              fontSize: "20px",
+              fontSize: "22px",
               fontWeight: "700",
-              color: "#e2e8f0",
+              color: TEXT_PRIMARY,
               margin: 0,
               letterSpacing: "-0.02em",
             }}
           >
             Dashboard Overview
           </h1>
-          <p style={{ fontSize: "12px", color: "#475569", marginTop: "4px", marginBottom: 0 }}>
+          <p style={{ fontSize: "12.5px", color: TEXT_MUTED, marginTop: "4px", marginBottom: 0 }}>
             P Suman &amp; Associates — administrative overview
           </p>
         </div>
@@ -486,29 +512,19 @@ export default function AdminDashboard() {
           onClick={() => loadAll(true)}
           disabled={refreshing}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "7px 13px",
-            background: "rgba(14,165,233,0.05)",
-            border: "1px solid rgba(14,165,233,0.12)",
-            borderRadius: "7px",
+            ...BTN_SECONDARY_STYLE,
+            opacity: refreshing ? 0.6 : 1,
             cursor: refreshing ? "default" : "pointer",
-            color: "#475569",
-            fontSize: "11.5px",
-            fontFamily: "inherit",
-            transition: "border-color 0.15s, color 0.15s",
-            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             if (!refreshing) {
-              e.currentTarget.style.borderColor = "rgba(14,165,233,0.3)";
-              e.currentTarget.style.color = "#94a3b8";
+              e.currentTarget.style.borderColor = ACCENT;
+              e.currentTarget.style.color = ACCENT;
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(14,165,233,0.12)";
-            e.currentTarget.style.color = "#475569";
+            e.currentTarget.style.borderColor = BORDER;
+            e.currentTarget.style.color = "#3D5A78";
           }}
         >
           <RefreshCw
@@ -524,7 +540,7 @@ export default function AdminDashboard() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: "14px",
+          gap: "16px",
           marginBottom: "28px",
         }}
       >
@@ -545,7 +561,7 @@ export default function AdminDashboard() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
           gap: "16px",
           marginBottom: "28px",
         }}
@@ -553,7 +569,7 @@ export default function AdminDashboard() {
         {/* Recent Campaigns */}
         <Panel title="Recent Campaigns" icon={Mail} action="/admin/communication" actionLabel="Open center">
           {dataLoading ? (
-            <div style={{ padding: "32px 16px", textAlign: "center", color: "#334155", fontSize: "12px" }}>
+            <div style={{ padding: "32px 16px", textAlign: "center", color: TEXT_MUTED, fontSize: "12px" }}>
               Loading…
             </div>
           ) : campaigns.length === 0 ? (
@@ -563,8 +579,8 @@ export default function AdminDashboard() {
                 textAlign: "center",
               }}
             >
-              <Mail size={20} style={{ color: "#1e293b", marginBottom: "8px" }} />
-              <div style={{ fontSize: "12px", color: "#334155" }}>No campaigns yet</div>
+              <Mail size={22} style={{ color: TEXT_DISABLED, marginBottom: "8px" }} />
+              <div style={{ fontSize: "12px", color: TEXT_MUTED }}>No campaigns yet</div>
             </div>
           ) : (
             campaigns.map((c, i) => (
@@ -576,7 +592,7 @@ export default function AdminDashboard() {
         {/* Recent Enquiries */}
         <Panel title="Recent Enquiries" icon={MessageSquare} action="/admin/inquiries" actionLabel="View all">
           {dataLoading ? (
-            <div style={{ padding: "32px 16px", textAlign: "center", color: "#334155", fontSize: "12px" }}>
+            <div style={{ padding: "32px 16px", textAlign: "center", color: TEXT_MUTED, fontSize: "12px" }}>
               Loading…
             </div>
           ) : enquiries.length === 0 ? (
@@ -586,8 +602,8 @@ export default function AdminDashboard() {
                 textAlign: "center",
               }}
             >
-              <Inbox size={20} style={{ color: "#1e293b", marginBottom: "8px" }} />
-              <div style={{ fontSize: "12px", color: "#334155" }}>No enquiries yet</div>
+              <Inbox size={22} style={{ color: TEXT_DISABLED, marginBottom: "8px" }} />
+              <div style={{ fontSize: "12px", color: TEXT_MUTED }}>No enquiries yet</div>
             </div>
           ) : (
             enquiries.map((e, i) => (
@@ -602,10 +618,10 @@ export default function AdminDashboard() {
         <div
           style={{
             fontSize: "10px",
-            fontWeight: "600",
-            color: "#334155",
+            fontWeight: "700",
+            color: TEXT_MUTED,
             textTransform: "uppercase",
-            letterSpacing: "0.08em",
+            letterSpacing: "0.1em",
             marginBottom: "12px",
           }}
         >
@@ -623,21 +639,21 @@ export default function AdminDashboard() {
             icon={FileText}
             label="Insights CMS"
             description="Author, edit, and publish editorial thought leadership."
-            accent="#38bdf8"
+            accent="#0EA5E9"
           />
           <QuickAction
             to="/admin/inquiries"
             icon={Inbox}
             label="Inquiries Center"
             description="Review and track inbound client consultation requests."
-            accent="#a78bfa"
+            accent="#8B5CF6"
           />
           <QuickAction
             to="/admin/communication"
             icon={Send}
             label="Communication Center"
             description="Manage campaigns and send emails to subscribers."
-            accent="#0ea5e9"
+            accent="#0EA5E9"
           />
         </div>
       </div>
@@ -655,13 +671,13 @@ function QuickAction({ to, icon: Icon, label, description, accent }) {
         style={{
           position: "relative",
           overflow: "hidden",
-          background: "#07101f",
-          border: `1px solid ${hovered ? accent + "35" : "rgba(14,165,233,0.08)"}`,
-          borderRadius: "10px",
+          background: SURFACE,
+          border: `1px solid ${hovered ? accent + "45" : BORDER}`,
+          borderRadius: RADIUS_LG,
           padding: "18px 20px",
           cursor: "pointer",
           transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-          boxShadow: hovered ? `0 0 22px ${accent}12` : "none",
+          boxShadow: hovered ? `0 4px 16px ${accent}12, ${SHADOW_SM}` : SHADOW_SM,
         }}
       >
         {/* Spotlight */}
@@ -673,21 +689,21 @@ function QuickAction({ to, icon: Icon, label, description, accent }) {
             width: "80px",
             height: "80px",
             borderRadius: "50%",
-            background: `radial-gradient(circle, ${accent}16 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`,
             pointerEvents: "none",
-            opacity: hovered ? 1 : 0.4,
+            opacity: hovered ? 1 : 0.5,
             transition: "opacity 0.3s",
           }}
         />
 
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
           <div
             style={{
               width: "32px",
               height: "32px",
               borderRadius: "7px",
               background: `${accent}12`,
-              border: `1px solid ${accent}20`,
+              border: `1px solid ${accent}25`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -698,17 +714,17 @@ function QuickAction({ to, icon: Icon, label, description, accent }) {
           <ArrowRight
             size={13}
             style={{
-              color: hovered ? accent : "#1e293b",
+              color: hovered ? accent : TEXT_DISABLED,
               transition: "color 0.2s, transform 0.2s",
               transform: hovered ? "translateX(2px)" : "none",
             }}
           />
         </div>
 
-        <div style={{ fontSize: "13px", fontWeight: "600", color: "#94a3b8", marginBottom: "4px" }}>
+        <div style={{ fontSize: "13px", fontWeight: "600", color: TEXT_PRIMARY, marginBottom: "4px" }}>
           {label}
         </div>
-        <div style={{ fontSize: "11.5px", color: "#334155", lineHeight: "1.5" }}>
+        <div style={{ fontSize: "11.5px", color: TEXT_SECONDARY, lineHeight: "1.5" }}>
           {description}
         </div>
       </div>
