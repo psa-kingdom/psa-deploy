@@ -234,8 +234,10 @@ async def preview_template(payload: TemplatePreviewRequest):
     full_html, plain_text = render_final_email(
         body_html=payload.body_html,
         variables=vars_map,
-        unsubscribe_url=vars_map["unsubscribe_url"]
+        unsubscribe_url=vars_map["unsubscribe_url"],
+        apply_wrapper=payload.apply_wrapper if payload.apply_wrapper is not None else True
     )
+
 
     return {
         "subject": rendered_subj,
