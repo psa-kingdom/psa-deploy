@@ -390,3 +390,43 @@ def test_webhook_bounce_suppression_idempotency(client, mock_db):
     finally:
         settings.EMAIL_ENVIRONMENT = original_env
         settings.RESEND_WEBHOOK_SECRET = original_secret
+
+
+def test_webhook_suppressed_event_handling(client, mock_db):
+    """12. Webhook email.suppressed marks recipient skipped_suppression and records provider suppression."""
+    original_env = settings.EMAIL_ENVIRONMENT
+    original_secret = settings.RESEND_WEBHOOK_SECRET
+    try:
+        settings.EMAIL_ENVIRONMENT = "development"
+        settings.RESEND_WEBHOOK_SECRET = ""
+
+        mock_db.campaign_recipients.docs.append({
+            "email": "suppressed.user@example.com",
+            "resend_message_id": "re_supp_101",
+            "status": "dispatched"
+        })
+
+        payload = {
+            "id": "evt_supp_101",
+            "type": "email.suppressed",
+            "data": {
+                "email_id": "re_supp_101",
+                "to": ["suppressed.user@example.com"]
+            }
+        }
+        r = client.post("/api/webhooks/resend", json=payload)
+        assert r.status_code == 200
+        assert r.json()["status"] == "processed"
+
+        # Check suppression
+        supp = next((d for d in mock_db.email_suppressions.docs if d["email"] == "suppressed.user@example.com"), None)
+        assert supp is not None
+        assert supp["reason"] == "provider_suppression"
+
+        # Check recipient status
+        rec = next(d for d in mock_db.campaign_recipients.docs if d["resend_message_id"] == "re_supp_101")
+        assert rec["status"] == "skipped_suppression"
+    finally:
+        settings.EMAIL_ENVIRONMENT = original_env
+        settings.RESEND_WEBHOOK_SECRET = original_secret
+

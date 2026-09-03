@@ -118,6 +118,19 @@ async def handle_resend_webhook(
             if not existing_sup:
                 supp = EmailSuppression(email=clean_email, reason=reason, created_at=now)
                 await db.email_suppressions.insert_one(supp.model_dump())
+    elif event_type == "email.suppressed":
+        if email_id:
+            await db.campaign_recipients.update_one(
+                {"resend_message_id": email_id},
+                {"$set": {"status": RecipientStatus.SKIPPED_SUPPRESSION.value}}
+            )
+        if recipient_email:
+            clean_email = recipient_email.strip().lower()
+            existing_sup = await db.email_suppressions.find_one({"email": clean_email})
+            if not existing_sup:
+                supp = EmailSuppression(email=clean_email, reason="provider_suppression", created_at=now)
+                await db.email_suppressions.insert_one(supp.model_dump())
 
     return {"status": "processed", "event_type": event_type}
+
 
