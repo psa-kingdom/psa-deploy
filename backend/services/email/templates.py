@@ -97,56 +97,31 @@ def get_independence_day_campaign_html() -> str:
     """
 
 
-def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+def get_contact_acknowledgement_fragment() -> str:
     """
-    Returns (subject, rendered_html, plain_text) for Independence Day Greetings.
+    Returns clean inner HTML content fragment for Contact Inquiry Acknowledgment.
+    Uses mustache variables {{name}}, {{service_of_interest}}, {{company}}.
+    Designed to be wrapped by the 780px responsive corporate shell.
     """
-    raw_subject = "Happy Independence Day — P Suman & Associates"
-    content_html = get_independence_day_campaign_html()
-    
-    name = variables.get("name") or "Valued Partner"
-    company = variables.get("company")
-    salutation = f"Dear {name}," if not company else f"Dear {name} ({company}),"
-    
-    content_html = content_html.replace("Dear {{name}},", salutation)
-
-    subject = interpolate_variables(raw_subject, variables)
-    full_html = render_base_layout(
-        content_html=content_html,
-        preheader="Warm Independence Day wishes from P Suman & Associates",
-        unsubscribe_url=variables.get("unsubscribe_url")
-    )
-    plain_text = html_to_plain_text(full_html)
-    return subject, full_html, plain_text
-
-
-def get_contact_acknowledgement_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
-    """
-    Transactional confirmation sent when a user submits the Contact form.
-    """
-    subject = "Inquiry Received — P Suman & Associates"
-    name = variables.get("name") or "Valued Client"
-    service = variables.get("service_of_interest") or "General Advisory"
-
-    content_html = f"""
+    return f"""
     <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: {PSA_BRAND_PRIMARY};">
         Thank You for Reaching Out
     </h2>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {name},
+        Dear {{{{name}}}},
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
-        We have received your inquiry regarding <strong>{service}</strong>. A member of our senior advisory team is reviewing your requirements and will connect with you within 24 business hours.
+        We have received your inquiry regarding <strong>{{{{service_of_interest}}}}</strong>. A member of our senior advisory team is reviewing your requirements and will connect with you within 24 business hours.
     </p>
 
     <div style="background-color: #f8fafc; border: 1px solid {PSA_BRAND_BORDER}; border-radius: 6px; padding: 18px; margin: 20px 0;">
         <p style="margin: 0 0 8px; font-size: 11px; font-weight: 700; color: {PSA_BRAND_MUTED}; text-transform: uppercase; letter-spacing: 0.5px;">
             Summary of Your Inquiry
         </p>
-        <p style="margin: 0 0 6px; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Service:</strong> {service}</p>
-        <p style="margin: 0; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Company:</strong> {variables.get('company') or 'Not specified'}</p>
+        <p style="margin: 0 0 6px; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Service:</strong> {{{{service_of_interest}}}}</p>
+        <p style="margin: 0; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Company:</strong> {{{{company}}}}</p>
     </div>
 
     <p style="margin: 0 0 24px; font-size: 14px; color: {PSA_BRAND_MUTED}; line-height: 1.6;">
@@ -159,23 +134,14 @@ def get_contact_acknowledgement_template(variables: Dict[str, Any]) -> Tuple[str
     </div>
     """
 
-    full_html = render_base_layout(
-        content_html=content_html,
-        preheader="We have received your advisory inquiry."
-    )
-    plain_text = html_to_plain_text(full_html)
-    return subject, full_html, plain_text
 
-
-def get_newsletter_welcome_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+def get_newsletter_welcome_fragment() -> str:
     """
-    Transactional confirmation sent when a user subscribes to the newsletter.
+    Returns clean inner HTML content fragment for Newsletter Welcome & Insights.
+    Designed to be wrapped by the 780px responsive corporate shell.
     """
-    subject = "Welcome to PSA Insights — P Suman & Associates"
-
     cta_html = render_cta_button("Explore Recent Insights →", "https://psumanassociates.com/insights", align="center")
-
-    content_html = f"""
+    return f"""
     <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: {PSA_BRAND_PRIMARY};">
         Welcome to PSA Insights
     </h2>
@@ -192,11 +158,70 @@ def get_newsletter_welcome_template(variables: Dict[str, Any]) -> Tuple[str, str
     </div>
     """
 
-    full_html = render_base_layout(
-        content_html=content_html,
+
+def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+    """
+    Returns (subject, rendered_html, plain_text) for Independence Day Greetings.
+    """
+    from backend.services.email.renderer import render_final_email
+    raw_subject = "Happy Independence Day — P Suman & Associates"
+    content_html = get_independence_day_campaign_html()
+    
+    name = variables.get("name") or "Valued Partner"
+    company = variables.get("company")
+    salutation = f"Dear {name}," if not company else f"Dear {name} ({company}),"
+    content_html = content_html.replace("Dear {{name}},", salutation)
+
+    subject = interpolate_variables(raw_subject, variables)
+    full_html, plain_text = render_final_email(
+        body_html=content_html,
+        variables=variables,
+        apply_wrapper=True,
+        preheader="Warm Independence Day wishes from P Suman & Associates",
+        unsubscribe_url=variables.get("unsubscribe_url")
+    )
+    return subject, full_html, plain_text
+
+
+def get_contact_acknowledgement_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+    """
+    Transactional confirmation sent when a user submits the Contact form.
+    """
+    from backend.services.email.renderer import render_final_email
+    subject = "Inquiry Received — P Suman & Associates"
+    vars_map = {
+        "name": variables.get("name") or "Valued Client",
+        "service_of_interest": variables.get("service_of_interest") or "General Advisory",
+        "company": variables.get("company") or "Not specified",
+        "unsubscribe_url": variables.get("unsubscribe_url")
+    }
+    fragment = get_contact_acknowledgement_fragment()
+    full_html, plain_text = render_final_email(
+        body_html=fragment,
+        variables=vars_map,
+        apply_wrapper=True,
+        preheader="We have received your advisory inquiry.",
+        unsubscribe_url=variables.get("unsubscribe_url")
+    )
+    return subject, full_html, plain_text
+
+
+def get_newsletter_welcome_template(variables: Dict[str, Any]) -> Tuple[str, str, str]:
+    """
+    Transactional confirmation sent when a user subscribes to the newsletter.
+    """
+    from backend.services.email.renderer import render_final_email
+    subject = "Welcome to PSA Insights — P Suman & Associates"
+    vars_map = {
+        "unsubscribe_url": variables.get("unsubscribe_url")
+    }
+    fragment = get_newsletter_welcome_fragment()
+    full_html, plain_text = render_final_email(
+        body_html=fragment,
+        variables=vars_map,
+        apply_wrapper=True,
         preheader="Welcome to executive tax & audit intelligence",
         unsubscribe_url=variables.get("unsubscribe_url")
     )
-    plain_text = html_to_plain_text(full_html)
     return subject, full_html, plain_text
 

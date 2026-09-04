@@ -16,7 +16,9 @@ from backend.services.email.renderer import render_final_email, interpolate_vari
 from backend.services.email.templates import (
     get_independence_day_campaign_html,
     get_independence_day_template,
+    get_contact_acknowledgement_fragment,
     get_contact_acknowledgement_template,
+    get_newsletter_welcome_fragment,
     get_newsletter_welcome_template
 )
 
@@ -26,68 +28,115 @@ def get_db() -> AsyncIOMotorDatabase:
     from backend.server import db
     return db
 
+SYSTEM_TEMPLATES_DEFINITIONS = {
+    "independence_day_2026": {
+        "name": "Independence Day 2026 Greetings",
+        "category": "announcement",
+        "description": "Formal Independence Day corporate greetings for clients and partners.",
+        "subject": "Happy Independence Day — P Suman & Associates",
+        "get_fragment": get_independence_day_campaign_html,
+        "variables": ["name", "company", "unsubscribe_url"]
+    },
+    "contact_acknowledgement": {
+        "name": "Contact Inquiry Acknowledgment",
+        "category": "transactional",
+        "description": "Instant confirmation sent upon inquiry form submission.",
+        "subject": "Inquiry Received — P Suman & Associates",
+        "get_fragment": get_contact_acknowledgement_fragment,
+        "variables": ["name", "service_of_interest", "company", "unsubscribe_url"]
+    },
+    "newsletter_welcome": {
+        "name": "Newsletter Welcome & Insights",
+        "category": "newsletter",
+        "description": "Welcome email for new PSA Insights subscribers.",
+        "subject": "Welcome to PSA Insights — P Suman & Associates",
+        "get_fragment": get_newsletter_welcome_fragment,
+        "variables": ["unsubscribe_url"]
+    }
+}
+
+async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
+    """
+    Safely normalizes known built-in system templates to fragment storage with apply_wrapper=True.
+    1. Creates a safety backup snapshot in template_version_history before mutation.
+    2. Updates ONLY known built-in templates (never touches custom or user-created templates).
+    3. Normalizes stored content to clean fragment without redundant outer shell.
+    """
+    now = get_utc_now()
+    results = {"backed_up": [], "migrated": [], "created": []}
+
+    for tid, defn in SYSTEM_TEMPLATES_DEFINITIONS.items():
+        existing = await db.email_templates_studio.find_one({"template_id": tid})
+        fragment_html = defn["get_fragment"]()
+        subject = defn["subject"]
+
+        if existing:
+            # 1. Create safety backup snapshot in template_version_history
+            old_version = existing.get("version", 1)
+            history_entry = TemplateVersionHistory(
+                template_id=tid,
+                version_number=old_version,
+                subject=existing.get("published_subject") or existing.get("draft_subject") or subject,
+                body_html=existing.get("published_body_html") or existing.get("draft_body_html") or "",
+                apply_wrapper=existing.get("apply_wrapper"),
+                created_by="system_migration_phase2c",
+                created_at=now
+            )
+            await db.template_version_history.insert_one(history_entry.model_dump())
+            results["backed_up"].append({"template_id": tid, "version": old_version})
+
+            # 2. Update to normalized v2 fragment
+            new_version = old_version + 1
+            update_data = {
+                "name": defn["name"],
+                "category": defn["category"],
+                "description": defn["description"],
+                "published_subject": subject,
+                "published_body_html": fragment_html,
+                "draft_subject": subject,
+                "draft_body_html": fragment_html,
+                "apply_wrapper": True,
+                "is_system_template": True,
+                "system_template_key": tid,
+                "system_template_revision": 2,
+                "has_pending_draft": False,
+                "version": new_version,
+                "variables": defn["variables"],
+                "updated_at": now
+            }
+            await db.email_templates_studio.update_one({"template_id": tid}, {"$set": update_data})
+            results["migrated"].append({"template_id": tid, "new_version": new_version})
+        else:
+            # Create if missing
+            t = EmailTemplateStudio(
+                template_id=tid,
+                name=defn["name"],
+                category=defn["category"],
+                description=defn["description"],
+                published_subject=subject,
+                published_body_html=fragment_html,
+                draft_subject=subject,
+                draft_body_html=fragment_html,
+                apply_wrapper=True,
+                is_system_template=True,
+                system_template_key=tid,
+                system_template_revision=2,
+                has_pending_draft=False,
+                version=1,
+                variables=defn["variables"],
+                created_at=now,
+                updated_at=now
+            )
+            await db.email_templates_studio.insert_one(t.model_dump())
+            results["created"].append({"template_id": tid, "version": 1})
+
+    return results
+
 async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
     count = await db.email_templates_studio.count_documents({})
     if count > 0:
         return
-
-    now = get_utc_now()
-    # 1. Independence Day — clean inner HTML without hardcoded outer wrapper
-    html_id = get_independence_day_campaign_html()
-    subj_id = "Happy Independence Day — P Suman & Associates"
-    t1 = EmailTemplateStudio(
-        template_id="independence_day_2026",
-        name="Independence Day 2026 Greetings",
-        category="announcement",
-        description="Formal Independence Day corporate greetings for clients and partners.",
-        published_subject=subj_id,
-        published_body_html=html_id,
-        draft_subject=subj_id,
-        draft_body_html=html_id,
-        apply_wrapper=True,
-        has_pending_draft=False,
-        version=1,
-        created_at=now,
-        updated_at=now
-    )
-
-    # 2. Contact Acknowledgement
-    subj_ack, html_ack, _ = get_contact_acknowledgement_template({"name": "{{name}}", "service_of_interest": "{{service_of_interest}}"})
-    t2 = EmailTemplateStudio(
-        template_id="contact_acknowledgement",
-        name="Contact Inquiry Acknowledgment",
-        category="transactional",
-        description="Instant confirmation sent upon inquiry form submission.",
-        published_subject=subj_ack,
-        published_body_html=html_ack,
-        draft_subject=subj_ack,
-        draft_body_html=html_ack,
-        apply_wrapper=True,
-        has_pending_draft=False,
-        version=1,
-        created_at=now,
-        updated_at=now
-    )
-
-    # 3. Newsletter Welcome
-    subj_news, html_news, _ = get_newsletter_welcome_template({"unsubscribe_url": "{{unsubscribe_url}}"})
-    t3 = EmailTemplateStudio(
-        template_id="newsletter_welcome",
-        name="Newsletter Welcome & Insights",
-        category="newsletter",
-        description="Welcome email for new PSA Insights subscribers.",
-        published_subject=subj_news,
-        published_body_html=html_news,
-        draft_subject=subj_news,
-        draft_body_html=html_news,
-        apply_wrapper=True,
-        has_pending_draft=False,
-        version=1,
-        created_at=now,
-        updated_at=now
-    )
-
-    await db.email_templates_studio.insert_many([t1.model_dump(), t2.model_dump(), t3.model_dump()])
+    await migrate_system_templates_to_v2(db)
 
 @router.get("", response_model=List[EmailTemplateStudio], dependencies=[Depends(get_current_admin)])
 async def list_templates(db: AsyncIOMotorDatabase = Depends(get_db)):
@@ -264,3 +313,17 @@ async def discard_draft(template_id: str, db: AsyncIOMotorDatabase = Depends(get
     await db.email_templates_studio.update_one({"template_id": template_id}, {"$set": update_data})
     updated = await db.email_templates_studio.find_one({"template_id": template_id}, {"_id": 0})
     return EmailTemplateStudio(**updated)
+
+@router.post("/migrate-system-templates", dependencies=[Depends(get_current_admin)])
+async def trigger_system_template_migration(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """
+    Safely normalizes known built-in system templates to fragment storage with apply_wrapper=True.
+    Backed up to template_version_history before mutation.
+    """
+    results = await migrate_system_templates_to_v2(db)
+    return {
+        "status": "success",
+        "message": "System templates successfully migrated to v2 responsive architecture",
+        "details": results
+    }
+
