@@ -406,8 +406,10 @@ async def confirm_and_dispatch_campaign(
         full_html, plain_text = render_final_email(
             body_html=campaign["body_html"],
             variables=vars_map,
-            unsubscribe_url=unsub_url
+            unsubscribe_url=unsub_url,
+            apply_wrapper=campaign.get("apply_wrapper", True)
         )
+
 
         job = OutboxJob(
             campaign_id=campaign_id,
@@ -522,8 +524,10 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
     full_html, plain_text = render_final_email(
         body_html=payload.body_html,
         variables=vars_map,
-        unsubscribe_url=vars_map["unsubscribe_url"]
+        unsubscribe_url=vars_map["unsubscribe_url"],
+        apply_wrapper=payload.apply_wrapper if payload.apply_wrapper is not None else True
     )
+
 
     result = await send_email_via_provider(
         to=configured_recipient,
