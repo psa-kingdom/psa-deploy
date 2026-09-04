@@ -51,18 +51,31 @@ class EmailTemplateStudio(BaseModel):
     model_config = ConfigDict(extra="ignore")
     template_id: str
     name: str
-    category: str = "announcement"  # announcement | transactional | newsletter
+    category: str = "announcement"  # announcement | transactional | newsletter | advisory | greeting | custom
     description: Optional[str] = ""
     published_subject: Optional[str] = ""
     published_body_html: Optional[str] = ""
+    published_preheader: Optional[str] = ""
     draft_subject: Optional[str] = ""
     draft_body_html: Optional[str] = ""
+    draft_preheader: Optional[str] = ""
     has_pending_draft: bool = False
     version: int = 1
     apply_wrapper: Optional[bool] = None
     is_system_template: bool = False
     system_template_key: Optional[str] = None
     system_template_revision: int = 1
+    sender_name: Optional[str] = "P Suman & Associates"
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
+    is_archived: bool = False
+    clone_source_template_id: Optional[str] = None
+    last_published_at: Optional[datetime] = None
+    published_by: Optional[str] = "admin"
+    draft_updated_at: Optional[datetime] = None
     variables: List[str] = Field(default_factory=lambda: ["name", "company", "unsubscribe_url"])
     created_at: datetime = Field(default_factory=get_utc_now)
     updated_at: datetime = Field(default_factory=get_utc_now)
@@ -74,7 +87,15 @@ class TemplateVersionHistory(BaseModel):
     version_number: int
     subject: str
     body_html: str
+    preheader: Optional[str] = ""
     apply_wrapper: Optional[bool] = None
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
+    change_summary: Optional[str] = None
     created_by: str = "admin"
     created_at: datetime = Field(default_factory=get_utc_now)
 
@@ -85,21 +106,44 @@ class TemplateCreate(BaseModel):
     description: Optional[str] = ""
     subject: str
     body_html: str
+    preheader: Optional[str] = ""
     apply_wrapper: Optional[bool] = None
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
     variables: Optional[List[str]] = None
+    publish_immediately: bool = False
 
 class TemplateUpdate(BaseModel):
     name: Optional[str] = None
+    category: Optional[str] = None
     description: Optional[str] = None
     subject: Optional[str] = None
     body_html: Optional[str] = None
+    preheader: Optional[str] = None
     apply_wrapper: Optional[bool] = None
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
+    variables: Optional[List[str]] = None
     publish_immediately: bool = False
 
 class TemplatePreviewRequest(BaseModel):
     subject: str
     body_html: str
+    preheader: Optional[str] = ""
     apply_wrapper: Optional[bool] = None
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
     recipient_name: Optional[str] = "Valued Client"
     recipient_company: Optional[str] = "Acme Corp"
     recipient_email: Optional[str] = "client@example.com"
@@ -186,10 +230,15 @@ class OutboxJob(BaseModel):
     recipient_email: EmailStr
     recipient_name: Optional[str] = None
     subject: str
+    preheader: Optional[str] = ""
     rendered_html: str
     rendered_text: str
     sender: str
+    sender_name: Optional[str] = None
     reply_to: str
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
     status: OutboxJobStatus = OutboxJobStatus.PENDING
     attempts: int = 0
     max_attempts: int = 3
@@ -207,7 +256,7 @@ class EmailAttempt(BaseModel):
     attempt_id: str = Field(default_factory=generate_uuid)
     job_id: Optional[str] = None
     campaign_id: Optional[str] = None
-    job_type: Optional[str] = None  # campaign | transactional
+    job_type: Optional[str] = None  # campaign | transactional | test_send
     transactional_type: Optional[str] = None  # contact_acknowledgement | newsletter_welcome
     subject: Optional[str] = None
     recipient_email: str
@@ -216,6 +265,7 @@ class EmailAttempt(BaseModel):
     status: str  # sent | failed | skipped_allowlist | skipped_suppression
     status_code: Optional[int] = None
     response_time_ms: int = 0
+    tags: Optional[List[Dict[str, str]]] = None
     error_message: Optional[str] = None
     created_at: datetime = Field(default_factory=get_utc_now)
 
@@ -231,10 +281,18 @@ class TestSendRequest(BaseModel):
     recipient_email: EmailStr
     subject: str
     body_html: str
+    preheader: Optional[str] = ""
     template_id: Optional[str] = None
     apply_wrapper: Optional[bool] = None
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    cc: Optional[List[str]] = None
+    bcc: Optional[List[str]] = None
+    tags: Optional[List[Dict[str, str]]] = None
     recipient_name: Optional[str] = "Test User"
     recipient_company: Optional[str] = "Test Company"
+    is_draft: bool = True
 
 class AudienceEstimateResponse(BaseModel):
     source: str

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -197,12 +197,24 @@ async def subscribe_newsletter(payload: NewsletterCreate):
         unsub_url = f"{settings.BACKEND_URL}/api/unsubscribe?email={clean_email}&token={sub.unsubscribe_token}"
         vars_map = {"unsubscribe_url": unsub_url}
 
+        tpl_preheader = (tpl_doc.get("published_preheader") if tpl_doc else None) or "Welcome to executive tax & audit intelligence"
+        tpl_sender = (
+            f"{tpl_doc['sender_name']} <{tpl_doc['sender_email']}>"
+            if tpl_doc and tpl_doc.get("sender_name") and tpl_doc.get("sender_email")
+            else settings.RESEND_FROM_EMAIL
+        )
+        tpl_reply_to = (tpl_doc.get("reply_to") if tpl_doc else None) or settings.RESEND_REPLY_TO
+        tpl_tags = [
+            {"name": "type", "value": "transactional"},
+            {"name": "template", "value": "newsletter_welcome"}
+        ]
+
         rendered_html, rendered_text = render_final_email(
             body_html=fragment_html,
             variables=vars_map,
             unsubscribe_url=unsub_url,
             apply_wrapper=apply_wrapper,
-            preheader="Welcome to executive tax & audit intelligence",
+            preheader=tpl_preheader,
             escape_variables=True,
         )
         rendered_subject = interpolate_variables(subject_raw, vars_map, escape_html=False)
@@ -218,10 +230,12 @@ async def subscribe_newsletter(payload: NewsletterCreate):
             system_template_revision=system_template_revision,
             recipient_email=clean_email,
             subject=rendered_subject,
+            preheader=tpl_preheader,
             rendered_html=rendered_html,
             rendered_text=rendered_text,
-            sender=settings.RESEND_FROM_EMAIL,
-            reply_to=settings.RESEND_REPLY_TO,
+            sender=tpl_sender,
+            reply_to=tpl_reply_to,
+            tags=tpl_tags,
             idempotency_key=f"newsletter-welcome/{sub.id}",
             status=OutboxJobStatus.PENDING,
         )
@@ -308,11 +322,23 @@ async def submit_contact(payload: ContactCreate):
             "company": clean_company,
         }
 
+        tpl_preheader = (tpl_doc.get("published_preheader") if tpl_doc else None) or "We have received your advisory inquiry."
+        tpl_sender = (
+            f"{tpl_doc['sender_name']} <{tpl_doc['sender_email']}>"
+            if tpl_doc and tpl_doc.get("sender_name") and tpl_doc.get("sender_email")
+            else settings.RESEND_FROM_EMAIL
+        )
+        tpl_reply_to = (tpl_doc.get("reply_to") if tpl_doc else None) or settings.RESEND_REPLY_TO
+        tpl_tags = [
+            {"name": "type", "value": "transactional"},
+            {"name": "template", "value": "contact_acknowledgement"}
+        ]
+
         rendered_html, rendered_text = render_final_email(
             body_html=fragment_html,
             variables=vars_map,
             apply_wrapper=apply_wrapper,
-            preheader="We have received your advisory inquiry.",
+            preheader=tpl_preheader,
             escape_variables=True,
         )
         rendered_subject = interpolate_variables(subject_raw, vars_map, escape_html=False)
@@ -329,10 +355,12 @@ async def submit_contact(payload: ContactCreate):
             recipient_email=clean_email,
             recipient_name=clean_name,
             subject=rendered_subject,
+            preheader=tpl_preheader,
             rendered_html=rendered_html,
             rendered_text=rendered_text,
-            sender=settings.RESEND_FROM_EMAIL,
-            reply_to=settings.RESEND_REPLY_TO,
+            sender=tpl_sender,
+            reply_to=tpl_reply_to,
+            tags=tpl_tags,
             idempotency_key=f"contact-acknowledgement/{sub.id}",
             status=OutboxJobStatus.PENDING,
         )
@@ -396,6 +424,16 @@ async def api_admin_me(session: dict = Depends(admin_auth.require_admin_session)
 @api_router.post("/admin/auth/logout")
 async def api_admin_logout(request: Request, response: Response):
     return await admin_auth.admin_logout(request, response)
+
+
+@api_router.get("/admin/communication/analytics")
+async def api_get_communication_analytics(
+    period: str = Query("7d", description="Metrics period: 7d or 30d"),
+    refresh: bool = Query(False, description="Force refresh cache"),
+    session: dict = Depends(admin_auth.require_admin_session)
+):
+    from backend.services.email.analytics import get_email_analytics
+    return await get_email_analytics(db, period=period, force_refresh=refresh)
 
 
 api_router.include_router(admin_campaigns.router)
