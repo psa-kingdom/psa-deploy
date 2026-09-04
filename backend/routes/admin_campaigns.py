@@ -30,6 +30,7 @@ from backend.services.email.audience import (
 )
 from backend.services.email.renderer import render_final_email, interpolate_variables, html_to_plain_text
 from backend.services.email.provider import send_email_via_provider
+from backend.routes.admin_templates import _is_approved_sender_email
 import re
 import logging
 
@@ -512,6 +513,16 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
             detail=f"Test send recipient mismatch. Test emails can only be sent to the configured test recipient '{configured_recipient}'."
         )
 
+    if payload.sender_email and not _is_approved_sender_email(payload.sender_email):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sender email '{payload.sender_email}' is not in approved sender allowlist."
+        )
+
+    sender_name = payload.sender_name or "P Suman & Associates"
+    sender_email = payload.sender_email or "updates@updates.psumanassociates.com"
+    sender_str = f"{sender_name} <{sender_email}>" if (payload.sender_name or payload.sender_email) else settings.RESEND_FROM_EMAIL
+
     vars_map = {
         "name": payload.recipient_name or "Test User",
         "company": payload.recipient_company or "Test Co",
@@ -520,23 +531,38 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         "year": datetime.now(timezone.utc).year
     }
 
-    rendered_subject = interpolate_variables(payload.subject, vars_map)
+    clean_subj = re.sub(r"[\r\n]+", " ", payload.subject).strip()[:250]
+    rendered_subject = interpolate_variables(clean_subj, vars_map)
+    clean_preheader = re.sub(r"[\r\n]+", " ", payload.preheader or "").strip()
+    rendered_preheader = interpolate_variables(clean_preheader, vars_map)
+
     full_html, plain_text = render_final_email(
         body_html=payload.body_html,
         variables=vars_map,
         unsubscribe_url=vars_map["unsubscribe_url"],
-        apply_wrapper=payload.apply_wrapper if payload.apply_wrapper is not None else True
+        apply_wrapper=payload.apply_wrapper if payload.apply_wrapper is not None else True,
+        preheader=rendered_preheader
     )
 
+    test_tags = list(payload.tags or [])
+    test_tags.append({"name": "type", "value": "test_send"})
+    if payload.template_id:
+        test_tags.append({"name": "template", "value": payload.template_id[:30]})
 
     result = await send_email_via_provider(
         to=configured_recipient,
         subject=rendered_subject,
         html=full_html,
         text=plain_text,
+        sender=sender_str,
+        reply_to=payload.reply_to or settings.RESEND_REPLY_TO,
+        cc=payload.cc,
+        bcc=payload.bcc,
+        tags=test_tags,
         db=db,
         _test_recipient_override=configured_recipient,
         is_production_dispatch=False,
+        job_type="test_send",
     )
 
     if not result["success"]:
@@ -548,6 +574,14 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         "message": f"Test email sent to configured test recipient: {configured_recipient}",
         "recipient": configured_recipient,
         "resend_id": result.get("resend_id"),
+        "subject": rendered_subject,
+        "preheader": rendered_preheader,
+        "sender": sender_str,
+        "reply_to": payload.reply_to or settings.RESEND_REPLY_TO,
+        "cc": payload.cc or [],
+        "bcc": payload.bcc or [],
+        "tags": test_tags,
+        "is_draft": payload.is_draft,
         "response_time_ms": result.get("response_time_ms")
     }
 

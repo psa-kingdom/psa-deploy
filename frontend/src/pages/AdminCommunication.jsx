@@ -29,9 +29,13 @@ import {
   Save,
   Mail,
   X,
+  FileText,
+  BarChart3,
+  Plus,
 } from "lucide-react";
 import AudienceSelector from "../components/admin/AudienceSelector";
 import TemplateEditor from "../components/admin/TemplateEditor";
+import AdminAnalyticsCards from "../components/admin/AdminAnalyticsCards";
 import CampaignReviewModal from "../components/admin/CampaignReviewModal";
 import CampaignProgress from "../components/admin/CampaignProgress";
 import DeliveryLogsTable from "../components/admin/DeliveryLogsTable";
@@ -70,10 +74,35 @@ export default function AdminCommunication() {
   const [excludedEmails, setExcludedEmails] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [subject, setSubject] = useState("");
+  const [preheader, setPreheader] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
   const [applyWrapper, setApplyWrapper] = useState(true);
+  const [senderName, setSenderName] = useState("P Suman & Associates");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [replyTo, setReplyTo] = useState("");
+  const [cc, setCc] = useState([]);
+  const [bcc, setBcc] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [audienceEstimate, setAudienceEstimate] = useState(null);
+
+  // Standalone Template Studio Tab State
+  const [studioSelectedTemplateId, setStudioSelectedTemplateId] = useState("");
+  const [studioSubject, setStudioSubject] = useState("");
+  const [studioPreheader, setStudioPreheader] = useState("");
+  const [studioBodyHtml, setStudioBodyHtml] = useState("");
+  const [studioApplyWrapper, setStudioApplyWrapper] = useState(true);
+  const [studioSenderName, setStudioSenderName] = useState("P Suman & Associates");
+  const [studioSenderEmail, setStudioSenderEmail] = useState("");
+  const [studioReplyTo, setStudioReplyTo] = useState("");
+  const [studioCc, setStudioCc] = useState([]);
+  const [studioBcc, setStudioBcc] = useState([]);
+
+  // Create Template Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTplId, setNewTplId] = useState("");
+  const [newTplName, setNewTplName] = useState("");
+  const [newTplCategory, setNewTplCategory] = useState("announcement");
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
 
   // Review Modal & Active Campaign State
   const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -211,12 +240,73 @@ export default function AdminCommunication() {
     const found = templates.find((t) => t.template_id === templateId);
     if (found) {
       setSubject(found.published_subject || found.draft_subject || "");
+      setPreheader(found.published_preheader || found.draft_preheader || "");
       setBodyHtml(found.published_body_html || found.draft_body_html || "");
       if (found.apply_wrapper !== undefined && found.apply_wrapper !== null) {
         setApplyWrapper(found.apply_wrapper);
       } else {
         setApplyWrapper(true);
       }
+      if (found.sender_name) setSenderName(found.sender_name);
+      if (found.sender_email) setSenderEmail(found.sender_email);
+      if (found.reply_to) setReplyTo(found.reply_to);
+      if (found.cc) setCc(found.cc);
+      if (found.bcc) setBcc(found.bcc);
+    }
+  };
+
+  const handleStudioTemplateSelect = (templateId) => {
+    setStudioSelectedTemplateId(templateId);
+    if (!templateId) {
+      setStudioSubject("");
+      setStudioPreheader("");
+      setStudioBodyHtml("");
+      setStudioApplyWrapper(true);
+      return;
+    }
+    const found = templates.find((t) => t.template_id === templateId);
+    if (found) {
+      setStudioSubject(found.draft_subject || found.published_subject || "");
+      setStudioPreheader(found.draft_preheader || found.published_preheader || "");
+      setStudioBodyHtml(found.draft_body_html || found.published_body_html || "");
+      setStudioApplyWrapper(found.apply_wrapper ?? true);
+      setStudioSenderName(found.sender_name || "P Suman & Associates");
+      setStudioSenderEmail(found.sender_email || "");
+      setStudioReplyTo(found.reply_to || "");
+      setStudioCc(found.cc || []);
+      setStudioBcc(found.bcc || []);
+    }
+  };
+
+  const handleCreateTemplateSubmit = async (e) => {
+    e.preventDefault();
+    if (!newTplId.trim() || !newTplName.trim()) {
+      showToast("Template ID and Name are required.", "error");
+      return;
+    }
+    setCreatingTemplate(true);
+    try {
+      const cleanId = newTplId.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+      const res = await api.post("/api/admin/communication/templates", {
+        template_id: cleanId,
+        name: newTplName.trim(),
+        category: newTplCategory,
+        subject: "Draft Subject",
+        body_html: "<h2>New Template Content</h2>\n<p>Author your message body here...</p>",
+        preheader: "",
+        apply_wrapper: true,
+        publish_immediately: false,
+      });
+      showToast(`Template "${res.data.name}" created!`, "success");
+      setShowCreateModal(false);
+      setNewTplId("");
+      setNewTplName("");
+      await fetchTemplates();
+      handleStudioTemplateSelect(res.data.template_id);
+    } catch (err) {
+      showToast(err.response?.data?.detail || "Failed to create template.", "error");
+    } finally {
+      setCreatingTemplate(false);
     }
   };
 
@@ -328,12 +418,53 @@ export default function AdminCommunication() {
       const res = await api.post("/api/admin/communication/campaigns/test-send", {
         recipient_email: testRecipient,
         subject: subject,
+        preheader: preheader,
         body_html: bodyHtml,
         apply_wrapper: applyWrapper,
+        sender_name: senderName,
+        sender_email: senderEmail || null,
+        reply_to: replyTo || null,
+        cc: cc,
+        bcc: bcc,
+        template_id: selectedTemplateId || null,
+        is_draft: true,
       });
       showToast(res.data.message || `Test email dispatched to ${res.data.recipient}!`, "success");
     } catch (err) {
       console.error("Test send error:", err);
+      showToast(err.response?.data?.detail || "Test send failed.", "error");
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  const handleStudioTestSend = async () => {
+    if (!studioSubject || !studioBodyHtml) {
+      showToast("Please enter a Subject and HTML content before testing.", "error");
+      return;
+    }
+    if (!testRecipient) {
+      showToast("Configure a Test Recipient in the top panel before testing.", "error");
+      return;
+    }
+    setTestSending(true);
+    try {
+      const res = await api.post("/api/admin/communication/campaigns/test-send", {
+        recipient_email: testRecipient,
+        subject: studioSubject,
+        preheader: studioPreheader,
+        body_html: studioBodyHtml,
+        apply_wrapper: studioApplyWrapper,
+        sender_name: studioSenderName,
+        sender_email: studioSenderEmail || null,
+        reply_to: studioReplyTo || null,
+        cc: studioCc,
+        bcc: studioBcc,
+        template_id: studioSelectedTemplateId || null,
+        is_draft: true,
+      });
+      showToast(res.data.message || `Test email dispatched to ${res.data.recipient}!`, "success");
+    } catch (err) {
       showToast(err.response?.data?.detail || "Test send failed.", "error");
     } finally {
       setTestSending(false);
@@ -503,6 +634,16 @@ export default function AdminCommunication() {
         <button style={styles.tab(activeTab === "campaigns")} onClick={() => setActiveTab("campaigns")}>
           <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <Send size={13} /> Campaigns
+          </span>
+        </button>
+        <button style={styles.tab(activeTab === "templates")} onClick={() => setActiveTab("templates")}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <FileText size={13} /> Template Studio
+          </span>
+        </button>
+        <button style={styles.tab(activeTab === "analytics")} onClick={() => setActiveTab("analytics")}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <BarChart3 size={13} /> Deliverability &amp; Analytics
           </span>
         </button>
         <button style={styles.tab(activeTab === "logs")} onClick={() => setActiveTab("logs")}>
@@ -874,12 +1015,28 @@ export default function AdminCommunication() {
                 templates={templates}
                 selectedTemplateId={selectedTemplateId}
                 onTemplateSelect={handleTemplateSelect}
+                onTemplatesRefresh={fetchTemplates}
                 subject={subject}
                 onSubjectChange={setSubject}
+                preheader={preheader}
+                onPreheaderChange={setPreheader}
                 bodyHtml={bodyHtml}
                 onBodyHtmlChange={setBodyHtml}
                 applyWrapper={applyWrapper}
                 onApplyWrapperChange={setApplyWrapper}
+                senderName={senderName}
+                onSenderNameChange={setSenderName}
+                senderEmail={senderEmail}
+                onSenderEmailChange={setSenderEmail}
+                replyTo={replyTo}
+                onReplyToChange={setReplyTo}
+                cc={cc}
+                onCcChange={setCc}
+                bcc={bcc}
+                onBccChange={setBcc}
+                testRecipient={testRecipient}
+                onTestSend={handleTestSend}
+                standaloneStudio={false}
               />
             </div>
 
@@ -968,6 +1125,185 @@ export default function AdminCommunication() {
         </div>
       )}
 
+      {/* TAB: TEMPLATE STUDIO */}
+      {activeTab === "templates" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+          <div style={styles.card}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "12px",
+                marginBottom: "20px",
+                borderBottom: `1px solid ${BORDER}`,
+                paddingBottom: "14px",
+              }}
+            >
+              <div>
+                <h3 style={{ fontSize: "16px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                  Corporate Email Template Studio
+                </h3>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "4px 0 0" }}>
+                  Select an email template to author drafts, configure delivery settings, and manage version lifecycles safely.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                style={{
+                  ...BTN_PRIMARY_STYLE,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "12px",
+                  padding: "8px 14px",
+                }}
+              >
+                <Plus size={14} /> Create Template
+              </button>
+            </div>
+
+            {/* Template cards catalog */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: "12px",
+                marginBottom: "24px",
+              }}
+            >
+              {templates.map((t) => {
+                const isSelected =
+                  (studioSelectedTemplateId || selectedTemplateId) === t.template_id;
+                return (
+                  <div
+                    key={t.template_id}
+                    onClick={() => handleStudioTemplateSelect(t.template_id)}
+                    style={{
+                      background: isSelected ? "rgba(14,165,233,0.06)" : SURFACE_ALT,
+                      border: isSelected ? "2px solid #0ea5e9" : `1px solid ${BORDER}`,
+                      borderRadius: RADIUS_MD,
+                      padding: "14px 16px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: ACCENT,
+                        }}
+                      >
+                        {t.category}
+                      </span>
+                      {t.is_system_template ? (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            background: "rgba(14,165,233,0.1)",
+                            color: "#0369a1",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          System
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            background: "#f1f5f9",
+                            color: "#475569",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Custom
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: TEXT_PRIMARY,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                    <div style={{ fontSize: "11px", color: TEXT_MUTED }}>
+                      {t.has_pending_draft ? (
+                        <span style={{ color: "#d97706", fontWeight: "600" }}>
+                          ● Pending Draft (v{t.version})
+                        </span>
+                      ) : (
+                        <span style={{ color: "#16a34a", fontWeight: "600" }}>
+                          ✓ Live (v{t.version})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Standalone Template Studio Editor */}
+            <TemplateEditor
+              backendUrl={BACKEND_URL}
+              templates={templates}
+              selectedTemplateId={studioSelectedTemplateId || selectedTemplateId}
+              onTemplateSelect={handleStudioTemplateSelect}
+              onTemplatesRefresh={fetchTemplates}
+              subject={studioSubject}
+              onSubjectChange={setStudioSubject}
+              preheader={studioPreheader}
+              onPreheaderChange={setStudioPreheader}
+              bodyHtml={studioBodyHtml}
+              onBodyHtmlChange={setStudioBodyHtml}
+              applyWrapper={studioApplyWrapper}
+              onApplyWrapperChange={setStudioApplyWrapper}
+              senderName={studioSenderName}
+              onSenderNameChange={setStudioSenderName}
+              senderEmail={studioSenderEmail}
+              onSenderEmailChange={setStudioSenderEmail}
+              replyTo={studioReplyTo}
+              onReplyToChange={setStudioReplyTo}
+              cc={studioCc}
+              onCcChange={setStudioCc}
+              bcc={studioBcc}
+              onBccChange={setStudioBcc}
+              testRecipient={testRecipient}
+              onTestSend={handleStudioTestSend}
+              standaloneStudio={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* TAB: DELIVERABILITY & ANALYTICS */}
+      {activeTab === "analytics" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+          <AdminAnalyticsCards backendUrl={BACKEND_URL} />
+        </div>
+      )}
+
       {/* TAB: AUDIT LOGS */}
       {activeTab === "logs" && (
         <DeliveryLogsTable
@@ -975,6 +1311,123 @@ export default function AdminCommunication() {
           campaigns={campaignsList}
           onRefreshCampaigns={fetchCampaigns}
         />
+      )}
+
+      {/* Create Template Modal */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,28,46,0.5)",
+            backdropFilter: "blur(2px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: SURFACE,
+              borderRadius: RADIUS_LG,
+              width: "100%",
+              maxWidth: "460px",
+              padding: "24px",
+              boxShadow: SHADOW_MD,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "16px",
+              }}
+            >
+              <h4 style={{ fontSize: "16px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                Create New Email Template
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: TEXT_MUTED,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTemplateSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={styles.label}>Template Name</label>
+                <input
+                  type="text"
+                  value={newTplName}
+                  onChange={(e) => {
+                    setNewTplName(e.target.value);
+                    if (!newTplId) {
+                      setNewTplId(e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, "_"));
+                    }
+                  }}
+                  placeholder="e.g. Q3 Advisory Briefing"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>Template ID (Slug)</label>
+                <input
+                  type="text"
+                  value={newTplId}
+                  onChange={(e) => setNewTplId(e.target.value)}
+                  placeholder="e.g. q3_advisory_briefing"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>Category</label>
+                <select
+                  value={newTplCategory}
+                  onChange={(e) => setNewTplCategory(e.target.value)}
+                  style={styles.input}
+                >
+                  <option value="announcement">Announcement</option>
+                  <option value="newsletter">Newsletter</option>
+                  <option value="advisory">Advisory</option>
+                  <option value="greeting">Greeting / Festive</option>
+                  <option value="transactional">Transactional</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  style={styles.btnSecondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTemplate}
+                  style={styles.btnPrimary}
+                >
+                  {creatingTemplate ? "Creating…" : "Create Draft Template"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Review & Confirmation Modal */}

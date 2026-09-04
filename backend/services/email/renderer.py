@@ -1,6 +1,6 @@
 import re
 import html
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 PSA_BRAND_PRIMARY = "#0a192f"      # Deep Navy
 PSA_BRAND_ACCENT = "#c5a059"       # Muted Gold / Amber
@@ -314,11 +314,146 @@ def render_final_email(
         )
     else:
         final_html = interpolated_html
+        # If preheader is provided for raw custom HTML and not already in document, inject right after <body>
+        if interpolated_preheader and "<body" in final_html.lower() and "preheader" not in final_html.lower():
+            preheader_padding = "&#847; &zwnj; &nbsp; " * 30
+            preheader_snippet = (
+                f'<div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">'
+                f'{html.escape(interpolated_preheader)}{preheader_padding}</div>'
+            )
+            final_html = re.sub(r"(<body[^>]*>)", r"\1\n" + preheader_snippet, final_html, count=1, flags=re.IGNORECASE)
 
     # 3. Plain text extraction
     plain_text = html_to_plain_text(final_html)
 
     return final_html, plain_text
+
+
+def check_html_compatibility(html_content: str) -> List[Dict[str, str]]:
+    """
+    Lightweight email client compatibility and link safety guard.
+    Scans for elements that degrade or fail in major clients (Outlook, Gmail, Apple Mail).
+    """
+    if not html_content:
+        return []
+    warnings = []
+
+    # 1. Scripts
+    if re.search(r"<script\b[^>]*>", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "error",
+            "type": "script_tag",
+            "message": "<script> tags are blocked by email clients for security. JavaScript cannot execute in emails."
+        })
+
+    # 2. IFrames
+    if re.search(r"<iframe\b[^>]*>", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "error",
+            "type": "iframe_tag",
+            "message": "<iframe> tags are unsupported in email clients and will fail to render."
+        })
+
+    # 3. Forms
+    if re.search(r"<form\b[^>]*>", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "warning",
+            "type": "form_tag",
+            "message": "<form> elements are blocked by many email clients. Use a call-to-action button linking to a web page instead."
+        })
+
+    # 4. External Stylesheets
+    if re.search(r"<link\b[^>]*rel=[\"']stylesheet[\"'][^>]*>", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "warning",
+            "type": "external_css",
+            "message": "External CSS stylesheets are blocked by Gmail and other clients. Use inline CSS or style tags in <head>."
+        })
+
+    # 5. CSS Flexbox / Grid
+    if re.search(r"display\s*:\s*(flex|grid)\b", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "warning",
+            "type": "modern_css_layout",
+            "message": "CSS flexbox/grid layout has poor support in Outlook (Word engine). Standard nested HTML tables are recommended for email."
+        })
+
+    # 6. Dummy / Placeholder Links
+    if re.search(r"href\s*=\s*[\"']#[\"']", html_content, re.IGNORECASE):
+        warnings.append({
+            "severity": "info",
+            "type": "placeholder_link",
+            "message": "Placeholder link 'href=\"#\"' detected. Ensure all links point to real URLs before broadcast."
+        })
+
+    # 7. Obviously malformed URLs
+    malformed = re.findall(r"href\s*=\s*[\"'](http[s]?//[^\"'\s>]+|htp[s]?://[^\"'\s>]+)[\"']", html_content, re.IGNORECASE)
+    if malformed:
+        warnings.append({
+            "severity": "warning",
+            "type": "malformed_url",
+            "message": f"Malformed URL detected: {malformed[0]}. Check link protocol formatting."
+        })
+
+    return warnings
+
+
+STANDARD_KNOWN_VARIABLES = {
+    "name", "company", "email", "unsubscribe_url", "year", "service_of_interest"
+}
+
+SYSTEM_CONTROLLED_VARIABLES = {
+    "unsubscribe_url", "year"
+}
+
+
+def validate_template_variables(
+    text: str,
+    allowed_variables: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Inspects template text (subject and/or body) for variable interpolation tags {{variable}}.
+    Returns a dictionary of:
+    - found_variables: list of all tags found
+    - known_variables: list of known supported variables
+    - unknown_variables: list of unknown/unsupported variables (potential typos)
+    - system_variables: list of system-controlled variables (e.g. unsubscribe_url)
+    - user_variables: list of recipient-personalized variables (e.g. name, company)
+    """
+    if not text:
+        return {
+            "found_variables": [],
+            "known_variables": [],
+            "unknown_variables": [],
+            "system_variables": [],
+            "user_variables": []
+        }
+
+    known = set(STANDARD_KNOWN_VARIABLES)
+    if allowed_variables:
+        known.update(v.strip().lower() for v in allowed_variables if v)
+
+    raw_matches = re.findall(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}", text)
+    found_unique = []
+    seen = set()
+    for v in raw_matches:
+        v_clean = v.strip().lower()
+        if v_clean not in seen:
+            seen.add(v_clean)
+            found_unique.append(v_clean)
+
+    known_vars = [v for v in found_unique if v in known]
+    unknown_vars = [v for v in found_unique if v not in known]
+    sys_vars = [v for v in known_vars if v in SYSTEM_CONTROLLED_VARIABLES]
+    user_vars = [v for v in known_vars if v not in SYSTEM_CONTROLLED_VARIABLES]
+
+    return {
+        "found_variables": found_unique,
+        "known_variables": known_vars,
+        "unknown_variables": unknown_vars,
+        "system_variables": sys_vars,
+        "user_variables": user_vars
+    }
 
 
 

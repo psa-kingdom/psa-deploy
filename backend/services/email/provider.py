@@ -1,8 +1,9 @@
 import asyncio
 import logging
+import re
 import time
 import uuid
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import resend
 from backend.core.config import settings
 from backend.models.email import EmailAttempt
@@ -13,6 +14,63 @@ if settings.RESEND_API_KEY:
     resend.api_key = settings.RESEND_API_KEY
 
 
+def sanitize_tags(tags: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
+    """
+    Sanitizes Resend outgoing email tags.
+    - Limits to max 10 tags.
+    - Enforces ASCII alphanumeric, dash, and underscore keys (max 256 chars).
+    - Enforces max 256 chars for values.
+    - SCRUBS PII: Drops tags containing email addresses, @ symbols, or phone number patterns.
+    """
+    if not tags:
+        return []
+    cleaned = []
+    pii_patterns = [
+        re.compile(r"@", re.IGNORECASE),
+        re.compile(r"\b\d{10,16}\b"),
+        re.compile(r"\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}"),
+    ]
+    tag_name_pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+    for t in tags[:10]:
+        if not isinstance(t, dict):
+            continue
+        name = str(t.get("name", "")).strip()[:256]
+        value = str(t.get("value", "")).strip()[:256]
+
+        if not name or not tag_name_pattern.match(name):
+            continue
+
+        # Check for PII in value
+        if any(pat.search(value) for pat in pii_patterns):
+            logger.warning("[TAG SANITIZER] Stripped tag '%s' containing potential PII", name)
+            continue
+
+        cleaned.append({"name": name, "value": value})
+    return cleaned
+
+
+def clean_email_list(emails: Optional[List[str]]) -> List[str]:
+    """Validates and cleans a list of email addresses."""
+    if not emails:
+        return []
+    cleaned = []
+    for e in emails:
+        if not e or not isinstance(e, str):
+            continue
+        clean = re.sub(r"[\r\n]+", "", e).strip().lower()
+        if "@" in clean and "." in clean and len(clean) >= 5:
+            cleaned.append(clean)
+    # Deduplicate while preserving order, max 5
+    seen = set()
+    result = []
+    for em in cleaned:
+        if em not in seen:
+            seen.add(em)
+            result.append(em)
+    return result[:5]
+
+
 async def send_email_via_provider(
     to: str,
     subject: str,
@@ -20,6 +78,9 @@ async def send_email_via_provider(
     text: Optional[str] = None,
     sender: Optional[str] = None,
     reply_to: Optional[str] = None,
+    cc: Optional[List[str]] = None,
+    bcc: Optional[List[str]] = None,
+    tags: Optional[List[Dict[str, str]]] = None,
     campaign_id: Optional[str] = None,
     job_id: Optional[str] = None,
     db: Optional[Any] = None,
@@ -32,12 +93,17 @@ async def send_email_via_provider(
     """
     Core resilient email sender.
     1. Unless is_production_dispatch is True, enforces final safety guard against real recipient delivery.
-    2. Sends via Resend (or Mock provider if RESEND_API_KEY is not set).
-    3. Records attempt in email_attempts collection.
+    2. Enforces CC/BCC safety: in test mode, blocks/drops CC/BCC targets not matching the test recipient.
+    3. Scrubs PII from tags.
+    4. Sends via Resend (or Mock provider if RESEND_API_KEY is not set).
+    5. Records attempt in email_attempts collection.
     """
     clean_to = to.strip().lower()
     from_email = sender or settings.RESEND_FROM_EMAIL
     reply_to_email = reply_to or settings.RESEND_REPLY_TO
+    clean_cc = clean_email_list(cc)
+    clean_bcc = clean_email_list(bcc)
+    sanitized_tags = sanitize_tags(tags)
 
     # ---------- Final Safety Guard (for test sends and non-production dispatches) ----------
     # If this is NOT an authorized production dispatch, enforce delivery strictly to the test recipient.
@@ -70,6 +136,7 @@ async def send_email_via_provider(
                 "status": "blocked_test_mode",
                 "status_code": None,
                 "response_time_ms": 0,
+                "tags": sanitized_tags,
                 "error_message": f"Blocked by test mode safety guard. Only {test_recipient} may receive email in {settings.EMAIL_ENVIRONMENT} mode.",
             }
             if db is not None:
@@ -84,6 +151,10 @@ async def send_email_via_provider(
                 "error": f"Blocked by test mode safety guard. Only {test_recipient} may receive email in {settings.EMAIL_ENVIRONMENT} mode.",
                 "response_time_ms": 0,
             }
+
+        # In non-production dispatch, ensure CC/BCC does not send to third parties
+        clean_cc = [e for e in clean_cc if e == test_recipient]
+        clean_bcc = [e for e in clean_bcc if e == test_recipient]
 
     if settings.EMAIL_ENVIRONMENT != "production":
         logger.info(
@@ -113,6 +184,12 @@ async def send_email_via_provider(
                 params["text"] = text
             if reply_to_email:
                 params["reply_to"] = reply_to_email
+            if clean_cc:
+                params["cc"] = clean_cc
+            if clean_bcc:
+                params["bcc"] = clean_bcc
+            if sanitized_tags:
+                params["tags"] = sanitized_tags
 
             # Call Resend SDK with native Idempotency-Key support if key is provided
             if idempotency_key:
@@ -141,7 +218,10 @@ async def send_email_via_provider(
             resend_id = f"mock_re_{uuid.uuid4().hex[:16]}"
             status = "sent"
             status_code = 200
-            logger.info("[MOCK EMAIL SENT] To: %s | Subject: %s | MockID: %s", clean_to, subject, resend_id)
+            logger.info(
+                "[MOCK EMAIL SENT] To: %s | CC: %s | BCC: %s | Tags: %s | Subject: %s | MockID: %s",
+                clean_to, clean_cc, clean_bcc, sanitized_tags, subject, resend_id
+            )
 
     except Exception as exc:
         status = "failed"
@@ -164,6 +244,7 @@ async def send_email_via_provider(
             status=status,
             status_code=status_code,
             response_time_ms=elapsed_ms,
+            tags=sanitized_tags,
             error_message=error_msg,
         )
         try:
