@@ -95,13 +95,20 @@ async def handle_unsubscribe(
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate token against campaign_recipients (exact indexed lookup)
+    # Validate token against campaign_recipients or newsletter_subscriptions
     recipient = await db.campaign_recipients.find_one({
         "unsubscribe_token": clean_token,
         "email": clean_email
     })
 
-    if not recipient:
+    newsletter_sub = None
+    if not recipient and hasattr(db, "newsletter_subscriptions"):
+        newsletter_sub = await db.newsletter_subscriptions.find_one({
+            "unsubscribe_token": clean_token,
+            "email": clean_email
+        })
+
+    if not recipient and not newsletter_sub:
         logger.warning(
             "Unsubscribe rejected: invalid or mismatched token for recipient: %s",
             clean_email
@@ -116,6 +123,17 @@ async def handle_unsubscribe(
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
+    # If newsletter subscriber, mark unsubscribed in newsletter_subscriptions collection
+    now = datetime.now(timezone.utc)
+    if newsletter_sub:
+        try:
+            await db.newsletter_subscriptions.update_one(
+                {"email": clean_email},
+                {"$set": {"unsubscribed": True, "unsubscribed_at": now}}
+            )
+        except Exception as n_exc:
+            logger.error("Failed to mark newsletter subscriber unsubscribed: %s", n_exc)
+
     # Idempotent suppression insertion
     try:
         existing = await db.email_suppressions.find_one({"email": clean_email})
@@ -123,8 +141,8 @@ async def handle_unsubscribe(
             supp = EmailSuppression(
                 email=clean_email,
                 reason="unsubscribe",
-                source_campaign_id=recipient.get("campaign_id"),
-                created_at=datetime.now(timezone.utc)
+                source_campaign_id=recipient.get("campaign_id") if recipient else None,
+                created_at=now
             )
             await db.email_suppressions.insert_one(supp.model_dump())
             logger.info("Email successfully suppressed via verified unsubscribe token: %s", clean_email)

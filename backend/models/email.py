@@ -174,6 +174,13 @@ class CampaignRecipient(BaseModel):
 class OutboxJob(BaseModel):
     model_config = ConfigDict(extra="ignore")
     job_id: str = Field(default_factory=generate_uuid)
+    job_type: str = "campaign"  # campaign | transactional
+    transactional_type: Optional[str] = None  # contact_acknowledgement | newsletter_welcome
+    source_entity_type: Optional[str] = None  # contact_submission | newsletter_subscription
+    source_entity_id: Optional[str] = None
+    template_id: Optional[str] = None
+    template_version: Optional[int] = None
+    system_template_revision: Optional[int] = None
     campaign_id: Optional[str] = None
     recipient_id: Optional[str] = None
     recipient_email: EmailStr
@@ -188,6 +195,9 @@ class OutboxJob(BaseModel):
     max_attempts: int = 3
     next_attempt_at: datetime = Field(default_factory=get_utc_now)
     idempotency_key: str
+    resend_message_id: Optional[str] = None
+    delivery_status: Optional[str] = None
+    delivered_at: Optional[datetime] = None
     error_details: Optional[str] = None
     created_at: datetime = Field(default_factory=get_utc_now)
     updated_at: datetime = Field(default_factory=get_utc_now)
@@ -197,6 +207,9 @@ class EmailAttempt(BaseModel):
     attempt_id: str = Field(default_factory=generate_uuid)
     job_id: Optional[str] = None
     campaign_id: Optional[str] = None
+    job_type: Optional[str] = None  # campaign | transactional
+    transactional_type: Optional[str] = None  # contact_acknowledgement | newsletter_welcome
+    subject: Optional[str] = None
     recipient_email: str
     provider: str = "resend"
     resend_id: Optional[str] = None

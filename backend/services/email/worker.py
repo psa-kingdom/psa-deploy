@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from backend.core.config import settings
 from backend.services.email.provider import send_email_via_provider
 from backend.models.email import OutboxJobStatus, RecipientStatus, CampaignStatus
 
@@ -101,6 +102,11 @@ class OutboxWorker:
     async def _process_job(self, job: dict):
         job_id = job["job_id"]
         campaign_id = job.get("campaign_id")
+        job_type = job.get("job_type", "campaign")
+        transactional_type = job.get("transactional_type")
+        source_entity_type = job.get("source_entity_type")
+        source_entity_id = job.get("source_entity_id")
+        idempotency_key = job.get("idempotency_key")
         recipient_email = job["recipient_email"]
         recipient_id = job.get("recipient_id")
         now = datetime.now(timezone.utc)
@@ -123,6 +129,10 @@ class OutboxWorker:
                 return
             if campaign and campaign.get("send_mode") == "production":
                 is_production_dispatch = True
+        elif job_type == "transactional":
+            # For transactional dispatches, allow delivery in production environment
+            if settings.EMAIL_ENVIRONMENT == "production":
+                is_production_dispatch = True
 
         # Attempt Email Dispatch
         result = await send_email_via_provider(
@@ -135,7 +145,10 @@ class OutboxWorker:
             campaign_id=campaign_id,
             job_id=job_id,
             db=self.db,
-            is_production_dispatch=is_production_dispatch
+            is_production_dispatch=is_production_dispatch,
+            idempotency_key=idempotency_key,
+            job_type=job_type,
+            transactional_type=transactional_type
         )
 
         if result["success"]:
@@ -146,6 +159,8 @@ class OutboxWorker:
                 {
                     "$set": {
                         "status": OutboxJobStatus.COMPLETED.value,
+                        "resend_message_id": resend_id,
+                        "delivery_status": "sent",
                         "updated_at": now
                     }
                 }
@@ -166,13 +181,21 @@ class OutboxWorker:
                     {"campaign_id": campaign_id},
                     {"$inc": {"dispatched_count": 1}}
                 )
+            if source_entity_type == "contact_submission" and source_entity_id:
+                await self.db.contact_submissions.update_one(
+                    {"id": source_entity_id},
+                    {"$set": {"acknowledgement_status": "sent", "resend_message_id": resend_id}}
+                )
+            elif source_entity_type == "newsletter_subscription" and source_entity_id:
+                await self.db.newsletter_subscriptions.update_one(
+                    {"id": source_entity_id},
+                    {"$set": {"welcome_email_status": "sent", "resend_message_id": resend_id}}
+                )
         elif result.get("status") == "blocked_test_mode":
             # Blocked by provider's test mode safety guard (Layer 2 defense).
-            # This should not occur under normal operation (Layer 1 in campaign confirm prevents this).
-            # Log as error for investigation.
             logger.error(
                 "Job %s reached provider but was blocked by test mode safety guard. "
-                "Campaign: %s, Recipient: %s. This indicates a Layer 1 bypass — investigate.",
+                "Campaign: %s, Recipient: %s.",
                 job_id, campaign_id, recipient_email
             )
             await self.db.outbox_jobs.update_one(
@@ -194,6 +217,16 @@ class OutboxWorker:
                             "error_message": result.get("error")
                         }
                     }
+                )
+            if source_entity_type == "contact_submission" and source_entity_id:
+                await self.db.contact_submissions.update_one(
+                    {"id": source_entity_id},
+                    {"$set": {"acknowledgement_status": "blocked_test_mode"}}
+                )
+            elif source_entity_type == "newsletter_subscription" and source_entity_id:
+                await self.db.newsletter_subscriptions.update_one(
+                    {"id": source_entity_id},
+                    {"$set": {"welcome_email_status": "blocked_test_mode"}}
                 )
         else:
             # Failed attempt
@@ -228,6 +261,16 @@ class OutboxWorker:
                     await self.db.email_campaigns.update_one(
                         {"campaign_id": campaign_id},
                         {"$inc": {"failed_count": 1}}
+                    )
+                if source_entity_type == "contact_submission" and source_entity_id:
+                    await self.db.contact_submissions.update_one(
+                        {"id": source_entity_id},
+                        {"$set": {"acknowledgement_status": "failed", "error_message": error_msg}}
+                    )
+                elif source_entity_type == "newsletter_subscription" and source_entity_id:
+                    await self.db.newsletter_subscriptions.update_one(
+                        {"id": source_entity_id},
+                        {"$set": {"welcome_email_status": "failed", "error_message": error_msg}}
                     )
             else:
                 # Retry with exponential backoff (30s, 60s, 120s)

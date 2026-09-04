@@ -29,9 +29,17 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
 import asyncio
 import uuid
-from datetime import datetime, timezone
+import re
+import secrets
+from datetime import datetime, timezone, timedelta
 
 from backend.core.config import settings
+from backend.models.email import OutboxJob, OutboxJobStatus
+from backend.services.email.renderer import render_final_email, interpolate_variables
+from backend.services.email.templates import (
+    get_contact_acknowledgement_fragment,
+    get_newsletter_welcome_fragment
+)
 
 mongo_url = settings.MONGO_URL
 client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2500)
@@ -61,12 +69,18 @@ app.add_middleware(
 outbox_worker = None
 
 
-# ---------- Existing Models (Frozen & Preserved) ----------
+# ---------- Existing Models (Frozen & Preserved, Extended for Transactional Autoresponders) ----------
 class NewsletterSubscription(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
     source: Optional[str] = "website"
+    unsubscribe_token: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    unsubscribed: bool = False
+    unsubscribed_at: Optional[datetime] = None
+    reactivated_at: Optional[datetime] = None
+    welcome_email_status: Optional[str] = None
+    resend_message_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -89,6 +103,8 @@ class ContactSubmission(BaseModel):
     source: str = "website_contact"  # website_contact | future: calcom_meeting | newsletter | etc.
     status: str = "new"              # new | contacted | qualified | converted | closed
     notes: Optional[str] = None      # Admin-only internal notes
+    acknowledgement_status: Optional[str] = None
+    resend_message_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -111,17 +127,115 @@ async def root():
 
 @api_router.post("/newsletter", response_model=NewsletterSubscription)
 async def subscribe_newsletter(payload: NewsletterCreate):
-    existing = await db.newsletter_subscriptions.find_one({"email": payload.email})
-    if existing:
-        # Idempotent — return existing
-        existing["created_at"] = datetime.fromisoformat(existing["created_at"]) if isinstance(existing.get("created_at"), str) else existing.get("created_at")
-        existing.pop("_id", None)
-        return NewsletterSubscription(**existing)
+    clean_email = payload.email.strip().lower()
+    existing = await db.newsletter_subscriptions.find_one({"email": clean_email})
+    now = datetime.now(timezone.utc)
 
-    sub = NewsletterSubscription(email=payload.email, source=payload.source or "website")
-    doc = sub.model_dump()
-    doc["created_at"] = doc["created_at"].isoformat()
-    await db.newsletter_subscriptions.insert_one(doc)
+    if existing:
+        # Check if already active
+        if not existing.get("unsubscribed"):
+            # Idempotent — return existing without re-sending welcome email
+            existing["created_at"] = (
+                datetime.fromisoformat(existing["created_at"])
+                if isinstance(existing.get("created_at"), str)
+                else existing.get("created_at")
+            )
+            existing.pop("_id", None)
+            return NewsletterSubscription(**existing)
+
+        # Previously unsubscribed -> reactivate
+        token = existing.get("unsubscribe_token") or secrets.token_urlsafe(32)
+        await db.newsletter_subscriptions.update_one(
+            {"email": clean_email},
+            {
+                "$set": {
+                    "unsubscribed": False,
+                    "unsubscribe_token": token,
+                    "reactivated_at": now.isoformat(),
+                    "welcome_email_status": "queued",
+                }
+            }
+        )
+        # Remove from suppressions
+        try:
+            await db.email_suppressions.delete_one({"email": clean_email})
+        except Exception:
+            pass
+
+        existing["unsubscribed"] = False
+        existing["unsubscribe_token"] = token
+        existing["welcome_email_status"] = "queued"
+        existing["created_at"] = (
+            datetime.fromisoformat(existing["created_at"])
+            if isinstance(existing.get("created_at"), str)
+            else existing.get("created_at")
+        )
+        existing.pop("_id", None)
+        sub = NewsletterSubscription(**existing)
+    else:
+        token = secrets.token_urlsafe(32)
+        sub = NewsletterSubscription(
+            email=clean_email,
+            source=payload.source or "website",
+            unsubscribe_token=token,
+            welcome_email_status="queued",
+            created_at=now,
+        )
+        doc = sub.model_dump()
+        doc["created_at"] = doc["created_at"].isoformat()
+        await db.newsletter_subscriptions.insert_one(doc)
+
+    # Queue Newsletter Welcome Email (Asynchronous Outbox Job)
+    try:
+        tpl_doc = await db.email_templates_studio.find_one({"template_id": "newsletter_welcome"})
+        template_version = tpl_doc.get("version", 1) if tpl_doc else 1
+        system_template_revision = tpl_doc.get("system_template_revision", 2) if tpl_doc else 2
+        subject_raw = (tpl_doc.get("published_subject") if tpl_doc else None) or "Welcome to PSA Insights — P Suman & Associates"
+        fragment_html = (tpl_doc.get("published_body_html") if tpl_doc else None) or get_newsletter_welcome_fragment()
+        apply_wrapper = tpl_doc.get("apply_wrapper", True) if tpl_doc else True
+
+        unsub_url = f"{settings.BACKEND_URL}/api/unsubscribe?email={clean_email}&token={sub.unsubscribe_token}"
+        vars_map = {"unsubscribe_url": unsub_url}
+
+        rendered_html, rendered_text = render_final_email(
+            body_html=fragment_html,
+            variables=vars_map,
+            unsubscribe_url=unsub_url,
+            apply_wrapper=apply_wrapper,
+            preheader="Welcome to executive tax & audit intelligence",
+            escape_variables=True,
+        )
+        rendered_subject = interpolate_variables(subject_raw, vars_map, escape_html=False)
+        rendered_subject = re.sub(r"[\r\n]+", " ", rendered_subject).strip()
+
+        job = OutboxJob(
+            job_type="transactional",
+            transactional_type="newsletter_welcome",
+            source_entity_type="newsletter_subscription",
+            source_entity_id=sub.id,
+            template_id="newsletter_welcome",
+            template_version=template_version,
+            system_template_revision=system_template_revision,
+            recipient_email=clean_email,
+            subject=rendered_subject,
+            rendered_html=rendered_html,
+            rendered_text=rendered_text,
+            sender=settings.RESEND_FROM_EMAIL,
+            reply_to=settings.RESEND_REPLY_TO,
+            idempotency_key=f"newsletter-welcome/{sub.id}",
+            status=OutboxJobStatus.PENDING,
+        )
+        job_doc = job.model_dump()
+        await db.outbox_jobs.insert_one(job_doc)
+        logger.info("[NEWSLETTER WELCOME] Queued welcome job %s for %s", job.job_id, clean_email)
+    except Exception as exc:
+        logger.error("[NEWSLETTER WELCOME] Failed to queue welcome job for %s: %s", clean_email, exc, exc_info=True)
+        await db.newsletter_subscriptions.update_one(
+            {"id": sub.id},
+            {"$set": {"welcome_email_status": "queue_failed"}}
+        )
+        sub.welcome_email_status = "queue_failed"
+
     return sub
 
 
@@ -131,15 +245,108 @@ async def list_newsletter_subscriptions():
     for r in rows:
         if isinstance(r.get("created_at"), str):
             r["created_at"] = datetime.fromisoformat(r["created_at"])
+        if isinstance(r.get("unsubscribed_at"), str):
+            r["unsubscribed_at"] = datetime.fromisoformat(r["unsubscribed_at"])
+        if isinstance(r.get("reactivated_at"), str):
+            r["reactivated_at"] = datetime.fromisoformat(r["reactivated_at"])
     return rows
 
 
 @api_router.post("/contact", response_model=ContactSubmission)
 async def submit_contact(payload: ContactCreate):
-    sub = ContactSubmission(**payload.model_dump())
+    clean_email = payload.email.strip().lower()
+    now = datetime.now(timezone.utc)
+
+    # Rate limiting & Anti-abuse Cooldown:
+    # Check if an inquiry with identical email was received in the last 60 seconds
+    cooldown_cutoff = (now - timedelta(seconds=60)).isoformat()
+    recent_dup = await db.contact_submissions.find_one({
+        "email": clean_email,
+        "created_at": {"$gte": cooldown_cutoff}
+    })
+
+    # Always persist inquiry FIRST — customer submission is primary
+    sub = ContactSubmission(
+        name=payload.name,
+        company=payload.company,
+        designation=payload.designation,
+        email=clean_email,
+        phone=payload.phone,
+        service_of_interest=payload.service_of_interest,
+        message=payload.message,
+        source=payload.source or "website_contact",
+        status="new",
+        acknowledgement_status="suppressed_cooldown" if recent_dup else "queued",
+        created_at=now,
+    )
     doc = sub.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
     await db.contact_submissions.insert_one(doc)
+
+    if recent_dup:
+        logger.info(
+            "[CONTACT INQUIRY] Suppressed duplicate acknowledgement for %s (cooldown active)",
+            clean_email
+        )
+        return sub
+
+    # Queue Contact Acknowledgement Email (Asynchronous Outbox Job)
+    try:
+        tpl_doc = await db.email_templates_studio.find_one({"template_id": "contact_acknowledgement"})
+        template_version = tpl_doc.get("version", 1) if tpl_doc else 1
+        system_template_revision = tpl_doc.get("system_template_revision", 2) if tpl_doc else 2
+        subject_raw = (tpl_doc.get("published_subject") if tpl_doc else None) or "Inquiry Received — P Suman & Associates"
+        fragment_html = (tpl_doc.get("published_body_html") if tpl_doc else None) or get_contact_acknowledgement_fragment()
+        apply_wrapper = tpl_doc.get("apply_wrapper", True) if tpl_doc else True
+
+        clean_name = re.sub(r"[\r\n]+", " ", payload.name).strip()
+        clean_service = re.sub(r"[\r\n]+", " ", payload.service_of_interest or "General Advisory").strip()
+        clean_company = re.sub(r"[\r\n]+", " ", payload.company or "Not specified").strip()
+        vars_map = {
+            "name": clean_name,
+            "service_of_interest": clean_service,
+            "company": clean_company,
+        }
+
+        rendered_html, rendered_text = render_final_email(
+            body_html=fragment_html,
+            variables=vars_map,
+            apply_wrapper=apply_wrapper,
+            preheader="We have received your advisory inquiry.",
+            escape_variables=True,
+        )
+        rendered_subject = interpolate_variables(subject_raw, vars_map, escape_html=False)
+        rendered_subject = re.sub(r"[\r\n]+", " ", rendered_subject).strip()
+
+        job = OutboxJob(
+            job_type="transactional",
+            transactional_type="contact_acknowledgement",
+            source_entity_type="contact_submission",
+            source_entity_id=sub.id,
+            template_id="contact_acknowledgement",
+            template_version=template_version,
+            system_template_revision=system_template_revision,
+            recipient_email=clean_email,
+            recipient_name=clean_name,
+            subject=rendered_subject,
+            rendered_html=rendered_html,
+            rendered_text=rendered_text,
+            sender=settings.RESEND_FROM_EMAIL,
+            reply_to=settings.RESEND_REPLY_TO,
+            idempotency_key=f"contact-acknowledgement/{sub.id}",
+            status=OutboxJobStatus.PENDING,
+        )
+        job_doc = job.model_dump()
+        await db.outbox_jobs.insert_one(job_doc)
+        logger.info("[CONTACT INQUIRY] Queued acknowledgement job %s for %s", job.job_id, clean_email)
+    except Exception as exc:
+        logger.error("[CONTACT INQUIRY] Failed to queue acknowledgement for %s: %s", clean_email, exc, exc_info=True)
+        await db.contact_submissions.update_one(
+            {"id": sub.id},
+            {"$set": {"acknowledgement_status": "queue_failed"}}
+        )
+        sub.acknowledgement_status = "queue_failed"
+
     return sub
 
 

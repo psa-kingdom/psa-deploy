@@ -104,6 +104,25 @@ async def handle_resend_webhook(
                 {"resend_message_id": email_id},
                 {"$set": {"status": RecipientStatus.DELIVERED.value, "delivered_at": now}}
             )
+            if hasattr(db, "outbox_jobs"):
+                job = await db.outbox_jobs.find_one({"resend_message_id": email_id})
+                if job:
+                    await db.outbox_jobs.update_one(
+                        {"resend_message_id": email_id},
+                        {"$set": {"delivery_status": "delivered", "delivered_at": now}}
+                    )
+                    if job.get("source_entity_type") == "contact_submission" and job.get("source_entity_id"):
+                        if hasattr(db, "contact_submissions"):
+                            await db.contact_submissions.update_one(
+                                {"id": job["source_entity_id"]},
+                                {"$set": {"acknowledgement_status": "delivered", "delivered_at": now}}
+                            )
+                    elif job.get("source_entity_type") == "newsletter_subscription" and job.get("source_entity_id"):
+                        if hasattr(db, "newsletter_subscriptions"):
+                            await db.newsletter_subscriptions.update_one(
+                                {"id": job["source_entity_id"]},
+                                {"$set": {"welcome_email_status": "delivered", "delivered_at": now}}
+                            )
     elif event_type in ("email.bounced", "email.complained"):
         reason = "bounce" if event_type == "email.bounced" else "complaint"
         if email_id:
@@ -111,6 +130,25 @@ async def handle_resend_webhook(
                 {"resend_message_id": email_id},
                 {"$set": {"status": RecipientStatus.BOUNCED.value}}
             )
+            if hasattr(db, "outbox_jobs"):
+                job = await db.outbox_jobs.find_one({"resend_message_id": email_id})
+                if job:
+                    await db.outbox_jobs.update_one(
+                        {"resend_message_id": email_id},
+                        {"$set": {"delivery_status": reason}}
+                    )
+                    if job.get("source_entity_type") == "contact_submission" and job.get("source_entity_id"):
+                        if hasattr(db, "contact_submissions"):
+                            await db.contact_submissions.update_one(
+                                {"id": job["source_entity_id"]},
+                                {"$set": {"acknowledgement_status": reason}}
+                            )
+                    elif job.get("source_entity_type") == "newsletter_subscription" and job.get("source_entity_id"):
+                        if hasattr(db, "newsletter_subscriptions"):
+                            await db.newsletter_subscriptions.update_one(
+                                {"id": job["source_entity_id"]},
+                                {"$set": {"welcome_email_status": reason}}
+                            )
         # Register in suppressions idempotently
         if recipient_email:
             clean_email = recipient_email.strip().lower()
@@ -130,6 +168,12 @@ async def handle_resend_webhook(
             if not existing_sup:
                 supp = EmailSuppression(email=clean_email, reason="provider_suppression", created_at=now)
                 await db.email_suppressions.insert_one(supp.model_dump())
+    elif event_type == "email.sent":
+        if email_id and hasattr(db, "outbox_jobs"):
+            await db.outbox_jobs.update_one(
+                {"resend_message_id": email_id},
+                {"$set": {"delivery_status": "sent"}}
+            )
 
     return {"status": "processed", "event_type": event_type}
 

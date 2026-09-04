@@ -21,6 +21,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [recipientSearch, setRecipientSearch] = useState("");
   const [expandedCampaignId, setExpandedCampaignId] = useState(null);
 
@@ -29,13 +30,14 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
     fetchStats();
     if (onRefreshCampaigns) onRefreshCampaigns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, typeFilter]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
       let url = `${backendUrl}/api/admin/communication/logs?limit=50`;
       if (statusFilter) url += `&status=${statusFilter}`;
+      if (typeFilter) url += `&job_type=${typeFilter}`;
       if (recipientSearch) url += `&recipient=${encodeURIComponent(recipientSearch)}`;
 
       const res = await axios.get(url, { withCredentials: true });
@@ -264,6 +266,15 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
 
             <div className="flex items-center gap-3">
               <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="text-xs bg-white border border-slate-200 rounded-md px-3 py-1.5 text-slate-600 focus:outline-none"
+              >
+                <option value="">All Types</option>
+                <option value="campaign">Campaigns</option>
+                <option value="transactional">Transactional</option>
+              </select>
+              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="text-xs bg-white border border-slate-200 rounded-md px-3 py-1.5 text-slate-600 focus:outline-none"
@@ -282,6 +293,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Type</th>
                   <th className="py-3 px-4">Recipient</th>
                   <th className="py-3 px-4">Provider</th>
                   <th className="py-3 px-4">Message ID</th>
@@ -292,7 +304,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
               <tbody className="divide-y divide-slate-100 font-mono text-slate-600">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-slate-400 font-sans">
+                    <td colSpan={7} className="text-center py-8 text-slate-400 font-sans">
                       {loading ? "Loading audit logs..." : "No email dispatch records found."}
                     </td>
                   </tr>
@@ -311,12 +323,30 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                       Icon = XCircle;
                     }
 
+                    let typeLabel = "Campaign";
+                    let typeBadgeClass = "bg-sky-50 text-sky-700 border-sky-200";
+                    if (log.transactional_type === "contact_acknowledgement") {
+                      typeLabel = "Contact Ack";
+                      typeBadgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+                    } else if (log.transactional_type === "newsletter_welcome") {
+                      typeLabel = "Newsletter";
+                      typeBadgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200";
+                    } else if (log.job_type === "transactional") {
+                      typeLabel = "Transactional";
+                      typeBadgeClass = "bg-purple-50 text-purple-700 border-purple-200";
+                    }
+
                     return (
                       <tr key={log.attempt_id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-semibold border ${badgeClass}`}>
                             <Icon className="w-3 h-3" />
                             {log.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-sans">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${typeBadgeClass}`}>
+                            {typeLabel}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-sans font-medium text-slate-700">{log.recipient_email}</td>

@@ -15,6 +15,7 @@ async def list_email_attempts(
     campaign_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     recipient: Optional[str] = Query(None),
+    job_type: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
     skip: int = Query(0),
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -27,6 +28,8 @@ async def list_email_attempts(
         filter_query["campaign_id"] = campaign_id
     if status:
         filter_query["status"] = status
+    if job_type:
+        filter_query["job_type"] = job_type
     if recipient:
         filter_query["recipient_email"] = {"$regex": recipient.strip().lower(), "$options": "i"}
 
@@ -49,6 +52,7 @@ async def get_email_stats(db: AsyncIOMotorDatabase = Depends(get_db)):
     skipped_count = await db.email_attempts.count_documents(
         {"status": {"$in": ["blocked_test_mode", "skipped_allowlist"]}}
     )
+    transactional_count = await db.email_attempts.count_documents({"job_type": "transactional"})
 
     suppressed_count = await db.email_suppressions.count_documents({})
     total_campaigns = await db.email_campaigns.count_documents({})
@@ -58,6 +62,7 @@ async def get_email_stats(db: AsyncIOMotorDatabase = Depends(get_db)):
         "sent_count": sent_count,
         "failed_count": failed_count,
         "skipped_count": skipped_count,
+        "transactional_count": transactional_count,
         "suppressed_count": suppressed_count,
         "total_campaigns": total_campaigns
     }

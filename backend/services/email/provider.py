@@ -25,6 +25,9 @@ async def send_email_via_provider(
     db: Optional[Any] = None,
     _test_recipient_override: Optional[str] = None,
     is_production_dispatch: bool = False,
+    idempotency_key: Optional[str] = None,
+    job_type: Optional[str] = None,
+    transactional_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Core resilient email sender.
@@ -58,6 +61,9 @@ async def send_email_via_provider(
             attempt_record_data = {
                 "job_id": job_id,
                 "campaign_id": campaign_id,
+                "job_type": job_type,
+                "transactional_type": transactional_type,
+                "subject": subject,
                 "recipient_email": clean_to,
                 "provider": "blocked_safety_guard",
                 "resend_id": None,
@@ -108,8 +114,13 @@ async def send_email_via_provider(
             if reply_to_email:
                 params["reply_to"] = reply_to_email
 
-            # Call Resend SDK in async threadpool
-            response = await asyncio.to_thread(resend.Emails.send, params)
+            # Call Resend SDK with native Idempotency-Key support if key is provided
+            if idempotency_key:
+                options = {"idempotency_key": str(idempotency_key)}
+                response = await asyncio.to_thread(resend.Emails.send, params, options)
+            else:
+                response = await asyncio.to_thread(resend.Emails.send, params)
+
             if isinstance(response, dict):
                 resend_id = response.get("id")
             elif hasattr(response, "id"):
@@ -144,6 +155,9 @@ async def send_email_via_provider(
         attempt_record = EmailAttempt(
             job_id=job_id,
             campaign_id=campaign_id,
+            job_type=job_type,
+            transactional_type=transactional_type,
+            subject=subject,
             recipient_email=clean_to,
             provider="resend" if settings.RESEND_API_KEY else "mock",
             resend_id=resend_id,
