@@ -77,7 +77,7 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
     <style type="text/css">
         body, table, td, p, a, span, h1, h2, h3 {{ font-family: Arial, Helvetica, sans-serif !important; }}
         table {{ border-collapse: collapse; }}
-        .mso-container {{ width: 680px !important; }}
+        .mso-container {{ width: 780px !important; }}
     </style>
     <![endif]-->
     <style type="text/css">
@@ -92,7 +92,7 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
         a:hover {{ color: {PSA_BRAND_ACCENT_HOVER}; text-decoration: underline; }}
 
         /* Responsive Mobile Styles */
-        @media only screen and (max-width: 680px) {{
+        @media only screen and (max-width: 780px) {{
             .email-outer-table {{
                 padding: 10px 4px !important;
             }}
@@ -145,17 +145,17 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
         <tr>
             <td align="center" style="padding: 0;">
                 <!--[if (gte mso 9)|(IE)]>
-                <table role="presentation" width="680" align="center" border="0" cellspacing="0" cellpadding="0" class="mso-container">
+                <table role="presentation" width="780" align="center" border="0" cellspacing="0" cellpadding="0" class="mso-container">
                 <tr>
                 <td>
                 <![endif]-->
                 
-                <!-- Main 680px Email Container -->
-                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" class="email-container" style="max-width: 680px; width: 100%; background-color: #ffffff; border-radius: 6px; overflow: hidden; border: 1px solid {PSA_BRAND_BORDER}; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);">
+                <!-- Main 780px Email Container -->
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" class="email-container" style="max-width: 780px; width: 100%; background-color: #ffffff; border-radius: 6px; overflow: hidden; border: 1px solid {PSA_BRAND_BORDER}; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);">
                     
                     <!-- Header -->
                     <tr>
-                        <td class="email-header" style="background-color: {PSA_BRAND_PRIMARY}; padding: 24px 30px; text-align: left; border-bottom: 3px solid {PSA_BRAND_ACCENT};">
+                        <td class="email-header" style="background-color: {PSA_BRAND_PRIMARY}; padding: 26px 38px; text-align: left; border-bottom: 3px solid {PSA_BRAND_ACCENT};">
                             <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td>
@@ -173,14 +173,14 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
 
                     <!-- Body Content -->
                     <tr>
-                        <td class="email-body" style="padding: 32px 30px; font-size: 15px; line-height: 1.7; color: {PSA_BRAND_TEXT}; background-color: #ffffff;">
+                        <td class="email-body" style="padding: 36px 38px; font-size: 15px; line-height: 1.7; color: {PSA_BRAND_TEXT}; background-color: #ffffff;">
                             {content_html}
                         </td>
                     </tr>
 
                     <!-- Footer -->
                     <tr>
-                        <td class="email-footer" style="background-color: {PSA_BRAND_IVORY}; padding: 24px 30px; border-top: 1px solid {PSA_BRAND_BORDER}; text-align: center;">
+                        <td class="email-footer" style="background-color: {PSA_BRAND_IVORY}; padding: 26px 38px; border-top: 1px solid {PSA_BRAND_BORDER}; text-align: center;">
                             <p style="margin: 0; font-size: 12px; font-weight: 600; color: {PSA_BRAND_PRIMARY}; letter-spacing: 0.2px;">
                                 P Suman & Associates — Chartered Accountants
                             </p>

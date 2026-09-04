@@ -60,6 +60,9 @@ class EmailTemplateStudio(BaseModel):
     has_pending_draft: bool = False
     version: int = 1
     apply_wrapper: Optional[bool] = None
+    is_system_template: bool = False
+    system_template_key: Optional[str] = None
+    system_template_revision: int = 1
     variables: List[str] = Field(default_factory=lambda: ["name", "company", "unsubscribe_url"])
     created_at: datetime = Field(default_factory=get_utc_now)
     updated_at: datetime = Field(default_factory=get_utc_now)
