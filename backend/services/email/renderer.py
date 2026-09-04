@@ -208,17 +208,34 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
 </html>"""
 
 
-def interpolate_variables(text_or_html: str, variables: Dict[str, Any]) -> str:
+def interpolate_variables(
+    text_or_html: str,
+    variables: Dict[str, Any],
+    escape_html: bool = False,
+    safe_keys: Optional[set] = None
+) -> str:
     """
     Replaces mustache style placeholders {{key}} with corresponding values.
+    If escape_html is True, variable values are safely HTML-escaped to prevent
+    markup injection / XSS from untrusted user inputs.
     """
     if not text_or_html:
         return ""
     
+    if safe_keys is None:
+        safe_keys = {"unsubscribe_url"}
+
     result = text_or_html
     for key, value in variables.items():
         placeholder = f"{{{{{key}}}}}"
-        str_val = str(value) if value is not None else ""
+        if value is None:
+            str_val = ""
+        else:
+            str_val = str(value)
+            if escape_html and key not in safe_keys:
+                str_val = html.escape(str_val, quote=True)
+            elif escape_html and key == "unsubscribe_url":
+                str_val = html.escape(str_val, quote=True)
         result = result.replace(placeholder, str_val)
     return result
 
@@ -251,7 +268,8 @@ def render_final_email(
     variables: Optional[Dict[str, Any]] = None,
     unsubscribe_url: Optional[str] = None,
     apply_wrapper: Optional[bool] = False,
-    preheader: str = ""
+    preheader: str = "",
+    escape_variables: bool = False
 ) -> Tuple[str, str]:
     """
     Canonical single source of truth for final email rendering across:
@@ -267,14 +285,16 @@ def render_final_email(
     - If apply_wrapper is False (or omitted/None):
         body_html is treated as deliberately authored full/raw email HTML.
         Sent as-is after variable interpolation without a wrapper.
+    - If escape_variables is True:
+        Interpolated variable values are safely HTML-escaped for untrusted user input.
     """
     vars_map = dict(variables or {})
     if unsubscribe_url and "unsubscribe_url" not in vars_map:
         vars_map["unsubscribe_url"] = unsubscribe_url
 
     # 1. Variable interpolation
-    interpolated_html = interpolate_variables(body_html or "", vars_map)
-    interpolated_preheader = interpolate_variables(preheader or "", vars_map)
+    interpolated_html = interpolate_variables(body_html or "", vars_map, escape_html=escape_variables)
+    interpolated_preheader = interpolate_variables(preheader or "", vars_map, escape_html=escape_variables)
 
     # 2. Wrapper decision & anti-double-wrapping guard
     lower_html = interpolated_html.lower()

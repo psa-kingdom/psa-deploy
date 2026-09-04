@@ -472,6 +472,43 @@ function DetailPanel({ inquiry, onClose, onStatusChange, onNotesChange }) {
                 {statusError}
               </div>
             )}
+
+            {inquiry.acknowledgement_status && (
+              <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px" }}>
+                <span style={{ color: TEXT_MUTED, fontWeight: "500" }}>Autoresponder:</span>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "2.5px 8px",
+                  borderRadius: "4px",
+                  fontWeight: "600",
+                  fontSize: "11px",
+                  background: (inquiry.acknowledgement_status === "delivered" || inquiry.acknowledgement_status === "sent")
+                    ? "#ecfdf5"
+                    : inquiry.acknowledgement_status === "failed"
+                    ? "#fef2f2"
+                    : "#f8fafc",
+                  color: (inquiry.acknowledgement_status === "delivered" || inquiry.acknowledgement_status === "sent")
+                    ? "#059669"
+                    : inquiry.acknowledgement_status === "failed"
+                    ? "#dc2626"
+                    : "#475569",
+                  border: `1px solid ${
+                    (inquiry.acknowledgement_status === "delivered" || inquiry.acknowledgement_status === "sent")
+                      ? "#a7f3d0"
+                      : inquiry.acknowledgement_status === "failed"
+                      ? "#fecaca"
+                      : "#e2e8f0"
+                  }`
+                }}>
+                  <Mail size={11} />
+                  {inquiry.acknowledgement_status === "suppressed_cooldown"
+                    ? "Cooldown Suppressed"
+                    : inquiry.acknowledgement_status.charAt(0).toUpperCase() + inquiry.acknowledgement_status.slice(1)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Divider */}

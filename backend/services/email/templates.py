@@ -201,7 +201,8 @@ def get_contact_acknowledgement_template(variables: Dict[str, Any]) -> Tuple[str
         variables=vars_map,
         apply_wrapper=True,
         preheader="We have received your advisory inquiry.",
-        unsubscribe_url=variables.get("unsubscribe_url")
+        unsubscribe_url=variables.get("unsubscribe_url"),
+        escape_variables=True
     )
     return subject, full_html, plain_text
 
@@ -221,7 +222,8 @@ def get_newsletter_welcome_template(variables: Dict[str, Any]) -> Tuple[str, str
         variables=vars_map,
         apply_wrapper=True,
         preheader="Welcome to executive tax & audit intelligence",
-        unsubscribe_url=variables.get("unsubscribe_url")
+        unsubscribe_url=variables.get("unsubscribe_url"),
+        escape_variables=True
     )
     return subject, full_html, plain_text
 
