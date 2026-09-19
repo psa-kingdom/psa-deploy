@@ -56,9 +56,9 @@ export default function Insights() {
   }, [active, articles]);
 
   return (
-    <main className="bg-ivory">
+    <main className="bg-ivory dark:bg-[#06182C] transition-colors duration-300">
       {/* HERO — dark anchor */}
-      <section className="bg-ink text-ivory relative overflow-hidden pt-40 pb-24">
+      <section className="bg-ink dark:bg-[#04101D] text-ivory relative overflow-hidden pt-40 pb-24">
         <div className="absolute inset-0 grain pointer-events-none opacity-40" />
         <div className="relative container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8">
@@ -78,14 +78,14 @@ export default function Insights() {
       {/* Loading state */}
       {loading && (
         <section className="py-24 text-center">
-          <p className="font-body text-base text-ink/50">Loading published insights…</p>
+          <p className="font-body text-base text-ink/50 dark:text-slate-400">Loading published insights…</p>
         </section>
       )}
 
       {/* Error state */}
       {!loading && error && (
         <section className="py-24 text-center">
-          <p className="font-body text-base text-ink/60">Unable to load insights at this moment. Please refresh or check back shortly.</p>
+          <p className="font-body text-base text-ink/60 dark:text-slate-400">Unable to load insights at this moment. Please refresh or check back shortly.</p>
         </section>
       )}
 
@@ -94,17 +94,17 @@ export default function Insights() {
         <section className="pb-20">
           <div className="container-px mx-auto max-w-[1440px]">
             <Reveal>
-              <Link to={`/insights/${featured.slug}`} data-testid={`insights-featured-${featured.slug}`} className="group grid grid-cols-12 gap-10 items-center border-t border-b border-borderline py-12">
+              <Link to={`/insights/${featured.slug}`} data-testid={`insights-featured-${featured.slug}`} className="group grid grid-cols-12 gap-10 items-center border-t border-b border-borderline dark:border-white/10 py-12">
                 <div className="col-span-12 lg:col-span-7 overflow-hidden">
                   <img src={featured.image} alt={featured.title} className="w-full aspect-[16/10] object-cover transition-transform duration-1000 group-hover:scale-105" />
                 </div>
                 <div className="col-span-12 lg:col-span-5">
-                  <p className="eyebrow text-[10px]">{featured.category} · Featured · {featured.readTime}</p>
-                  <h2 className="font-display-bold text-4xl md:text-5xl text-ink mt-4 tracking-[-0.02em] leading-[1.02] group-hover:text-gold transition-colors duration-500">
+                  <p className="eyebrow text-[10px] dark:text-sky">{featured.category} · Featured · {featured.readTime}</p>
+                  <h2 className="font-display-bold text-4xl md:text-5xl text-ink dark:text-white mt-4 tracking-[-0.02em] leading-[1.02] group-hover:text-gold dark:group-hover:text-sky transition-colors duration-500">
                     {featured.title}
                   </h2>
-                  <p className="font-body text-base text-ink/65 mt-6 leading-relaxed">{featured.excerpt}</p>
-                  <span className="link-underline mt-8 inline-flex items-center gap-2 font-body text-sm text-ink group-hover:text-gold transition-colors duration-500">
+                  <p className="font-body text-base text-ink/65 dark:text-slate-300 mt-6 leading-relaxed">{featured.excerpt}</p>
+                  <span className="link-underline mt-8 inline-flex items-center gap-2 font-body text-sm text-ink dark:text-white group-hover:text-gold dark:group-hover:text-sky transition-colors duration-500">
                     Read the article <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                   </span>
                 </div>
@@ -116,7 +116,7 @@ export default function Insights() {
 
       {/* CATEGORY FILTER */}
       {!loading && !error && articles.length > 0 && (
-        <div className="sticky top-20 z-30 bg-ivory/95 backdrop-blur-md border-y border-borderline">
+        <div className="sticky top-20 z-30 bg-ivory/95 dark:bg-[#06182C]/95 backdrop-blur-md border-y border-borderline dark:border-white/10">
           <div className="container-px mx-auto max-w-[1440px] py-5 flex gap-2 overflow-x-auto no-scrollbar">
             {CATEGORIES.map((c) => (
               <button
@@ -125,8 +125,8 @@ export default function Insights() {
                 onClick={() => { setActive(c); setVisible(9); }}
                 className={`flex-shrink-0 font-body text-[12px] uppercase tracking-[0.18em] px-4 py-2 border transition-all duration-300 ${
                   active === c
-                    ? "bg-ink text-ivory border-ink"
-                    : "border-borderline text-ink/65 hover:text-ink hover:border-ink/40"
+                    ? "bg-ink text-ivory border-ink dark:bg-white dark:text-ink dark:border-white font-semibold"
+                    : "border-borderline dark:border-white/15 text-ink/65 dark:text-slate-300 hover:text-ink dark:hover:text-white hover:border-ink/40 dark:hover:border-white/30"
                 }`}
               >
                 {c}
@@ -141,7 +141,7 @@ export default function Insights() {
         <section className="py-20 md:py-28">
           <div className="container-px mx-auto max-w-[1440px]">
             {filtered.length === 0 && (articles.length === 0 || (active !== "All" && filtered.length === 0)) ? (
-              <p className="font-body text-base text-ink/55 text-center py-20">
+              <p className="font-body text-base text-ink/55 dark:text-slate-400 text-center py-20">
                 {articles.length === 0 ? "No published insights available yet." : "No articles in this category yet."}
               </p>
             ) : (
@@ -152,9 +152,9 @@ export default function Insights() {
                       <div className="overflow-hidden aspect-[16/10] mb-6">
                         <img src={a.image} alt={a.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                       </div>
-                      <p className="eyebrow text-[10px]">{a.category} · {a.readTime}</p>
-                      <h3 className="font-heading text-2xl text-ink mt-3 leading-snug group-hover:text-gold transition-colors duration-500">{a.title}</h3>
-                      <p className="font-body text-sm text-ink/65 mt-3 leading-relaxed line-clamp-3">{a.excerpt}</p>
+                      <p className="eyebrow text-[10px] dark:text-sky">{a.category} · {a.readTime}</p>
+                      <h3 className="font-heading text-2xl text-ink dark:text-white mt-3 leading-snug group-hover:text-gold dark:group-hover:text-sky transition-colors duration-500">{a.title}</h3>
+                      <p className="font-body text-sm text-ink/65 dark:text-slate-300 mt-3 leading-relaxed line-clamp-3">{a.excerpt}</p>
                     </Link>
                   </Reveal>
                 ))}

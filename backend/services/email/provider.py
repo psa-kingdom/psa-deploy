@@ -81,6 +81,7 @@ async def send_email_via_provider(
     cc: Optional[List[str]] = None,
     bcc: Optional[List[str]] = None,
     tags: Optional[List[Dict[str, str]]] = None,
+    attachments: Optional[List[Dict[str, Any]]] = None,
     campaign_id: Optional[str] = None,
     job_id: Optional[str] = None,
     db: Optional[Any] = None,

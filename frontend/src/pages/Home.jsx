@@ -55,6 +55,7 @@ export default function Home() {
                 <div className="font-display text-5xl md:text-6xl text-gold tracking-tight">
                   <StatCounter
                     value={s.value}
+                    text={s.text}
                     prefix={s.prefix || ""}
                     suffix={s.suffix || ""}
                     testid={`hero-stat-${i}`}
@@ -73,40 +74,40 @@ export default function Home() {
       </section>
 
       {/* PRACTICE AREAS */}
-      <section className="py-24 md:py-32 bg-white relative">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#06182C] relative transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8 mb-16">
             <div className="col-span-12 md:col-span-5">
               <p className="eyebrow">Practice Areas</p>
-              <h2 className="font-display-bold text-5xl md:text-7xl text-ink tracking-[-0.02em] mt-5 leading-[1.02]">
+              <h2 className="font-display-bold text-5xl md:text-7xl text-ink dark:text-white tracking-[-0.02em] mt-5 leading-[1.02]">
                 Four practices.<br />
                 <span className="italic text-sky">One standard.</span>
               </h2>
             </div>
             <div className="col-span-12 md:col-span-6 md:col-start-7 self-end">
-              <p className="font-body text-lg text-ink/75 leading-relaxed">
+              <p className="font-body text-lg text-ink/75 dark:text-slate-300 leading-relaxed">
                 Rigorous, sector-deep, and technology-enabled. PSA delivers audit and advisory at the standard that India&apos;s most demanding boards expect.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-borderline border border-borderline">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-borderline dark:bg-white/10 border border-borderline dark:border-white/10">
             {SERVICES.map((s) => (
               <Reveal key={s.slug}>
                 <Link
                   to={`/services#${s.slug}`}
                   data-testid={`home-service-${s.slug}`}
-                  className="group block bg-white p-10 md:p-14 hover:bg-offwhite transition-colors duration-500 h-full relative"
+                  className="group block bg-white dark:bg-[#0A2540] p-10 md:p-14 hover:bg-offwhite dark:hover:bg-[#0E2D55] transition-colors duration-500 h-full relative"
                 >
                   <div className="flex items-baseline justify-between mb-12">
                     <span className="font-display-bold text-3xl text-sky">{s.no}</span>
                     {s.flagship && <span className="font-body text-[10px] uppercase tracking-[0.25em] text-sky border border-sky/40 px-2.5 py-1 font-semibold">Flagship</span>}
                   </div>
-                  <h3 className="font-heading text-3xl md:text-4xl text-ink tracking-tight leading-tight group-hover:text-sky transition-colors duration-500" style={{ fontWeight: 700 }}>
+                  <h3 className="font-heading text-3xl md:text-4xl text-ink dark:text-white tracking-tight leading-tight group-hover:text-sky transition-colors duration-500" style={{ fontWeight: 700 }}>
                     {s.title}
                   </h3>
-                  <p className="font-body text-base text-ink/75 mt-5 leading-relaxed max-w-md">{s.short}</p>
-                  <div className="mt-10 inline-flex items-center gap-2 font-body text-[12px] uppercase tracking-[0.22em] text-sky font-semibold group-hover:text-ink transition-colors duration-500">
+                  <p className="font-body text-base text-ink/75 dark:text-slate-300 mt-5 leading-relaxed max-w-md">{s.short}</p>
+                  <div className="mt-10 inline-flex items-center gap-2 font-body text-[12px] uppercase tracking-[0.22em] text-sky font-semibold group-hover:text-ink dark:group-hover:text-white transition-colors duration-500">
                     Explore practice <ArrowUpRight className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1 group-hover:-translate-y-1" strokeWidth={1.5} />
                   </div>
                 </Link>
@@ -117,7 +118,7 @@ export default function Home() {
       </section>
 
       {/* TRUSTED BY */}
-      <section className="py-16 bg-white border-y border-borderline">
+      <section className="py-16 bg-white dark:bg-[#0A2540]/60 border-y border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px] mb-8">
           <p className="eyebrow text-center">Trusted by India&apos;s Leading Enterprises</p>
         </div>
@@ -163,17 +164,17 @@ export default function Home() {
       </section>
 
       {/* INDUSTRY DEPTH */}
-      <section className="py-24 md:py-32">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8 mb-16">
             <div className="col-span-12 md:col-span-5">
               <p className="eyebrow">Industry Depth</p>
-              <h2 className="font-display text-5xl md:text-6xl text-ink tracking-tight mt-5 leading-[1.05]">
+              <h2 className="font-display text-5xl md:text-6xl text-ink dark:text-white tracking-tight mt-5 leading-[1.05]">
                 Sector-deep,<br />board-grade.
               </h2>
             </div>
             <div className="col-span-12 md:col-span-6 md:col-start-7 self-end">
-              <Link to="/industries" data-testid="home-industries-link" className="link-underline font-body text-sm text-ink hover:text-gold inline-flex items-center gap-2">
+              <Link to="/industries" data-testid="home-industries-link" className="link-underline font-body text-sm text-ink dark:text-slate-200 hover:text-gold inline-flex items-center gap-2">
                 All 12 sectors <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
               </Link>
             </div>
@@ -182,12 +183,12 @@ export default function Home() {
             {featuredIndustries.map((ind) => (
               <Reveal key={ind.slug}>
                 <Link to={`/industries#${ind.slug}`} data-testid={`home-industry-${ind.slug}`} className="group block">
-                  <div className="overflow-hidden mb-6 aspect-[4/5]">
+                  <div className="overflow-hidden mb-6 aspect-[4/5] bg-slate-100 dark:bg-slate-800">
                     <img src={ind.img} alt={ind.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                   </div>
                   <p className="eyebrow text-[10px]">Sector</p>
-                  <h3 className="font-heading text-2xl text-ink mt-2 group-hover:text-gold transition-colors duration-500">{ind.name}</h3>
-                  <p className="font-body text-sm text-ink/60 mt-3 leading-relaxed">{ind.blurb}</p>
+                  <h3 className="font-heading text-2xl text-ink dark:text-white mt-2 group-hover:text-gold transition-colors duration-500">{ind.name}</h3>
+                  <p className="font-body text-sm text-ink/60 dark:text-slate-400 mt-3 leading-relaxed">{ind.blurb}</p>
                 </Link>
               </Reveal>
             ))}
@@ -196,7 +197,7 @@ export default function Home() {
       </section>
 
       {/* WHY PSA */}
-      <section className="py-24 md:py-32 bg-navy text-white relative">
+      <section className="py-24 md:py-32 bg-navy dark:bg-[#0A2540] text-white relative transition-colors duration-300">
         <div className="absolute inset-0 grain pointer-events-none opacity-30" />
         <div className="relative container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8 mb-16 items-end">
@@ -214,7 +215,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/10 border border-white/10">
             {DIFFERENTIATORS.map((d) => (
-              <div key={d.no} className="bg-navy p-10 md:p-12 hover:bg-navy-mid transition-colors duration-500 group">
+              <div key={d.no} className="bg-navy dark:bg-[#06182C] p-10 md:p-12 hover:bg-navy-mid dark:hover:bg-[#0E2D55] transition-colors duration-500 group">
                 <span className="font-display-bold text-3xl text-sky-light">{d.no}</span>
                 <h3 className="font-heading text-2xl text-white mt-6 leading-snug" style={{ fontWeight: 700 }}>{d.title}</h3>
                 <p className="font-body text-sm text-white/75 mt-4 leading-relaxed">{d.body}</p>
@@ -226,17 +227,17 @@ export default function Home() {
       </section>
 
       {/* FEATURED INSIGHTS */}
-      <section className="py-24 md:py-32">
+      <section className="py-24 md:py-32 bg-ivory dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8 mb-16 items-end">
             <div className="col-span-12 md:col-span-7">
               <p className="eyebrow">Featured Insights</p>
-              <h2 className="font-display-bold text-5xl md:text-6xl text-ink tracking-[-0.02em] mt-5 leading-[1.02]">
+              <h2 className="font-display-bold text-5xl md:text-6xl text-ink dark:text-white tracking-[-0.02em] mt-5 leading-[1.02]">
                 Perspectives from the practice.
               </h2>
             </div>
             <div className="col-span-12 md:col-span-5 md:text-right">
-              <Link to="/insights" data-testid="home-insights-all" className="link-underline font-body text-sm text-ink hover:text-gold inline-flex items-center gap-2">
+              <Link to="/insights" data-testid="home-insights-all" className="link-underline font-body text-sm text-ink dark:text-slate-200 hover:text-gold inline-flex items-center gap-2">
                 All Insights <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
               </Link>
             </div>
@@ -245,21 +246,21 @@ export default function Home() {
           <div className="grid grid-cols-12 gap-8">
             <Reveal className="col-span-12 lg:col-span-7">
               <Link to={`/insights/${featured.slug}`} data-testid={`home-article-${featured.slug}`} className="group block">
-                <div className="overflow-hidden mb-8 aspect-[16/10]">
+                <div className="overflow-hidden mb-8 aspect-[16/10] bg-slate-100 dark:bg-slate-800">
                   <img src={featured.image} alt={featured.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                 </div>
                 <p className="eyebrow text-[10px]">{featured.category} · {featured.readTime}</p>
-                <h3 className="font-heading text-3xl md:text-4xl text-ink mt-3 leading-tight group-hover:text-gold transition-colors duration-500">{featured.title}</h3>
-                <p className="font-body text-base text-ink/65 mt-4 leading-relaxed max-w-xl">{featured.excerpt}</p>
+                <h3 className="font-heading text-3xl md:text-4xl text-ink dark:text-white mt-3 leading-tight group-hover:text-gold transition-colors duration-500">{featured.title}</h3>
+                <p className="font-body text-base text-ink/65 dark:text-slate-400 mt-4 leading-relaxed max-w-xl">{featured.excerpt}</p>
               </Link>
             </Reveal>
             <div className="col-span-12 lg:col-span-5 flex flex-col gap-8">
               {others.map((a) => (
                 <Reveal key={a.slug}>
-                  <Link to={`/insights/${a.slug}`} data-testid={`home-article-${a.slug}`} className="group block border-b border-borderline pb-8 last:border-b-0">
+                  <Link to={`/insights/${a.slug}`} data-testid={`home-article-${a.slug}`} className="group block border-b border-borderline dark:border-white/10 pb-8 last:border-b-0">
                     <p className="eyebrow text-[10px]">{a.category}</p>
-                    <h4 className="font-heading text-xl text-ink mt-2 leading-snug group-hover:text-gold transition-colors duration-500">{a.title}</h4>
-                    <p className="font-body text-sm text-ink/60 mt-2 leading-relaxed line-clamp-2">{a.excerpt}</p>
+                    <h4 className="font-heading text-xl text-ink dark:text-white mt-2 leading-snug group-hover:text-gold transition-colors duration-500">{a.title}</h4>
+                    <p className="font-body text-sm text-ink/60 dark:text-slate-400 mt-2 leading-relaxed line-clamp-2">{a.excerpt}</p>
                   </Link>
                 </Reveal>
               ))}
@@ -269,20 +270,20 @@ export default function Home() {
       </section>
 
       {/* NEWSLETTER */}
-      <section className="pb-24 md:pb-32">
+      <section className="pb-24 md:pb-32 bg-ivory dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <NewsletterBlock variant="dark" testidPrefix="home-newsletter" />
         </div>
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-24 md:py-32 bg-white border-t border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/50 border-t border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px] text-center">
           <p className="eyebrow">Ready to Begin</p>
-          <h2 className="font-display-bold text-5xl md:text-7xl text-ink tracking-[-0.025em] mt-6 leading-[1.02] max-w-4xl mx-auto">
+          <h2 className="font-display-bold text-5xl md:text-7xl text-ink dark:text-white tracking-[-0.025em] mt-6 leading-[1.02] max-w-4xl mx-auto">
             Ready to elevate your<br /><span className="italic text-gold">assurance standards?</span>
           </h2>
-          <p className="font-body text-lg text-ink/65 mt-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="font-body text-lg text-ink/65 dark:text-slate-300 mt-8 max-w-2xl mx-auto leading-relaxed">
             A 30-minute conversation with our partner team. No obligation. Independent perspective on your audit, risk, and process priorities.
           </p>
           <Link to="/contact" data-testid="home-final-cta" className="btn-primary mt-12 inline-flex">

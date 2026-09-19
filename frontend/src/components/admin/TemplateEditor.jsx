@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   Eye,
+  Paperclip,
+  UploadCloud,
+  Trash2,
+  FileText,
+  Download,
   Code,
   Smartphone,
   Monitor,
@@ -18,7 +23,6 @@ import {
   HelpCircle,
   Shield,
   Layers,
-  FileText,
   AlertOctagon,
   X,
 } from "lucide-react";
@@ -81,6 +85,10 @@ export default function TemplateEditor({
   standaloneStudio = false,
 }) {
   const [previewDevice, setPreviewDevice] = useState("desktop");
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showDeliverySettings, setShowDeliverySettings] = useState(false);
@@ -111,7 +119,7 @@ export default function TemplateEditor({
       } catch (_) {
         // Fallback default
         setApprovedSenders([
-          { name: "P Suman & Associates", email: "updates@updates.psumanassociates.com" },
+          { name: "P Suman & Associates", email: "updates@psumanassociates.com" },
         ]);
       }
     };
@@ -145,12 +153,21 @@ export default function TemplateEditor({
     onBccChange(parts);
   };
 
-  // Live preview fetcher
+  // Optimized Live preview fetcher with abort controller and smooth background updates
+  const previewAbortControllerRef = useRef(null);
+
   const fetchLivePreview = useCallback(async () => {
     if (!bodyHtml) {
       setPreviewData(null);
       return;
     }
+
+    if (previewAbortControllerRef.current) {
+      previewAbortControllerRef.current.abort();
+    }
+    previewAbortControllerRef.current = new AbortController();
+
+    // Only show full loading placeholder if we don't have any preview data yet
     setPreviewLoading(true);
     try {
       const res = await axios.post(
@@ -165,15 +182,20 @@ export default function TemplateEditor({
           reply_to: replyTo,
           cc: Array.isArray(cc) ? cc : [],
           bcc: Array.isArray(bcc) ? bcc : [],
-          recipient_name: "CA Rajesh Sharma",
-          recipient_company: "Bharat Financial Corp",
-          recipient_email: "rajesh@example.com",
+          recipient_name: "Valued Subscriber",
+          recipient_company: "Subscriber Organization",
+          recipient_email: "subscriber@example.com",
         },
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          signal: previewAbortControllerRef.current.signal,
+        }
       );
       setPreviewData(res.data);
     } catch (err) {
-      console.error("Preview render failed:", err);
+      if (!axios.isCancel(err) && err.name !== "CanceledError") {
+        console.error("Preview render failed:", err);
+      }
     } finally {
       setPreviewLoading(false);
     }
@@ -193,9 +215,85 @@ export default function TemplateEditor({
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchLivePreview();
-    }, 250);
-    return () => clearTimeout(timer);
+    }, 450);
+    return () => {
+      clearTimeout(timer);
+      if (previewAbortControllerRef.current) {
+        previewAbortControllerRef.current.abort();
+      }
+    };
   }, [fetchLivePreview]);
+
+    // Attachment upload & insertion
+  const handleAttachmentUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadError("");
+    setUploadingAttachment(true);
+
+    for (const file of files) {
+      if (file.size > 25 * 1024 * 1024) {
+        setUploadError(`File ${file.name} exceeds 25MB limit.`);
+        continue;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await axios.post(
+          `${backendUrl}/api/admin/attachments/upload`,
+          formData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        if (res.data?.attachment) {
+          const att = res.data.attachment;
+          setAttachments((prev) => [...prev, att]);
+          showToast(`Uploaded ${att.filename} to Cloudflare R2`, "success");
+        }
+      } catch (err) {
+        const detail = err?.response?.data?.detail || "Failed to upload file to Cloudflare R2.";
+        setUploadError(detail);
+        showToast(detail, "error");
+      }
+    }
+
+    setUploadingAttachment(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveAttachment = async (attId) => {
+    try {
+      await axios.delete(`${backendUrl}/api/admin/attachments/${attId}`, {
+        withCredentials: true,
+      });
+      setAttachments((prev) => prev.filter((a) => a.attachment_id !== attId));
+      showToast("Attachment removed", "success");
+    } catch (err) {
+      setAttachments((prev) => prev.filter((a) => a.attachment_id !== attId));
+    }
+  };
+
+  const handleInsertDownloadButton = (att) => {
+    const buttonHtml = `
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 18px 0;">
+  <tr>
+    <td align="center" style="border-radius: 8px; background: #0A2540;">
+      <a href="${att.download_url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 12px 24px; font-family: 'Cabinet Grotesk', -apple-system, sans-serif; font-size: 13px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #0284c7; letter-spacing: 0.5px;">
+        📥 Download ${att.filename}
+      </a>
+    </td>
+  </tr>
+</table>
+`;
+    onBodyHtmlChange(bodyHtml ? bodyHtml + buttonHtml : buttonHtml);
+    showToast(`Added download button for ${att.filename} to email body`, "success");
+  };
 
   const showToast = (msg, type = "success") => {
     setActionNotice({ msg, type });
@@ -595,6 +693,103 @@ export default function TemplateEditor({
         </div>
       </div>
 
+      {/* Cloudflare R2 Attachments Section */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-2xs">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky flex items-center justify-center border border-sky-200/60">
+              <Paperclip size={15} />
+            </div>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                Attachments &amp; Downloads (Cloudflare R2)
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Upload documents to Cloudflare R2 and generate 1-click download buttons in your email.
+              </span>
+            </div>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAttachment}
+              className="px-3.5 py-1.5 text-xs font-semibold bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <UploadCloud size={14} className="text-sky" />
+              {uploadingAttachment ? "Uploading to R2..." : "Add Attachment"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleAttachmentUpload}
+              className="hidden"
+              accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.zip,.txt"
+            />
+          </div>
+        </div>
+
+        {uploadError && (
+          <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+            {uploadError}
+          </div>
+        )}
+
+        {attachments.length === 0 ? (
+          <div className="mt-2 text-xs text-slate-400 italic py-2 px-3 bg-white/60 rounded-lg border border-dashed border-slate-200 text-center">
+            No files attached yet. Click <strong>"Add Attachment"</strong> to upload reports, PDFs, or spreadsheets to Cloudflare R2.
+          </div>
+        ) : (
+          <div className="space-y-2 mt-3">
+            {attachments.map((att) => (
+              <div
+                key={att.attachment_id}
+                className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-2xs"
+              >
+                <div className="flex items-center gap-2.5 truncate max-w-[340px]">
+                  <FileText size={16} className="text-sky shrink-0" />
+                  <span className="truncate font-semibold text-slate-800" title={att.filename}>
+                    {att.filename}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono shrink-0">
+                    ({(att.size_bytes / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleInsertDownloadButton(att)}
+                    className="px-2.5 py-1 text-xs bg-sky/10 hover:bg-sky/20 text-sky font-bold rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                    title="Insert 📥 Download Button directly into email content"
+                  >
+                    <Download size={12} />
+                    Insert in Email
+                  </button>
+                  <a
+                    href={att.download_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                    title="Test Download File"
+                  >
+                    <Download size={14} />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(att.attachment_id)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                    title="Remove Attachment"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Toolbar: Placeholders, Delivery Settings Toggle, Variables Documentation Toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
         {/* Quick Placeholder Inserter */}
@@ -671,7 +866,7 @@ export default function TemplateEditor({
                 onChange={(e) => onSenderEmailChange && onSenderEmailChange(e.target.value)}
                 className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs text-slate-800 font-mono"
               >
-                <option value="">Default (updates@updates.psumanassociates.com)</option>
+                <option value="">Default (updates@psumanassociates.com)</option>
                 {approvedSenders.map((s, idx) => (
                   <option key={idx} value={s.email}>
                     {s.name} &lt;{s.email}&gt;
@@ -1004,21 +1199,31 @@ export default function TemplateEditor({
 
           {/* Iframe Viewport */}
           <div
-            className={`border border-slate-200 rounded-lg bg-slate-100 overflow-hidden flex justify-center p-3 h-[520px] transition-all ${
+            className={`border border-slate-200 rounded-lg bg-slate-100 overflow-hidden relative flex justify-center p-3 h-[520px] transition-all ${
               previewDevice === "mobile" ? "max-w-[390px] mx-auto shadow-inner" : "w-full mx-auto"
             }`}
           >
-            {previewLoading ? (
-              <div className="flex items-center justify-center h-full text-xs text-slate-400">
-                Rendering preview…
+            {/* Subtle floating sync indicator while typing */}
+            {previewLoading && (
+              <div className="absolute top-4 right-4 z-10 bg-slate-900/80 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 shadow-md animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky animate-ping" />
+                Updating preview...
               </div>
-            ) : previewData?.html ? (
+            )}
+
+            {previewData?.html ? (
               <iframe
                 title="Email Preview"
                 srcDoc={previewData.html}
-                className="w-full h-full bg-white rounded shadow-sm border-0"
+                className={`w-full h-full bg-white rounded shadow-sm border-0 transition-opacity duration-200 ${
+                  previewLoading ? "opacity-85" : "opacity-100"
+                }`}
                 sandbox="allow-same-origin"
               />
+            ) : previewLoading ? (
+              <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                Rendering preview...
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full text-xs text-slate-400">
                 Enter HTML body content to see preview.

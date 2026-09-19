@@ -131,7 +131,55 @@ export default function AdminCommunication() {
   const fetchTemplates = useCallback(async () => {
     try {
       const res = await api.get("/api/admin/communication/templates");
-      setTemplates(res.data);
+      const list = res.data || [];
+      setTemplates(list);
+
+      // Default selection: automatically select the Welcome Template if none is selected yet
+      if (list.length > 0) {
+        const welcomeTpl = list.find((t) =>
+          t.name?.toLowerCase().includes("welcome") ||
+          t.slug?.toLowerCase().includes("welcome") ||
+          t.template_id === "f990c681-48dd-4d64-b17f-790ae0bca3ba"
+        ) || list[0];
+
+        if (welcomeTpl) {
+          setSelectedTemplateId((prev) => {
+            if (!prev) {
+              setSubject(welcomeTpl.published_subject || welcomeTpl.draft_subject || "");
+              setPreheader(welcomeTpl.published_preheader || welcomeTpl.draft_preheader || "");
+              setBodyHtml(welcomeTpl.published_body_html || welcomeTpl.draft_body_html || "");
+              if (welcomeTpl.apply_wrapper !== undefined && welcomeTpl.apply_wrapper !== null) {
+                setApplyWrapper(welcomeTpl.apply_wrapper);
+              } else {
+                setApplyWrapper(true);
+              }
+              if (welcomeTpl.sender_name) setSenderName(welcomeTpl.sender_name);
+              if (welcomeTpl.sender_email) setSenderEmail(welcomeTpl.sender_email);
+              if (welcomeTpl.reply_to) setReplyTo(welcomeTpl.reply_to);
+              if (welcomeTpl.cc) setCc(welcomeTpl.cc);
+              if (welcomeTpl.bcc) setBcc(welcomeTpl.bcc);
+              return welcomeTpl.template_id;
+            }
+            return prev;
+          });
+
+          setStudioSelectedTemplateId((prev) => {
+            if (!prev) {
+              setStudioSubject(welcomeTpl.draft_subject || welcomeTpl.published_subject || "");
+              setStudioPreheader(welcomeTpl.draft_preheader || welcomeTpl.published_preheader || "");
+              setStudioBodyHtml(welcomeTpl.draft_body_html || welcomeTpl.published_body_html || "");
+              setStudioApplyWrapper(welcomeTpl.apply_wrapper ?? true);
+              setStudioSenderName(welcomeTpl.sender_name || "P Suman & Associates");
+              setStudioSenderEmail(welcomeTpl.sender_email || "");
+              setStudioReplyTo(welcomeTpl.reply_to || "");
+              setStudioCc(welcomeTpl.cc || []);
+              setStudioBcc(welcomeTpl.bcc || []);
+              return welcomeTpl.template_id;
+            }
+            return prev;
+          });
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch templates:", err);
     }
@@ -484,11 +532,11 @@ export default function AdminCommunication() {
     },
     // TEST MODE card: intentionally green — critical safety indicator, DO NOT change
     testModeCard: {
-      background: "rgba(22,163,74,0.06)",
-      border: "1px solid #16a34a",
+      background: "#F0FDF4",
+      border: "1px solid #BBF7D0",
       borderRadius: RADIUS_LG,
       padding: "20px 24px",
-      boxShadow: "0 0 0 1px rgba(22,163,74,0.1)",
+      boxShadow: "0 1px 3px rgba(10, 37, 64, 0.04)",
     },
     label: {
       display: "block",
@@ -661,25 +709,25 @@ export default function AdminCommunication() {
             <div style={styles.testModeCard}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Mail size={14} style={{ color: "#86efac" }} />
+                  <Mail size={14} style={{ color: "#16A34A" }} />
                   <span
                     style={{
                       fontSize: "12px",
                       fontWeight: "700",
                       letterSpacing: "0.06em",
-                      color: "#86efac",
+                      color: "#14532D",
                       textTransform: "uppercase",
                     }}
                   >
                     TEST MODE ACTIVE
                   </span>
                 </div>
-                <span style={{ fontSize: "11px", color: "#4ade80", opacity: 0.8 }}>
-                  Safety Layer 1 & 2 Enforced
+                <span style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>
+                  Safety Layer 1 &amp; 2 Enforced
                 </span>
               </div>
 
-              <label style={{ ...styles.label, color: "#4ade80" }}>Configured Test Recipient</label>
+              <label style={{ ...styles.label, color: "#166534", fontWeight: "700" }}>Configured Test Recipient</label>
 
               {testRecipient && !isEditingTestRecipient ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -688,14 +736,15 @@ export default function AdminCommunication() {
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "8px",
-                      background: "rgba(22, 163, 74, 0.2)",
-                      border: "1px solid #166534",
-                      padding: "6px 12px",
+                      background: "#ffffff",
+                      border: "1px solid #86EFAC",
+                      padding: "6px 14px",
                       borderRadius: "6px",
-                      color: "#86efac",
+                      color: "#0A2540",
                       fontFamily: "monospace",
                       fontSize: "13px",
                       fontWeight: "600",
+                      boxShadow: "0 1px 3px rgba(10, 37, 64, 0.05)",
                     }}
                   >
                     <span>{testRecipient}</span>
@@ -706,7 +755,7 @@ export default function AdminCommunication() {
                       style={{
                         background: "transparent",
                         border: "none",
-                        color: "#86efac",
+                        color: "#9ca3af",
                         cursor: "pointer",
                         padding: 0,
                         display: "flex",
@@ -725,13 +774,15 @@ export default function AdminCommunication() {
                       setIsEditingTestRecipient(true);
                     }}
                     style={{
-                      background: "transparent",
-                      border: "1px solid #22c55e",
+                      background: "#ffffff",
+                      border: "1px solid #CBD5E1",
                       borderRadius: "6px",
-                      padding: "5px 10px",
-                      color: "#86efac",
-                      fontSize: "11px",
+                      padding: "6px 12px",
+                      color: "#334155",
+                      fontSize: "12px",
+                      fontWeight: "600",
                       cursor: "pointer",
+                      boxShadow: "0 1px 2px rgba(10, 37, 64, 0.04)",
                     }}
                   >
                     Change Recipient
@@ -795,8 +846,7 @@ export default function AdminCommunication() {
               <p
                 style={{
                   fontSize: "12px",
-                  color: "#4ade80",
-                  opacity: 0.75,
+                  color: "#047857",
                   marginTop: "10px",
                   lineHeight: "1.5",
                 }}

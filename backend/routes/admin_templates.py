@@ -39,7 +39,9 @@ def get_db() -> AsyncIOMotorDatabase:
 
 # Approved sender identities allowlist (Task 8 & 9)
 APPROVED_SENDER_IDENTITIES = [
-    {"name": "P Suman & Associates", "email": "updates@updates.psumanassociates.com", "role": "Default Corporate Broadcast"},
+    {"name": "P Suman & Associates", "email": "info@psuman.com", "role": "General & Advisory Inquiries"},
+    {"name": "P Suman & Associates", "email": "info@psumanassociates.com", "role": "General Corporate Inquiries"},
+    {"name": "P Suman & Associates", "email": "updates@psumanassociates.com", "role": "Default Corporate Broadcast"},
     {"name": "PSA Advisory", "email": "advisory@updates.psumanassociates.com", "role": "Regulatory & Tax Advisory"},
     {"name": "PSA Insights", "email": "insights@updates.psumanassociates.com", "role": "Thought Leadership & Newsletter"},
     {"name": "PSA Client Support", "email": "contact@updates.psumanassociates.com", "role": "Inquiry Acknowledgements"},
@@ -56,6 +58,13 @@ def _is_approved_sender_email(email_str: str) -> bool:
         if "<" in from_email_clean and ">" in from_email_clean:
             from_email_clean = from_email_clean.split("<")[1].split(">")[0]
         approved.append(from_email_clean.strip().lower())
+
+    # Allow verified corporate domain patterns
+    allowed_domains = ["psumanassociates.com", "updates.psumanassociates.com", "psuman.com", "resend.dev"]
+    domain = clean.split("@")[-1] if "@" in clean else ""
+    if domain in allowed_domains:
+        return True
+
     return clean in approved
 
 
@@ -606,7 +615,7 @@ async def preview_template(payload: TemplatePreviewRequest):
     )
 
     from_name = payload.sender_name or "P Suman & Associates"
-    from_email = payload.sender_email or "updates@updates.psumanassociates.com"
+    from_email = payload.sender_email or "updates@psumanassociates.com"
     from_header = f"{from_name} <{from_email}>"
 
     return {

@@ -45,7 +45,9 @@ mongo_url = settings.MONGO_URL
 client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2500)
 db = client[settings.DB_NAME]
 
-app = FastAPI(title="P Suman & Associates API")
+app = FastAPI(
+title="P Suman & Associates API")
+app.state.db = db
 api_router = APIRouter(prefix="/api")
 
 # ---------- CORS Middleware ----------
@@ -396,6 +398,8 @@ try:
         admin_logs,
         admin_inquiries,
         admin_insights,
+        admin_attachments,
+        admin_visitors,
         webhooks,
         unsubscribe
     )
@@ -407,13 +411,30 @@ except ImportError:
         admin_logs,
         admin_inquiries,
         admin_insights,
+        admin_attachments,
+        admin_visitors,
         webhooks,
         unsubscribe
     )
 
 @api_router.post("/admin/auth/login")
 async def api_admin_login(payload: admin_auth.AdminLoginRequest, request: Request, response: Response):
-    return await admin_auth.admin_login(payload, request, response)
+    return await admin_auth.admin_login(payload, request, response, db=db)
+
+
+@api_router.post("/admin/auth/forgot-password")
+async def api_admin_forgot_password(payload: admin_auth.AdminForgotPasswordRequest, request: Request):
+    return await admin_auth.admin_forgot_password(payload, request, db=db)
+
+
+@api_router.post("/admin/auth/verify-reset-code")
+async def api_admin_verify_reset_code(payload: admin_auth.AdminVerifyResetCodeRequest, request: Request):
+    return await admin_auth.admin_verify_reset_code(payload, request, db=db)
+
+
+@api_router.post("/admin/auth/reset-password")
+async def api_admin_reset_password(payload: admin_auth.AdminResetPasswordRequest, request: Request):
+    return await admin_auth.admin_reset_password(payload, request, db=db)
 
 
 @api_router.get("/admin/auth/me")
@@ -442,6 +463,9 @@ api_router.include_router(admin_logs.router)
 api_router.include_router(admin_inquiries.router)
 api_router.include_router(admin_insights.admin_router)
 api_router.include_router(admin_insights.public_router)
+api_router.include_router(admin_attachments.admin_router)
+api_router.include_router(admin_attachments.public_router)
+api_router.include_router(admin_visitors.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(unsubscribe.router)
 

@@ -1,4 +1,6 @@
-import React from "react";
+import axios from "axios";
+import { BACKEND_URL } from "./config";
+import React, { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -18,6 +20,8 @@ import AdminCommunication from "@/pages/AdminCommunication";
 import AdminInquiries from "@/pages/AdminInquiries";
 import AdminInsights from "@/pages/AdminInsights";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
+import WhatsAppChatBubble from "@/components/WhatsAppChatBubble";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 function AppContent() {
   const location = useLocation();
@@ -25,8 +29,21 @@ function AppContent() {
   const isAdminPage = location.pathname.startsWith("/admin");
   const hideHeaderFooter = isConnectPage || isAdminPage;
 
+  // Track visitor pageview
+  useEffect(() => {
+    if (!isAdminPage) {
+      try {
+        axios.post(`${BACKEND_URL}/api/track/visit`, {
+          path: location.pathname + location.search,
+          referrer: document.referrer || "",
+        }, { withCredentials: true }).catch(() => {});
+      } catch (_) {}
+    }
+  }, [location.pathname, location.search, isAdminPage]);
+
+
   return (
-    <div className="App bg-ivory text-ink">
+    <div className="App bg-white dark:bg-[#06182C] text-ink dark:text-slate-100 min-h-screen transition-colors duration-300">
       <ScrollToTop />
       {!hideHeaderFooter && <Header />}
       <Routes>
@@ -82,15 +99,18 @@ function AppContent() {
         <Route path="*" element={<Home />} />
       </Routes>
       {!hideHeaderFooter && <Footer />}
+      {!hideHeaderFooter && <WhatsAppChatBubble />}
     </div>
   );
 }
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ThemeProvider defaultTheme="light">
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

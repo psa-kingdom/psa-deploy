@@ -6,7 +6,8 @@ import { FIRM, OFFICES, TEAM_PILLARS, MILESTONES, VALUES } from "../data/site";
 
 export default function About() {
   return (
-    <main className="bg-ivory">
+    <main className="bg-ivory dark:bg-[#06182C] transition-colors duration-300">
+      {/* HERO */}
       <section className="bg-ink text-ivory relative overflow-hidden pt-40 pb-24 md:pb-32">
         <div className="absolute inset-0 grain pointer-events-none opacity-40" />
         <div className="relative container-px mx-auto max-w-[1440px]">
@@ -25,12 +26,12 @@ export default function About() {
       </section>
 
       {/* Leadership */}
-      <section className="py-24 md:py-32 bg-white border-y border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/40 border-y border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-10">
             <div className="col-span-12 lg:col-span-4">
               <p className="eyebrow mb-6">Leadership</p>
-              <h2 className="font-display-bold text-5xl md:text-6xl text-ink tracking-[-0.02em] leading-[1.02]">
+              <h2 className="font-display-bold text-5xl md:text-6xl text-ink dark:text-white tracking-[-0.02em] leading-[1.02]">
                 The founding partner.
               </h2>
             </div>
@@ -38,7 +39,7 @@ export default function About() {
               <div className="grid grid-cols-12 gap-8 items-start">
                 <div className="col-span-12 sm:col-span-4">
                   {/* Portrait */}
-                  <div className="aspect-square w-full max-w-[260px] relative border border-gold/40 overflow-hidden">
+                  <div className="aspect-square w-full max-w-[260px] relative border border-gold/40 overflow-hidden bg-slate-100 dark:bg-slate-800">
                     <img
                       src="/founder.jpg"
                       alt="CA Prem Suman — Founder & Managing Partner"
@@ -53,16 +54,16 @@ export default function About() {
                 </div>
                 <div className="col-span-12 sm:col-span-8">
                   <p className="eyebrow text-[10px]">Founder &amp; Managing Partner</p>
-                  <h3 className="font-display text-4xl md:text-5xl text-ink mt-3 tracking-tight leading-tight">
+                  <h3 className="font-display text-4xl md:text-5xl text-ink dark:text-white mt-3 tracking-tight leading-tight">
                     CA Prem Suman
                   </h3>
-                  <p className="font-body text-sm text-ink/55 mt-2 uppercase tracking-[0.18em]">FCA (ICAI)</p>
+                  <p className="font-body text-sm text-ink/55 dark:text-slate-400 mt-2 uppercase tracking-[0.18em]">FCA (ICAI)</p>
 
-                  <blockquote className="font-display italic text-2xl text-ink/85 mt-8 leading-snug border-l-2 border-gold pl-6">
+                  <blockquote className="font-display italic text-2xl text-ink/85 dark:text-slate-200 mt-8 leading-snug border-l-2 border-gold pl-6">
                     &ldquo;20+ years leading audit, internal controls, inventory management, and assurance mandates across manufacturing, automobiles, real estate, financial services, and infrastructure.&rdquo;
                   </blockquote>
 
-                  <ul className="mt-8 space-y-3 font-body text-base text-ink/75">
+                  <ul className="mt-8 space-y-3 font-body text-base text-ink/75 dark:text-slate-300">
                     <li>· Co-opted Member, Corporate Laws &amp; Corporate Governance Committee (ICAI)</li>
                     <li>· Architect of the firm&apos;s structured audit methodology and technology roadmap</li>
                     <li>· Sector exposure: manufacturing, automotive, real estate, financial services, infrastructure</li>
@@ -75,28 +76,28 @@ export default function About() {
       </section>
 
       {/* Delivery Organisation */}
-      <section className="py-24 md:py-32">
+      <section className="py-24 md:py-32 bg-ivory dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-10 mb-16">
             <div className="col-span-12 md:col-span-5">
               <p className="eyebrow">The Delivery Organisation</p>
-              <h2 className="font-display-bold text-5xl md:text-6xl text-ink tracking-[-0.02em] mt-5 leading-[1.02]">
+              <h2 className="font-display-bold text-5xl md:text-6xl text-ink dark:text-white tracking-[-0.02em] mt-5 leading-[1.02]">
                 A multi-disciplinary team.
               </h2>
             </div>
             <div className="col-span-12 md:col-span-6 md:col-start-7 self-end">
-              <p className="font-body text-base text-ink/65 leading-relaxed">
+              <p className="font-body text-base text-ink/65 dark:text-slate-400 leading-relaxed">
                 CA Prem Suman is supported by a senior, multi-disciplinary delivery organisation — chartered accountants, cost accountants, technology specialists, and operational audit experts.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-borderline border border-borderline">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-borderline dark:bg-white/10 border border-borderline dark:border-white/10">
             {TEAM_PILLARS.map((p, i) => (
-              <div key={p.title} className="bg-ivory p-10 hover:bg-white transition-colors duration-500">
+              <div key={p.title} className="bg-ivory dark:bg-[#0A2540] p-10 hover:bg-white dark:hover:bg-[#0E2D55] transition-colors duration-500">
                 <span className="font-display text-2xl text-gold">{String(i + 1).padStart(2, "0")}</span>
-                <h3 className="font-heading text-xl text-ink mt-6 leading-snug">{p.title}</h3>
-                <p className="font-body text-sm text-ink/60 mt-3 leading-relaxed">{p.body}</p>
+                <h3 className="font-heading text-xl text-ink dark:text-white mt-6 leading-snug">{p.title}</h3>
+                <p className="font-body text-sm text-ink/60 dark:text-slate-400 mt-3 leading-relaxed">{p.body}</p>
               </div>
             ))}
           </div>
@@ -104,25 +105,25 @@ export default function About() {
       </section>
 
       {/* Offices */}
-      <section className="py-24 md:py-32 bg-white border-y border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/40 border-y border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="flex items-center justify-between gap-8 mb-12">
             <p className="eyebrow">Offices</p>
             <div className="hairline-long flex-1" />
-            <p className="font-body text-sm text-ink/55 uppercase tracking-[0.2em] whitespace-nowrap">Pan-India reach</p>
+            <p className="font-body text-sm text-ink/55 dark:text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Pan-India reach</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {OFFICES.map((o) => (
               <Reveal key={o.city}>
-                <div className="border border-borderline bg-ivory p-8 h-full hover:border-gold hover:bg-white transition-all duration-500 group">
+                <div className="border border-borderline dark:border-white/15 bg-ivory dark:bg-[#06182C] p-8 h-full hover:border-gold hover:bg-white dark:hover:bg-[#0A2540] transition-all duration-500 group">
                   <MapPin className="w-5 h-5 text-gold" strokeWidth={1.5} />
-                  <h3 className="font-heading text-3xl text-ink mt-6 group-hover:text-gold transition-colors duration-500" style={{ fontWeight: 600 }}>
+                  <h3 className="font-heading text-3xl text-ink dark:text-white mt-6 group-hover:text-gold transition-colors duration-500" style={{ fontWeight: 600 }}>
                     {o.city}
                   </h3>
                   {o.role === "Headquarters" ? (
                     <p className="font-body text-[10px] uppercase tracking-[0.25em] text-gold mt-3">Headquarters</p>
                   ) : (
-                    <p className="font-body text-[10px] uppercase tracking-[0.25em] text-ink/45 mt-3">Office</p>
+                    <p className="font-body text-[10px] uppercase tracking-[0.25em] text-ink/45 dark:text-slate-400 mt-3">Office</p>
                   )}
                   <div className="w-6 h-px bg-gold/40 mt-6 group-hover:w-16 transition-all duration-500" />
                 </div>
@@ -133,22 +134,22 @@ export default function About() {
       </section>
 
       {/* Values */}
-      <section className="py-24 md:py-32">
+      <section className="py-24 md:py-32 bg-ivory dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-10 mb-16">
             <div className="col-span-12 md:col-span-5">
               <p className="eyebrow">Our Values</p>
-              <h2 className="font-display-bold text-5xl md:text-6xl text-ink tracking-[-0.02em] mt-5 leading-[1.02]">
+              <h2 className="font-display-bold text-5xl md:text-6xl text-ink dark:text-white tracking-[-0.02em] mt-5 leading-[1.02]">
                 Four principles.<br />Non-negotiable.
               </h2>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {VALUES.map((v, i) => (
-              <div key={v.title} className="border-t border-ink pt-8">
+              <div key={v.title} className="border-t border-ink dark:border-white/25 pt-8">
                 <span className="font-display text-2xl text-gold">{String(i + 1).padStart(2, "0")}</span>
-                <h3 className="font-heading text-2xl text-ink mt-6">{v.title}</h3>
-                <p className="font-body text-sm text-ink/65 mt-3 leading-relaxed">{v.body}</p>
+                <h3 className="font-heading text-2xl text-ink dark:text-white mt-6">{v.title}</h3>
+                <p className="font-body text-sm text-ink/65 dark:text-slate-400 mt-3 leading-relaxed">{v.body}</p>
               </div>
             ))}
           </div>
@@ -178,9 +179,9 @@ export default function About() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 md:py-32 bg-white border-t border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/50 border-t border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px] text-center">
-          <h2 className="font-display-bold text-5xl md:text-7xl text-ink tracking-[-0.025em] leading-[1.02] max-w-4xl mx-auto">
+          <h2 className="font-display-bold text-5xl md:text-7xl text-ink dark:text-white tracking-[-0.025em] leading-[1.02] max-w-4xl mx-auto">
             Work with a senior-led firm.
           </h2>
           <Link to="/contact" data-testid="about-cta" className="btn-primary mt-12 inline-flex">

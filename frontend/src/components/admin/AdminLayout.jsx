@@ -29,6 +29,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { BACKEND_URL } from "../../config";
+import ThemeToggle from "../ThemeToggle";
 
 import {
   PAGE_BG,
@@ -564,36 +565,45 @@ export default function AdminLayout({ children }) {
             <AdminSearch onNavigate={() => {}} />
           </div>
 
-          {/* Right side — firm badge */}
+          {/* Right side — theme toggle & firm badge */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
+              gap: "12px",
               flexShrink: 0,
             }}
           >
+            <ThemeToggle size="sm" />
             <div
               style={{
-                fontSize: "10px",
-                color: TEXT_SECONDARY,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
               }}
             >
-              P Suman &amp; Associates
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: TEXT_SECONDARY,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  fontWeight: "600",
+                }}
+              >
+                P Suman &amp; Associates
+              </div>
+              <div
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: "#22C55E",
+                  boxShadow: "0 0 5px rgba(34,197,94,0.5)",
+                }}
+                title="Portal operational"
+              />
             </div>
-            <div
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "#22C55E",
-                boxShadow: "0 0 5px rgba(34,197,94,0.5)",
-              }}
-              title="Portal operational"
-            />
           </div>
         </header>
 

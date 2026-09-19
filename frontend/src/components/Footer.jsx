@@ -24,7 +24,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-ink text-ivory">
+    <footer className="bg-ink dark:bg-[#030D17] text-ivory border-t border-transparent dark:border-white/10 transition-colors duration-300">
       {/* Newsletter strip */}
       <div className="border-b border-ivory/10">
         <div className="container-px mx-auto max-w-[1440px] py-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">

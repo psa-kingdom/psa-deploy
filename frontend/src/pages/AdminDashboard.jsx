@@ -1,3 +1,12 @@
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 /**
  * AdminDashboard
  *
@@ -21,6 +30,9 @@ import {
   XCircle,
   Ban,
   LayoutGrid,
+  Users,
+  TrendingUp,
+  Calendar,
   RefreshCw,
   Clock,
   MessageSquare,
@@ -354,8 +366,26 @@ export default function AdminDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [visitorDays, setVisitorDays] = useState(30);
+  const [visitorData, setVisitorData] = useState(null);
+  const [visitorLoading, setVisitorLoading] = useState(true);
+
+  const fetchVisitors = useCallback(async (days = visitorDays) => {
+    setVisitorLoading(true);
+    try {
+      const res = await axios.get(`${BACKEND_URL}/api/admin/analytics/visitors?days=${days}`, {
+        withCredentials: true,
+      });
+      setVisitorData(res.data);
+    } catch (err) {
+      console.error("Failed to load visitor analytics:", err);
+    } finally {
+      setVisitorLoading(false);
+    }
+  }, [visitorDays]);
 
   const loadAll = useCallback(async (isRefresh = false) => {
+    fetchVisitors();
     if (isRefresh) setRefreshing(true);
 
     try {
@@ -425,6 +455,13 @@ export default function AdminDashboard() {
       icon: LayoutGrid,
       accent: "#0EA5E9",
       sublabel: "All time",
+    },
+    {
+      label: "Website Visitors",
+      value: visitorData?.unique_visitors ?? null,
+      icon: Users,
+      accent: "#059669",
+      sublabel: `Last ${visitorDays} days (${visitorData?.total_visits ?? 0} views)`,
     },
     {
       label: "Total Enquiries",
@@ -555,6 +592,240 @@ export default function AdminDashboard() {
             loading={statsLoading}
           />
         ))}
+      </div>
+
+      {/* ─── Interactive Visitor Traffic Analytics & Graph ─── */}
+      <div
+        style={{
+          ...CARD_STYLE,
+          padding: "24px",
+          marginBottom: "28px",
+          background: SURFACE,
+          border: `1px solid ${BORDER}`,
+          borderRadius: RADIUS_LG,
+          boxShadow: SHADOW_SM,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "16px",
+            marginBottom: "20px",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: "rgba(5, 150, 105, 0.1)",
+                  border: "1px solid rgba(5, 150, 105, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <TrendingUp size={16} style={{ color: "#059669" }} />
+              </div>
+              <h2 style={{ fontSize: "16px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                Website Visitors & Traffic
+              </h2>
+            </div>
+            <p style={{ fontSize: "13px", color: TEXT_MUTED, margin: 0 }}>
+              Real-time telemetry of unique visitors and total pageviews over the last <strong>{visitorDays} days</strong>.
+            </p>
+          </div>
+
+          {/* Preset Buttons & Custom Slider */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                background: SURFACE_ALT,
+                padding: "3px",
+                borderRadius: RADIUS_MD,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              {[7, 14, 30, 60, 90].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => {
+                    setVisitorDays(d);
+                    fetchVisitors(d);
+                  }}
+                  style={{
+                    border: "none",
+                    background: visitorDays === d ? "#ffffff" : "transparent",
+                    color: visitorDays === d ? "#059669" : TEXT_SECONDARY,
+                    fontWeight: visitorDays === d ? "700" : "500",
+                    fontSize: "12px",
+                    padding: "5px 12px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    boxShadow: visitorDays === d ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {d}D
+                </button>
+              ))}
+            </div>
+
+            {/* Manual range input slider */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: SURFACE_ALT,
+                padding: "5px 12px",
+                borderRadius: RADIUS_MD,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <Calendar size={13} style={{ color: TEXT_MUTED }} />
+              <label style={{ fontSize: "11px", fontWeight: "600", color: TEXT_MUTED, textTransform: "uppercase" }}>
+                Range:
+              </label>
+              <input
+                type="range"
+                min="3"
+                max="90"
+                value={visitorDays}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setVisitorDays(val);
+                }}
+                onMouseUp={() => fetchVisitors(visitorDays)}
+                onTouchEnd={() => fetchVisitors(visitorDays)}
+                style={{ width: "90px", cursor: "pointer", accentColor: "#059669" }}
+              />
+              <span style={{ fontSize: "12px", fontWeight: "700", color: TEXT_PRIMARY, minWidth: "35px" }}>
+                {visitorDays}d
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick summary strip */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "12px",
+            marginBottom: "20px",
+          }}
+        >
+          <div style={{ background: SURFACE_ALT, padding: "12px 16px", borderRadius: RADIUS_MD, border: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "11px", color: TEXT_MUTED, fontWeight: "600", textTransform: "uppercase" }}>
+              Period Visitors
+            </span>
+            <div style={{ fontSize: "22px", fontWeight: "700", color: "#059669", marginTop: "2px" }}>
+              {visitorLoading ? "..." : (visitorData?.unique_visitors?.toLocaleString() ?? 0)}
+            </div>
+          </div>
+
+          <div style={{ background: SURFACE_ALT, padding: "12px 16px", borderRadius: RADIUS_MD, border: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "11px", color: TEXT_MUTED, fontWeight: "600", textTransform: "uppercase" }}>
+              Period Pageviews
+            </span>
+            <div style={{ fontSize: "22px", fontWeight: "700", color: "#0EA5E9", marginTop: "2px" }}>
+              {visitorLoading ? "..." : (visitorData?.total_visits?.toLocaleString() ?? 0)}
+            </div>
+          </div>
+
+          <div style={{ background: SURFACE_ALT, padding: "12px 16px", borderRadius: RADIUS_MD, border: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "11px", color: TEXT_MUTED, fontWeight: "600", textTransform: "uppercase" }}>
+              All-Time Visitors
+            </span>
+            <div style={{ fontSize: "22px", fontWeight: "700", color: TEXT_PRIMARY, marginTop: "2px" }}>
+              {visitorLoading ? "..." : (visitorData?.all_time_unique?.toLocaleString() ?? 0)}
+            </div>
+          </div>
+
+          <div style={{ background: SURFACE_ALT, padding: "12px 16px", borderRadius: RADIUS_MD, border: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "11px", color: TEXT_MUTED, fontWeight: "600", textTransform: "uppercase" }}>
+              All-Time Pageviews
+            </span>
+            <div style={{ fontSize: "22px", fontWeight: "700", color: TEXT_SECONDARY, marginTop: "2px" }}>
+              {visitorLoading ? "..." : (visitorData?.all_time_visits?.toLocaleString() ?? 0)}
+            </div>
+          </div>
+        </div>
+
+        {/* Recharts Area Graph */}
+        <div style={{ width: "100%", height: "280px" }}>
+          {visitorLoading && !visitorData ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: TEXT_MUTED, fontSize: "13px" }}>
+              Loading visitor telemetry...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={visitorData?.daily || []} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="visitorGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="pageviewGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis
+                  dataKey="displayDate"
+                  tickLine={false}
+                  axisLine={{ stroke: "#CBD5E1" }}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                />
+                <RechartsTooltip
+                  contentStyle={{
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  }}
+                  formatter={(value, name) => [value, name === "visitors" ? "Unique Visitors" : "Pageviews"]}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="visitors"
+                  stroke="#059669"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#visitorGradient)"
+                  name="visitors"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="visits"
+                  stroke="#0EA5E9"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  fillOpacity={1}
+                  fill="url(#pageviewGradient)"
+                  name="visits"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* ─── Activity Panels ─── */}

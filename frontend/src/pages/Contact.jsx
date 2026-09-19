@@ -93,9 +93,9 @@ export default function Contact() {
   };
 
   return (
-    <main className="bg-ivory">
+    <main className="bg-ivory dark:bg-[#06182C] transition-colors duration-300">
       {/* HERO / HEADER */}
-      <section className="bg-ink text-ivory relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-24">
+      <section className="bg-ink dark:bg-[#04101D] text-ivory relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-24">
         <div className="absolute inset-0 grain pointer-events-none opacity-30" />
         <div className="relative container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-12 gap-8">
@@ -119,27 +119,27 @@ export default function Contact() {
             
             {/* LEFT COLUMN: START A CONVERSATION */}
             <div className="col-span-12 lg:col-span-7">
-              <div className="bg-white border border-borderline p-8 md:p-12 shadow-[0_4px_24px_rgba(10,37,64,0.03)]">
+              <div className="bg-white dark:bg-[#0A2540] border border-borderline dark:border-white/10 p-8 md:p-12 shadow-[0_4px_24px_rgba(10,37,64,0.03)] transition-colors duration-300">
                 <div className="flex items-center justify-between gap-4 mb-3">
                   <p className="eyebrow">Request a Consultation</p>
-                  <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-body text-ink/50 uppercase tracking-[0.14em]">
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-body text-ink/50 dark:text-slate-400 uppercase tracking-[0.14em]">
                     <Clock className="w-3.5 h-3.5 text-sky" /> 15 Min Partner Call
                   </span>
                 </div>
-                <h2 className="font-display text-3xl md:text-4xl text-ink tracking-tight">
+                <h2 className="font-display text-3xl md:text-4xl text-ink dark:text-white tracking-tight">
                   Tell us about your engagement.
                 </h2>
 
                 {status === "success" ? (
-                  <div className="mt-8 border border-sky/30 bg-sky/5 p-8" data-testid="contact-success">
+                  <div className="mt-8 border border-sky/30 bg-sky/5 dark:bg-sky/10 p-8" data-testid="contact-success">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-5 h-5 text-sky" />
                       <p className="eyebrow">Enquiry Logged</p>
                     </div>
-                    <h3 className="font-display text-2xl md:text-3xl text-ink mt-3">
+                    <h3 className="font-display text-2xl md:text-3xl text-ink dark:text-white mt-3">
                       Thank you — your enquiry has been received.
                     </h3>
-                    <p className="font-body text-base text-ink/75 mt-3 leading-relaxed">
+                    <p className="font-body text-base text-ink/75 dark:text-slate-300 mt-3 leading-relaxed">
                       Our partner team reviews every brief within one business day. If you haven&apos;t scheduled your slot yet, you can pick a time directly on our calendar.
                     </p>
                     
@@ -170,18 +170,18 @@ export default function Contact() {
                     <Field label="Phone" testid="contact-phone" value={form.phone} onChange={onChange("phone")} placeholder="e.g. +91 98765 43210" />
                     
                     <div className="flex flex-col">
-                      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 mb-2 font-medium">
+                      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 dark:text-slate-400 mb-2 font-medium">
                         Service of Interest
                       </label>
                       <select
                         data-testid="contact-service"
                         value={form.service_of_interest}
                         onChange={onChange("service_of_interest")}
-                        className="bg-transparent border-b border-ink/20 py-3 font-body text-base text-ink focus:outline-none focus:border-sky transition-colors duration-300"
+                        className="bg-transparent dark:bg-[#0A2540] border-b border-ink/20 dark:border-white/20 py-3 font-body text-base text-ink dark:text-white focus:outline-none focus:border-sky transition-colors duration-300"
                       >
-                        <option value="">Select practice area…</option>
+                        <option value="" className="bg-white dark:bg-[#0A2540] text-ink dark:text-white">Select practice area…</option>
                         {SERVICES_OPTS.map((s) => (
-                          <option key={s} value={s}>
+                          <option key={s} value={s} className="bg-white dark:bg-[#0A2540] text-ink dark:text-white">
                             {s}
                           </option>
                         ))}
@@ -189,7 +189,7 @@ export default function Contact() {
                     </div>
 
                     <div className="md:col-span-2 flex flex-col">
-                      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 mb-2 font-medium">
+                      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 dark:text-slate-400 mb-2 font-medium">
                         Message / Brief *
                       </label>
                       <textarea
@@ -199,12 +199,12 @@ export default function Contact() {
                         onChange={onChange("message")}
                         data-testid="contact-message"
                         placeholder="Please describe your audit scope, key timelines, or risk advisory objectives…"
-                        className="bg-transparent border-b border-ink/20 py-3 font-body text-base text-ink focus:outline-none focus:border-sky transition-colors duration-300 resize-none"
+                        className="bg-transparent border-b border-ink/20 dark:border-white/20 py-3 font-body text-base text-ink dark:text-white placeholder:text-ink/30 dark:placeholder:text-slate-500 focus:outline-none focus:border-sky transition-colors duration-300 resize-none"
                       />
                     </div>
 
-                    <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-borderline/60">
-                      <p className="font-body text-xs text-ink/55">
+                    <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-borderline/60 dark:border-white/10">
+                      <p className="font-body text-xs text-ink/55 dark:text-slate-400">
                         Direct Partner Review · Response within 1 business day
                       </p>
                       <button
@@ -225,7 +225,7 @@ export default function Contact() {
                     </div>
 
                     {error && (
-                      <p data-testid="contact-error" className="md:col-span-2 font-body text-sm text-red-600 bg-red-50 p-3 border border-red-200">
+                      <p data-testid="contact-error" className="md:col-span-2 font-body text-sm text-red-600 bg-red-50 dark:bg-red-950/30 p-3 border border-red-200 dark:border-red-900/50">
                         {error}
                       </p>
                     )}
@@ -239,7 +239,7 @@ export default function Contact() {
                   type="button"
                   onClick={() => setIsBookingModalOpen(true)}
                   data-testid="contact-schedule-call"
-                  className="inline-flex items-center gap-2 font-body text-sm text-ink hover:text-sky transition-colors duration-300 font-medium text-left"
+                  className="inline-flex items-center gap-2 font-body text-sm text-ink dark:text-slate-300 hover:text-sky transition-colors duration-300 font-medium text-left"
                 >
                   <span>Prefer to pick a time slot immediately?</span>
                   <span className="text-sky underline underline-offset-4 inline-flex items-center gap-1 font-semibold">
@@ -348,7 +348,7 @@ export default function Contact() {
               <div>
                 <div className="flex items-center justify-between mb-4 px-1">
                   <p className="eyebrow">Practice Locations</p>
-                  <span className="font-body text-xs text-ink/50 uppercase tracking-[0.14em]">
+                  <span className="font-body text-xs text-ink/50 dark:text-slate-400 uppercase tracking-[0.14em]">
                     Pan-India Presence
                   </span>
                 </div>
@@ -359,13 +359,13 @@ export default function Contact() {
                     return (
                       <div
                         key={o.city}
-                        className={`bg-white border p-6 flex flex-col justify-between min-h-[148px] transition-all duration-300 hover:border-sky hover:shadow-[0_4px_16px_rgba(14,165,233,0.06)] group relative ${
-                          isHq ? "border-sky/40 bg-gradient-to-br from-white to-sky/[0.02]" : "border-borderline"
+                        className={`bg-white dark:bg-[#0A2540] border p-6 flex flex-col justify-between min-h-[148px] transition-all duration-300 hover:border-sky hover:shadow-[0_4px_16px_rgba(14,165,233,0.06)] group relative ${
+                          isHq ? "border-sky/40 dark:border-sky/40 bg-gradient-to-br from-white to-sky/[0.02] dark:from-[#0A2540] dark:to-sky/[0.05]" : "border-borderline dark:border-white/10"
                         }`}
                       >
                         {/* Top Area */}
                         <div className="flex items-center justify-between">
-                          <div className="w-8 h-8 rounded-none bg-ink/5 flex items-center justify-center text-sky group-hover:bg-sky group-hover:text-white transition-colors duration-300">
+                          <div className="w-8 h-8 rounded-none bg-ink/5 dark:bg-white/5 flex items-center justify-center text-sky group-hover:bg-sky group-hover:text-white transition-colors duration-300">
                             {isHq ? (
                               <Building2 className="w-4 h-4" strokeWidth={1.5} />
                             ) : (
@@ -380,11 +380,11 @@ export default function Contact() {
                         </div>
 
                         {/* Lower / Center Area */}
-                        <div className="mt-6 pt-3 border-t border-borderline/60">
-                          <h4 className="font-heading text-2xl text-ink group-hover:text-navy transition-colors font-semibold tracking-tight">
+                        <div className="mt-6 pt-3 border-t border-borderline/60 dark:border-white/10">
+                          <h4 className="font-heading text-2xl text-ink dark:text-white group-hover:text-navy dark:group-hover:text-sky transition-colors font-semibold tracking-tight">
                             {o.city}
                           </h4>
-                          <p className="font-body text-[11px] uppercase tracking-[0.18em] text-ink/45 mt-0.5 font-medium">
+                          <p className="font-body text-[11px] uppercase tracking-[0.18em] text-ink/45 dark:text-slate-400 mt-0.5 font-medium">
                             {isHq ? "Headquarters · West Bengal" : "Practice Location"}
                           </p>
                         </div>
@@ -405,16 +405,16 @@ export default function Contact() {
           role="dialog"
           aria-modal="true"
           aria-label="Booking Scheduler"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-ink/80 backdrop-blur-sm animate-fade-up"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-ink/80 dark:bg-black/80 backdrop-blur-sm animate-fade-up"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsBookingModalOpen(false);
             }
           }}
         >
-          <div className="bg-white w-full max-w-4xl h-[90vh] max-h-[720px] rounded-none border border-borderline shadow-2xl flex flex-col overflow-hidden relative">
+          <div className="bg-white dark:bg-[#0A2540] w-full max-w-4xl h-[90vh] max-h-[720px] rounded-none border border-borderline dark:border-white/10 shadow-2xl flex flex-col overflow-hidden relative">
             {/* Modal Header */}
-            <div className="bg-ink text-ivory px-6 py-4 flex items-center justify-between border-b border-white/10">
+            <div className="bg-ink dark:bg-[#04101D] text-ivory px-6 py-4 flex items-center justify-between border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 bg-sky rounded-full animate-pulse" />
                 <div>
@@ -437,7 +437,7 @@ export default function Contact() {
             </div>
 
             {/* Modal Body / Iframe */}
-            <div className="flex-1 bg-white relative">
+            <div className="flex-1 bg-white dark:bg-[#0A2540] relative">
               <iframe
                 src={CAL_BOOKING_URL}
                 title="Schedule a consultation with P Suman & Associates"
@@ -447,7 +447,7 @@ export default function Contact() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-offwhite px-6 py-3 border-t border-borderline flex items-center justify-between text-xs font-body text-ink/60">
+            <div className="bg-offwhite dark:bg-[#06182C] px-6 py-3 border-t border-borderline dark:border-white/10 flex items-center justify-between text-xs font-body text-ink/60 dark:text-slate-400">
               <span>Press Escape or click outside to close</span>
               <a
                 href={CAL_BOOKING_URL}
@@ -468,7 +468,7 @@ export default function Contact() {
 function Field({ label, type = "text", testid, value, onChange, required, placeholder }) {
   return (
     <div className="flex flex-col">
-      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 mb-2 font-medium">
+      <label className="font-body text-[11px] uppercase tracking-[0.2em] text-ink/55 dark:text-slate-400 mb-2 font-medium">
         {label}
       </label>
       <input
@@ -478,7 +478,7 @@ function Field({ label, type = "text", testid, value, onChange, required, placeh
         onChange={onChange}
         data-testid={testid}
         placeholder={placeholder}
-        className="bg-transparent border-b border-ink/20 py-3 font-body text-base text-ink placeholder:text-ink/30 focus:outline-none focus:border-sky transition-colors duration-300"
+        className="bg-transparent border-b border-ink/20 dark:border-white/20 py-3 font-body text-base text-ink dark:text-white placeholder:text-ink/30 dark:placeholder:text-slate-500 focus:outline-none focus:border-sky transition-colors duration-300"
       />
     </div>
   );

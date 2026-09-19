@@ -4,12 +4,13 @@ import React, { useEffect, useRef, useState } from "react";
  * Animated counter — counts up to `value` when scrolled into view.
  * Optional prefix/suffix. Supports both ints and decimals.
  */
-export default function StatCounter({ value, prefix = "", suffix = "", duration = 1800, className = "", testid }) {
+export default function StatCounter({ value, text, prefix = "", suffix = "", duration = 1800, className = "", testid }) {
   const [display, setDisplay] = useState(0);
   const elRef = useRef(null);
   const startedRef = useRef(false);
 
   useEffect(() => {
+    if (text !== undefined) return;
     const el = elRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(([entry]) => {
@@ -28,7 +29,15 @@ export default function StatCounter({ value, prefix = "", suffix = "", duration 
     }, { threshold: 0.4 });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [value, duration]);
+  }, [value, duration, text]);
+
+  if (text !== undefined) {
+    return (
+      <span ref={elRef} data-testid={testid} className={className}>
+        {prefix}{text}{suffix}
+      </span>
+    );
+  }
 
   return (
     <span ref={elRef} data-testid={testid} className={className}>

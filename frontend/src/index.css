@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 0 0% 100%;
     --foreground: 212 60% 14%;
     --card: 0 0% 100%;
@@ -26,6 +27,85 @@
     --input: 214 32% 91%;
     --ring: 199 89% 48%;
     --radius: 0.125rem;
+
+    /* Admin tokens (Light) */
+    --admin-page-bg: #F0F4F8;
+    --admin-surface: #FFFFFF;
+    --admin-surface-alt: #F8FAFC;
+    --admin-surface-hover: #EFF6FF;
+    --admin-surface-selected: #E0F2FE;
+    --admin-topbar-bg: #FFFFFF;
+    --admin-topbar-border: #DDE3EC;
+    --admin-border: #DDE3EC;
+    --admin-border-strong: #B8C4D0;
+    --admin-text-primary: #0A2540;
+    --admin-text-secondary: #3D5A78;
+    --admin-text-muted: #6B8099;
+    --admin-text-disabled: #A3B3C1;
+    --admin-sidebar-bg: #0F1C2E;
+    --admin-sidebar-active-bg: #1A3350;
+    --admin-sidebar-divider: rgba(255, 255, 255, 0.07);
+    --admin-accent-bg: rgba(14, 165, 233, 0.08);
+    --admin-success-bg: rgba(22, 163, 74, 0.08);
+    --admin-success-border: #BBF7D0;
+    --admin-warning-bg: rgba(217, 119, 6, 0.08);
+    --admin-warning-border: #FDE68A;
+    --admin-danger-bg: rgba(220, 38, 38, 0.08);
+    --admin-danger-border: #FECACA;
+    --admin-shadow-sm: 0 1px 3px rgba(10, 37, 64, 0.06), 0 1px 2px rgba(10, 37, 64, 0.04);
+    --admin-shadow-md: 0 4px 12px rgba(10, 37, 64, 0.08), 0 2px 4px rgba(10, 37, 64, 0.04);
+    --admin-shadow-panel: -8px 0 32px rgba(10, 37, 64, 0.12);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 216 75% 10%;
+    --foreground: 210 40% 98%;
+    --card: 214 62% 16%;
+    --card-foreground: 210 40% 98%;
+    --popover: 216 75% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 62% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 214 62% 16%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 50% 20%;
+    --input: 214 50% 20%;
+    --ring: 199 89% 48%;
+
+    /* Admin tokens (Dark - Executive Navy & Deep Slate) */
+    --admin-page-bg: #06182C;
+    --admin-surface: #0A2540;
+    --admin-surface-alt: #0E2D55;
+    --admin-surface-hover: #133966;
+    --admin-surface-selected: #17487F;
+    --admin-topbar-bg: #081B30;
+    --admin-topbar-border: rgba(255, 255, 255, 0.1);
+    --admin-border: rgba(255, 255, 255, 0.1);
+    --admin-border-strong: rgba(255, 255, 255, 0.2);
+    --admin-text-primary: #F8FAFC;
+    --admin-text-secondary: #CBD5E1;
+    --admin-text-muted: #94A3B8;
+    --admin-text-disabled: #64748B;
+    --admin-sidebar-bg: #040E1B;
+    --admin-sidebar-active-bg: #0A2540;
+    --admin-sidebar-divider: rgba(255, 255, 255, 0.08);
+    --admin-accent-bg: rgba(14, 165, 233, 0.15);
+    --admin-success-bg: rgba(22, 163, 74, 0.15);
+    --admin-success-border: rgba(34, 197, 94, 0.3);
+    --admin-warning-bg: rgba(217, 119, 6, 0.15);
+    --admin-warning-border: rgba(245, 158, 11, 0.3);
+    --admin-danger-bg: rgba(220, 38, 38, 0.15);
+    --admin-danger-border: rgba(239, 68, 68, 0.3);
+    --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --admin-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --admin-shadow-panel: -8px 0 32px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -33,7 +113,7 @@
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
   body {
-    @apply bg-white text-ink antialiased;
+    @apply bg-white text-ink dark:bg-[#06182C] dark:text-slate-100 antialiased transition-colors duration-300;
     font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -66,14 +146,14 @@
     @apply inline-flex items-center justify-center gap-2 bg-sky text-white px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.18em] transition-all duration-500 hover:bg-sky-dark border border-sky hover:border-sky-dark;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-transparent text-ink px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.18em] border border-ink/30 transition-all duration-500 hover:border-sky hover:text-sky;
+    @apply inline-flex items-center justify-center gap-2 bg-transparent text-ink dark:text-white px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.18em] border border-ink/30 dark:border-white/30 transition-all duration-500 hover:border-sky hover:text-sky;
   }
   .btn-ghost-dark {
     @apply inline-flex items-center justify-center gap-2 bg-transparent text-white px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.18em] border border-white/40 transition-all duration-500 hover:border-sky hover:text-sky hover:bg-white/5;
   }
 
   .hairline { @apply h-px w-12 bg-sky; }
-  .hairline-long { @apply h-px w-full bg-borderline; }
+  .hairline-long { @apply h-px w-full bg-borderline dark:bg-white/10; }
 
   .link-underline {
     @apply relative inline-block after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-sky after:transition-all after:duration-500 hover:after:w-full;
@@ -102,18 +182,18 @@
   .marquee-track { width: max-content; display: flex; gap: 4rem; }
 
   .article-prose {
-    @apply font-body text-[17px] leading-[1.85] text-ink/85;
+    @apply font-body text-[17px] leading-[1.85] text-ink/85 dark:text-slate-300;
   }
   .article-prose h2 {
-    @apply font-heading text-3xl md:text-4xl text-ink mt-16 mb-6 tracking-tight scroll-mt-28;
+    @apply font-heading text-3xl md:text-4xl text-ink dark:text-white mt-16 mb-6 tracking-tight scroll-mt-28;
   }
   .article-prose h3 {
-    @apply font-heading text-2xl text-ink mt-12 mb-4 scroll-mt-28;
+    @apply font-heading text-2xl text-ink dark:text-white mt-12 mb-4 scroll-mt-28;
   }
   .article-prose p { @apply mb-6; }
   .article-prose ul { @apply mb-6 ml-6 list-disc space-y-2; }
   .article-prose blockquote {
-    @apply border-l-2 border-gold pl-6 my-10 font-display italic text-2xl md:text-3xl text-ink/90 leading-snug;
+    @apply border-l-2 border-gold pl-6 my-10 font-display italic text-2xl md:text-3xl text-ink/90 dark:text-slate-100 leading-snug;
   }
   .article-prose a { @apply text-gold underline decoration-gold/40 underline-offset-4 hover:decoration-gold; }
 

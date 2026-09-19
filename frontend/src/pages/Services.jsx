@@ -6,7 +6,7 @@ import { SERVICES } from "../data/site";
 
 export default function Services() {
   return (
-    <main className="bg-ivory">
+    <main className="bg-ivory dark:bg-[#06182C] transition-colors duration-300">
       {/* HERO — dark anchor */}
       <section className="bg-ink text-ivory relative overflow-hidden pt-40 pb-24 md:pb-32">
         <div className="absolute inset-0 grain pointer-events-none opacity-40" />
@@ -30,7 +30,11 @@ export default function Services() {
         <section
           key={s.slug}
           id={s.slug}
-          className={`py-24 md:py-32 scroll-mt-24 ${idx % 2 === 0 ? "bg-white border-y border-borderline" : "bg-ivory"}`}
+          className={`py-24 md:py-32 scroll-mt-24 transition-colors duration-300 ${
+            idx % 2 === 0
+              ? "bg-white dark:bg-[#0A2540]/40 border-y border-borderline dark:border-white/10"
+              : "bg-ivory dark:bg-[#06182C]"
+          }`}
         >
           <div className="container-px mx-auto max-w-[1440px]">
             <div className="grid grid-cols-12 gap-10">
@@ -40,21 +44,21 @@ export default function Services() {
                     <span className="font-display text-3xl text-gold">{s.no}</span>
                     {s.flagship && <span className="font-body text-[10px] uppercase tracking-[0.25em] text-gold border border-gold/40 px-2.5 py-1">Flagship Practice</span>}
                   </div>
-                  <h2 className="font-display-bold text-5xl md:text-6xl text-ink tracking-[-0.02em] mt-6 leading-[1.02]">
+                  <h2 className="font-display-bold text-5xl md:text-6xl text-ink dark:text-white tracking-[-0.02em] mt-6 leading-[1.02]">
                     {s.title}
                   </h2>
-                  <p className="font-body text-base text-ink/65 mt-6 leading-relaxed">{s.short}</p>
+                  <p className="font-body text-base text-ink/65 dark:text-slate-400 mt-6 leading-relaxed">{s.short}</p>
                 </div>
               </div>
 
               <Reveal className="col-span-12 lg:col-span-7 lg:col-start-7">
-                <p className="font-body text-lg text-ink/80 leading-[1.85]">{s.description}</p>
+                <p className="font-body text-lg text-ink/80 dark:text-slate-200 leading-[1.85]">{s.description}</p>
 
                 <div className="mt-10">
                   <p className="eyebrow mb-5">Capabilities</p>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                     {s.capabilities.map((c) => (
-                      <li key={c} className="flex items-start gap-3 font-body text-base text-ink/80">
+                      <li key={c} className="flex items-start gap-3 font-body text-base text-ink/80 dark:text-slate-300">
                         <Check className="w-4 h-4 text-gold mt-1.5 flex-shrink-0" strokeWidth={2} />
                         <span>{c}</span>
                       </li>
@@ -62,10 +66,10 @@ export default function Services() {
                   </ul>
                 </div>
 
-                <div className="mt-12 border-t border-borderline pt-10">
+                <div className="mt-12 border-t border-borderline dark:border-white/10 pt-10">
                   <p className="eyebrow mb-3">Track Record</p>
-                  <p className="font-display text-5xl md:text-6xl text-ink tracking-tight">{s.stat.value}</p>
-                  <p className="font-body text-sm text-ink/60 mt-2">{s.stat.label}</p>
+                  <p className="font-display text-5xl md:text-6xl text-ink dark:text-white tracking-tight">{s.stat.value}</p>
+                  <p className="font-body text-sm text-ink/60 dark:text-slate-400 mt-2">{s.stat.label}</p>
                 </div>
 
                 <Link to="/contact" data-testid={`service-cta-${s.slug}`} className="btn-primary mt-12 inline-flex">
@@ -78,13 +82,13 @@ export default function Services() {
       ))}
 
       {/* Bottom CTA */}
-      <section className="py-24 md:py-32 bg-white border-t border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/50 border-t border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px] text-center">
           <p className="eyebrow">Engagement</p>
-          <h2 className="font-display-bold text-5xl md:text-7xl text-ink tracking-[-0.025em] mt-6 leading-[1.02] max-w-4xl mx-auto">
+          <h2 className="font-display-bold text-5xl md:text-7xl text-ink dark:text-white tracking-[-0.025em] mt-6 leading-[1.02] max-w-4xl mx-auto">
             Senior-led from the<br /><span className="italic text-sky">first conversation.</span>
           </h2>
-          <p className="font-body text-lg text-ink/75 mt-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="font-body text-lg text-ink/75 dark:text-slate-300 mt-8 max-w-2xl mx-auto leading-relaxed">
             Every mandate is personally overseen by the founding partner.
           </p>
           <Link to="/contact" data-testid="services-bottom-cta" className="btn-primary mt-12 inline-flex">

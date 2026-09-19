@@ -80,7 +80,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeSubTab === "campaigns"
                 ? "bg-sky-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white"
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -92,7 +92,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeSubTab === "attempts"
                 ? "bg-sky-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white"
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -107,7 +107,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
             fetchStats();
             if (onRefreshCampaigns) onRefreshCampaigns();
           }}
-          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-500 dark:text-slate-300 bg-white dark:bg-[#0A2540] border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
           title="Refresh audit data"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-500" : ""}`} />
@@ -118,25 +118,25 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
       {/* Stats Header Bar */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Attempts</span>
-            <span className="text-xl font-bold text-slate-800 block mt-1">{stats.total_attempts}</span>
+          <div className="bg-white dark:bg-[#0A2540] p-3.5 rounded-lg border border-slate-200 dark:border-white/10 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Attempts</span>
+            <span className="text-xl font-bold text-slate-800 dark:text-white block mt-1">{stats.total_attempts}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sent to Provider</span>
-            <span className="text-xl font-bold text-emerald-600 block mt-1">{stats.sent_count}</span>
+          <div className="bg-white dark:bg-[#0A2540] p-3.5 rounded-lg border border-slate-200 dark:border-white/10 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sent to Provider</span>
+            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 block mt-1">{stats.sent_count}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Blocked (Test Mode)</span>
-            <span className="text-xl font-bold text-amber-600 block mt-1">{stats.skipped_count}</span>
+          <div className="bg-white dark:bg-[#0A2540] p-3.5 rounded-lg border border-slate-200 dark:border-white/10 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Blocked (Test Mode)</span>
+            <span className="text-xl font-bold text-amber-600 dark:text-amber-400 block mt-1">{stats.skipped_count}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Failed</span>
-            <span className="text-xl font-bold text-rose-600 block mt-1">{stats.failed_count}</span>
+          <div className="bg-white dark:bg-[#0A2540] p-3.5 rounded-lg border border-slate-200 dark:border-white/10 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Failed</span>
+            <span className="text-xl font-bold text-rose-600 dark:text-rose-400 block mt-1">{stats.failed_count}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Campaigns</span>
-            <span className="text-xl font-bold text-sky-600 block mt-1">{campaigns.length || stats.total_campaigns}</span>
+          <div className="bg-white dark:bg-[#0A2540] p-3.5 rounded-lg border border-slate-200 dark:border-white/10 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Campaigns</span>
+            <span className="text-xl font-bold text-sky-600 dark:text-sky-400 block mt-1">{campaigns.length || stats.total_campaigns}</span>
           </div>
         </div>
       )}
@@ -144,15 +144,15 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
       {/* SUBTAB 1: CAMPAIGN HISTORY GROUPED VIEW */}
       {activeSubTab === "campaigns" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
             <span>Historical record of created and dispatched campaigns</span>
-            <span className="text-[11px] text-slate-400 font-mono">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
               Note: Application dispatch status is recorded. Webhook delivery confirmation is tracked when received.
             </span>
           </div>
 
           {campaigns.length === 0 ? (
-            <div className="bg-slate-50 rounded-lg p-8 border border-slate-200 text-center text-slate-400 text-xs">
+            <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-8 border border-slate-200 dark:border-white/10 text-center text-slate-400 dark:text-slate-500 text-xs">
               No historical campaigns recorded yet.
             </div>
           ) : (
@@ -172,23 +172,23 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                 return (
                   <div
                     key={c.campaign_id}
-                    className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-slate-300 transition-all shadow-sm"
+                    className="bg-white dark:bg-[#0A2540] rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden hover:border-slate-300 dark:hover:border-white/20 transition-all shadow-sm"
                   >
                     <div
                       onClick={() => toggleExpand(c.campaign_id)}
-                      className="p-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-50"
+                      className="p-4 flex items-center justify-between cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-white/5"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2.5">
-                          <span className="font-bold text-sm text-slate-800">{c.title}</span>
+                          <span className="font-bold text-sm text-slate-800 dark:text-white">{c.title}</span>
                           <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusBadge}`}>
                             {c.status}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500 flex items-center gap-4">
-                          <span>Subject: <strong className="text-slate-700 font-normal">{c.subject}</strong></span>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-4">
+                          <span>Subject: <strong className="text-slate-700 dark:text-slate-200 font-normal">{c.subject}</strong></span>
                           <span>•</span>
-                          <span>Recipients: <strong className="text-slate-700">{c.frozen_recipient_count || 0}</strong></span>
+                          <span>Recipients: <strong className="text-slate-700 dark:text-slate-200">{c.frozen_recipient_count || 0}</strong></span>
                           <span>•</span>
                           <span>Created: {new Date(c.created_at).toLocaleDateString()}</span>
                         </div>
@@ -196,8 +196,8 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
 
                       <div className="flex items-center gap-3">
                         <div className="text-right text-xs">
-                          <span className="text-slate-500 block text-[11px]">Dispatched</span>
-                          <span className="font-mono font-bold text-slate-700">
+                          <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Dispatched</span>
+                          <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
                             {c.dispatched_count || 0} / {c.frozen_recipient_count || 0}
                           </span>
                         </div>
@@ -211,22 +211,22 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
 
                     {/* Expandable Details Panel */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                      <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-[#06182C]/60 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-500 block">Sender Address</span>
-                          <span className="text-slate-700 font-mono mt-0.5 block">{c.sender_email || "—"}</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Sender Address</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-mono mt-0.5 block">{c.sender_email || "—"}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-500 block">Reply-To</span>
-                          <span className="text-slate-700 font-mono mt-0.5 block">{c.reply_to || "—"}</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Reply-To</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-mono mt-0.5 block">{c.reply_to || "—"}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-500 block">Target Audience Source</span>
-                          <span className="text-slate-700 mt-0.5 block">{c.target_filter?.source || "manual"}</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Target Audience Source</span>
+                          <span className="text-slate-700 dark:text-slate-200 mt-0.5 block">{c.target_filter?.source || "manual"}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-500 block">Completed Timestamp</span>
-                          <span className="text-slate-700 mt-0.5 block">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Completed Timestamp</span>
+                          <span className="text-slate-700 dark:text-slate-200 mt-0.5 block">
                             {c.completed_at ? new Date(c.completed_at).toLocaleString() : "—"}
                           </span>
                         </div>
@@ -244,7 +244,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
       {activeSubTab === "attempts" && (
         <div className="space-y-4">
           {/* Filter and Search Bar */}
-          <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white dark:bg-[#0A2540] p-4 rounded-lg border border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-4">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
               <div className="relative w-full">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -253,12 +253,12 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                   value={recipientSearch}
                   onChange={(e) => setRecipientSearch(e.target.value)}
                   placeholder="Search recipient email..."
-                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-white border border-slate-200 text-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-white dark:bg-[#06182C] border border-slate-200 dark:border-white/15 text-slate-700 dark:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-sky-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
               <button
                 type="submit"
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 rounded-md hover:bg-slate-200"
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-md hover:bg-slate-200 dark:hover:bg-white/20"
               >
                 Search
               </button>
@@ -268,7 +268,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="text-xs bg-white border border-slate-200 rounded-md px-3 py-1.5 text-slate-600 focus:outline-none"
+                className="text-xs bg-white dark:bg-[#06182C] border border-slate-200 dark:border-white/15 rounded-md px-3 py-1.5 text-slate-600 dark:text-slate-200 focus:outline-none"
               >
                 <option value="">All Types</option>
                 <option value="campaign">Campaigns</option>
@@ -277,7 +277,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-xs bg-white border border-slate-200 rounded-md px-3 py-1.5 text-slate-600 focus:outline-none"
+                className="text-xs bg-white dark:bg-[#06182C] border border-slate-200 dark:border-white/15 rounded-md px-3 py-1.5 text-slate-600 dark:text-slate-200 focus:outline-none"
               >
                 <option value="">All Statuses</option>
                 <option value="sent">Sent</option>
@@ -288,10 +288,10 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-[#0A2540] rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Type</th>
                   <th className="py-3 px-4">Recipient</th>
@@ -301,10 +301,10 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                   <th className="py-3 px-4">Timestamp (UTC)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-mono text-slate-600">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-mono text-slate-600 dark:text-slate-300">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-slate-400 font-sans">
+                    <td colSpan={7} className="text-center py-8 text-slate-400 dark:text-slate-500 font-sans">
                       {loading ? "Loading audit logs..." : "No email dispatch records found."}
                     </td>
                   </tr>
@@ -337,7 +337,7 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                     }
 
                     return (
-                      <tr key={log.attempt_id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={log.attempt_id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-semibold border ${badgeClass}`}>
                             <Icon className="w-3 h-3" />
@@ -349,13 +349,13 @@ export default function DeliveryLogsTable({ backendUrl, campaigns = [], onRefres
                             {typeLabel}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-sans font-medium text-slate-700">{log.recipient_email}</td>
-                        <td className="py-3 px-4 uppercase text-[10px] text-slate-500">{log.provider}</td>
-                        <td className="py-3 px-4 text-slate-400 truncate max-w-[140px]" title={log.resend_id}>
+                        <td className="py-3 px-4 font-sans font-medium text-slate-700 dark:text-slate-200">{log.recipient_email}</td>
+                        <td className="py-3 px-4 uppercase text-[10px] text-slate-500 dark:text-slate-400">{log.provider}</td>
+                        <td className="py-3 px-4 text-slate-400 dark:text-slate-500 truncate max-w-[140px]" title={log.resend_id}>
                           {log.resend_id || "—"}
                         </td>
-                        <td className="py-3 px-4 text-slate-500">{log.response_time_ms}ms</td>
-                        <td className="py-3 px-4 text-slate-500 text-[11px]">
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{log.response_time_ms}ms</td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
                           {new Date(log.created_at).toLocaleString()}
                         </td>
                       </tr>

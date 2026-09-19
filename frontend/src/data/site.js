@@ -19,19 +19,19 @@ export const OFFICES = [
 ];
 
 export const STATS = [
-  { value: 200, suffix: "+", label: "Clients Served" },
-  { value: 15, suffix: "+", label: "States Covered" },
-  { value: 100, prefix: "₹", suffix: "Cr+", label: "Inventory Audited" },
-  { value: 15, suffix: "+", label: "Years of Practice" },
+  { value: 500, suffix: "+", label: "Clients Served" },
+  { text: "PAN India", label: "Presence" },
+  { value: 950, prefix: "₹", suffix: "Cr+", label: "Inventory Audited" },
+  { value: 20, suffix: "+", label: "Years of Practice" },
 ];
 
 export const STATS_EXTENDED = [
-  { value: 200, suffix: "+", label: "Clients" },
-  { value: 15, suffix: "+", label: "States" },
+  { value: 500, suffix: "+", label: "Clients" },
+  { text: "PAN India", label: "Presence" },
   { value: 75, suffix: "+", label: "Cities" },
   { value: 150, suffix: "+", label: "Dealerships Audited" },
-  { value: 100, prefix: "₹", suffix: "Cr+", label: "Inventory Value Audited" },
-  { value: 15, suffix: "+", label: "Years of Practice" },
+  { value: 950, prefix: "₹", suffix: "Cr+", label: "Inventory Value Audited" },
+  { value: 20, suffix: "+", label: "Years of Practice" },
   { value: 7, suffix: "+", label: "OEM Partnerships" },
 ];
 
@@ -60,7 +60,7 @@ export const SERVICES = [
     short: "India's most rigorous inventory audit practice — barcode-enabled, DMS-integrated, board-grade.",
     flagship: true,
     description:
-      "The flagship of the firm. Physical stock verification, variance analysis, dead stock identification, dealership compliance audits, and inventory policy design — delivered through barcode systems and DMS integration. PSA has audited ₹100Cr+ of inventory across 150+ dealerships and 7+ OEM partners.",
+      "The flagship of the firm. Physical stock verification, variance analysis, dead stock identification, dealership compliance audits, and inventory policy design — delivered through barcode systems and DMS integration. PSA has audited ₹950Cr+ of inventory across 150+ dealerships and 7+ OEM partners.",
     capabilities: [
       "Physical stock verification",
       "Variance analysis & reconciliation",
@@ -70,7 +70,7 @@ export const SERVICES = [
       "Dealership compliance audits",
       "Inventory policy design",
     ],
-    stat: { value: "₹100Cr+", label: "Inventory Audited · 150+ Dealerships · 7+ OEM Partners" },
+    stat: { value: "₹950Cr+", label: "Inventory Audited · 150+ Dealerships · 7+ OEM Partners" },
   },
   {
     slug: "risk-advisory",
@@ -136,7 +136,7 @@ export const DIFFERENTIATORS = [
   { no: "02", title: "AI & Technology-Enabled Delivery", body: "Barcode systems, DMS integration, real-time analytics dashboards, and data-driven audit methodologies embedded into every engagement." },
   { no: "03", title: "Pan-India Presence", body: "15+ states · 75+ cities · 4 offices — Kolkata, Delhi, Siliguri, Patna." },
   { no: "04", title: "Sector-Specific Intelligence", body: "12 industries served, with deepest exposure in automotive, FMCG, hospitality, manufacturing, and retail." },
-  { no: "05", title: "₹100Cr+ Inventory Audited", body: "India's most rigorous inventory audit practice — 150+ dealerships, 7+ OEM partnerships." },
+  { no: "05", title: "₹950Cr+ Inventory Audited", body: "India's most rigorous inventory audit practice — 150+ dealerships, 7+ OEM partnerships." },
   { no: "06", title: "Long-Term Partnerships", body: "7+ year average client relationship — built on independence, integrity, and senior-led delivery." },
 ];
 
@@ -155,7 +155,7 @@ export const MILESTONES = [
   { year: "2018", label: "Technology systems deployment — barcode & DMS integration" },
   { year: "2020", label: "100+ dealerships audit milestone" },
   { year: "2022", label: "15-state pan-India presence established" },
-  { year: "2024", label: "200+ clients · ₹100Cr+ inventory audited milestone" },
+  { year: "2024", label: "500+ clients · ₹950Cr+ inventory audited milestone" },
 ];
 
 export const VALUES = [

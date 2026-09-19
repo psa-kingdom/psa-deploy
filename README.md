@@ -1,5 +1,6 @@
 # P Suman & Associates — Marketing Website
 
+
 A premium, McKinsey/KPMG-tier marketing website for **P Suman & Associates** (Chartered Accountancy · Audit · Risk · Advisory).
 
 **Stack:** React 19 (CRA + Tailwind) · FastAPI · MongoDB · Motor (async)
@@ -10,6 +11,10 @@ A premium, McKinsey/KPMG-tier marketing website for **P Suman & Associates** (Ch
 
 ```
 psa-website/
+├── docs/                  # Architecture & System Documentation
+│   ├── APPLICATION_OVERVIEW.md  # Full technical & non-technical overview
+│   ├── ARCHITECTURE.md    # High-level architecture specification
+│   └── PROJECT_STATE.md   # Current active engineering state
 ├── frontend/              # React app (deploys to Vercel)
 │   ├── src/
 │   ├── public/

@@ -6,7 +6,7 @@ import { INDUSTRIES } from "../data/site";
 
 export default function Industries() {
   return (
-    <main className="bg-ivory">
+    <main className="bg-ivory dark:bg-[#06182C] transition-colors duration-300">
       <section className="bg-ink text-ivory relative overflow-hidden pt-40 pb-24 md:pb-32">
         <div className="absolute inset-0 grain pointer-events-none opacity-40" />
         <div className="relative container-px mx-auto max-w-[1440px]">
@@ -24,21 +24,21 @@ export default function Industries() {
         </div>
       </section>
 
-      <section className="pb-24 md:pb-32">
+      <section className="py-24 md:py-32 bg-ivory dark:bg-[#06182C] transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-14">
             {INDUSTRIES.map((ind, i) => (
               <Reveal key={ind.slug} delay={(i % 3) * 80}>
                 <article id={ind.slug} className="group scroll-mt-32">
-                  <div className="overflow-hidden aspect-[4/5] mb-6">
+                  <div className="overflow-hidden aspect-[4/5] mb-6 bg-slate-100 dark:bg-slate-800">
                     <img src={ind.img} alt={ind.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
                   </div>
                   <div className="flex items-baseline gap-3">
                     <span className="font-display text-sm text-gold">{String(i + 1).padStart(2, "0")}</span>
-                    <h3 className="font-heading text-2xl text-ink leading-snug">{ind.name}</h3>
+                    <h3 className="font-heading text-2xl text-ink dark:text-white leading-snug">{ind.name}</h3>
                   </div>
-                  <p className="font-body text-sm text-ink/65 mt-3 leading-relaxed">{ind.blurb}</p>
-                  <p className="font-body text-xs uppercase tracking-[0.18em] text-ink/45 mt-4">{ind.credentials}</p>
+                  <p className="font-body text-sm text-ink/65 dark:text-slate-400 mt-3 leading-relaxed">{ind.blurb}</p>
+                  <p className="font-body text-xs uppercase tracking-[0.18em] text-ink/45 dark:text-slate-500 mt-4">{ind.credentials}</p>
                 </article>
               </Reveal>
             ))}
@@ -46,11 +46,11 @@ export default function Industries() {
         </div>
       </section>
 
-      <section className="py-24 md:py-32 bg-white border-t border-borderline">
+      <section className="py-24 md:py-32 bg-white dark:bg-[#0A2540]/50 border-t border-borderline dark:border-white/10 transition-colors duration-300">
         <div className="container-px mx-auto max-w-[1440px] grid grid-cols-12 gap-8 items-center">
           <div className="col-span-12 md:col-span-7">
             <p className="eyebrow">Sector-Deep Engagement</p>
-            <h2 className="font-display-bold text-4xl md:text-5xl text-ink tracking-[-0.02em] mt-5 leading-[1.02]">
+            <h2 className="font-display-bold text-4xl md:text-5xl text-ink dark:text-white tracking-[-0.02em] mt-5 leading-[1.02]">
               Looking for sector-specific assurance? Our partners will brief you.
             </h2>
           </div>

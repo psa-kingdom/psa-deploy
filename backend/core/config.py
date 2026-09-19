@@ -28,7 +28,7 @@ class Settings:
     # Email
     EMAIL_ENVIRONMENT: str = os.getenv("EMAIL_ENVIRONMENT", "development").lower()  # development | staging | production
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
-    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <updates@updates.psumanassociates.com>")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <updates@psumanassociates.com>")
     RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "contact@psumanassociates.com")
 
     # Dispatch rate (conservative default: 2.0 req/s to respect standard Resend rate limits)
@@ -40,12 +40,33 @@ class Settings:
 
     RESEND_WEBHOOK_SECRET: str = os.getenv("RESEND_WEBHOOK_SECRET", "")
 
+    # Recovery Email for Admin Password Reset
+    ADMIN_RECOVERY_EMAIL: str = os.getenv("ADMIN_RECOVERY_EMAIL", "shubhamkumar224488@gmail.com")
+
     # Admin Portal Authentication
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     # ADMIN_PASSWORD_HASH: bcrypt hash for production. Set to a plain string for dev (triggers a warning).
     ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH", "psa_admin_dev_password_2026")
     # ADMIN_SESSION_SECRET: random secret used to sign JWT session tokens.
     ADMIN_SESSION_SECRET: str = os.getenv("ADMIN_SESSION_SECRET", "psa_dev_session_secret_change_in_production_2026")
+
+
+    # Cloudflare R2 Object Storage (Attachments & Downloads)
+    R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")
+    R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
+    R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
+    R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "psa-attachments")
+    R2_PUBLIC_DOMAIN: str = os.getenv("R2_PUBLIC_DOMAIN", "").rstrip("/")
+
+    @property
+    def is_r2_configured(self) -> bool:
+        return bool(self.R2_ACCOUNT_ID and self.R2_ACCESS_KEY_ID and self.R2_SECRET_ACCESS_KEY and self.R2_BUCKET_NAME)
+
+    @property
+    def r2_endpoint_url(self) -> str:
+        if not self.R2_ACCOUNT_ID:
+            return ""
+        return f"https://{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
     # App
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://psumanassociates.com")

@@ -7,8 +7,8 @@ import { Link } from "react-router-dom";
  */
 export default function Logo({ variant = "light", size = "md", className = "" }) {
   const isDark = variant === "dark";
-  const text = isDark ? "text-ivory" : "text-ink";
-  const sub = isDark ? "text-ivory/60" : "text-ink/55";
+  const text = isDark ? "text-ivory" : "text-ink dark:text-ivory";
+  const sub = isDark ? "text-ivory/60" : "text-ink/55 dark:text-ivory/60";
   const rule = "bg-gold";
 
   const sizes = {
