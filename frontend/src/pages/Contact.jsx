@@ -347,13 +347,13 @@ export default function Contact() {
               {/* PRACTICE LOCATIONS / OFFICE CARDS */}
               <div>
                 <div className="flex items-center justify-between mb-4 px-1">
-                  <p className="eyebrow">Practice Locations</p>
+                  <p className="eyebrow">Locations</p>
                   <span className="font-body text-xs text-ink/50 dark:text-slate-400 uppercase tracking-[0.14em]">
                     Pan-India Presence
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {OFFICES.map((o) => {
                     const isHq = o.role === "Headquarters" || o.city === "Kolkata";
                     return (
@@ -374,7 +374,7 @@ export default function Contact() {
                           </div>
                           {isHq && (
                             <span className="font-body text-[9px] uppercase tracking-[0.2em] font-semibold text-sky bg-sky/10 border border-sky/30 px-2 py-0.5">
-                              HQ · Principal
+                              HQ
                             </span>
                           )}
                         </div>

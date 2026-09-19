@@ -103,13 +103,12 @@ export default function Footer() {
         </div>
 
         <div className="md:col-span-4">
-          <p className="eyebrow-light mb-5">Offices</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-            {OFFICES.map((o) => (
-              <div key={o.city}>
-                <p className="font-heading text-base text-ivory">{o.city}{o.role === "Headquarters" && <span className="text-gold text-[10px] ml-2 align-middle uppercase tracking-[0.2em]">HQ</span>}</p>
-              </div>
-            ))}
+          <p className="eyebrow-light mb-5">Office</p>
+          <div className="space-y-1">
+            <p className="font-heading text-base text-ivory">
+              Kolkata <span className="text-gold text-[10px] ml-2 align-middle uppercase tracking-[0.2em]">HQ</span>
+            </p>
+            <p className="font-body text-xs text-ivory/60 mt-1">PAN India Presence</p>
           </div>
           <div className="mt-8 space-y-2">
             {FIRM.phones.map((p) => (

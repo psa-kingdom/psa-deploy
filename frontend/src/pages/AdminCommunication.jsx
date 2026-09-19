@@ -645,21 +645,21 @@ export default function AdminCommunication() {
             display: "inline-flex",
             alignItems: "center",
             gap: "8px",
-            background: sendMode === "production" ? "rgba(234, 179, 8, 0.15)" : "rgba(34, 197, 94, 0.12)",
-            border: `1px solid ${sendMode === "production" ? "#eab308" : "#22c55e"}`,
+            background: sendMode === "production" ? "var(--admin-warning-bg, #FFFBEB)" : "var(--admin-success-bg, #F0FDF4)",
+            border: `1px solid ${sendMode === "production" ? "var(--admin-warning-border, #FCD34D)" : "var(--admin-success-border, #86EFAC)"}`,
             borderRadius: "8px",
             padding: "6px 14px",
-            boxShadow: sendMode === "production" ? "0 0 16px rgba(234, 179, 8, 0.1)" : "0 0 16px rgba(34, 197, 94, 0.1)",
+            boxShadow: sendMode === "production" ? "0 1px 3px rgba(217, 119, 6, 0.08)" : "0 1px 3px rgba(22, 163, 74, 0.08)",
             transition: "all 0.2s ease",
           }}
         >
           <div
             style={{
-              width: "7px",
-              height: "7px",
+              width: "8px",
+              height: "8px",
               borderRadius: "50%",
-              background: sendMode === "production" ? "#eab308" : "#22c55e",
-              boxShadow: `0 0 8px ${sendMode === "production" ? "#eab308" : "#22c55e"}`,
+              background: sendMode === "production" ? "#D97706" : "#16A34A",
+              boxShadow: sendMode === "production" ? "0 0 6px rgba(217, 119, 6, 0.4)" : "0 0 6px rgba(22, 163, 74, 0.4)",
               animation: sendMode === "production" ? "pulse 2s infinite" : "none",
             }}
           />
@@ -668,7 +668,7 @@ export default function AdminCommunication() {
               fontSize: "11px",
               fontWeight: "700",
               letterSpacing: "0.08em",
-              color: sendMode === "production" ? "#fde047" : "#86efac",
+              color: sendMode === "production" ? "var(--admin-warning-text, #78350F)" : "var(--admin-success-text, #14532D)",
               textTransform: "uppercase",
             }}
           >
@@ -885,7 +885,7 @@ export default function AdminCommunication() {
                   marginBottom: "12px",
                 }}
               >
-                {/* Test Mode Option — green selected state is intentional safety indicator */}
+                {/* Test Mode Option */}
                 <div
                   id="btn-mode-test"
                   onClick={() => setSendMode("test")}
@@ -897,17 +897,18 @@ export default function AdminCommunication() {
                     padding: "12px 14px",
                     borderRadius: RADIUS_MD,
                     cursor: "pointer",
-                    border: sendMode === "test" ? "1px solid #10b981" : `1px solid ${BORDER}`,
-                    background: sendMode === "test" ? "rgba(16,185,129,0.08)" : SURFACE_ALT,
+                    border: sendMode === "test" ? "1.5px solid var(--admin-success-border, #86EFAC)" : `1px solid ${BORDER}`,
+                    background: sendMode === "test" ? "var(--admin-success-bg, #F0FDF4)" : SURFACE_ALT,
+                    boxShadow: sendMode === "test" ? "0 1px 3px rgba(22, 163, 74, 0.08)" : "none",
                     transition: "all 0.15s ease",
                   }}
                 >
                   <div
                     style={{
-                      padding: "6px",
+                      padding: "7px",
                       borderRadius: "6px",
-                      background: sendMode === "test" ? "#10b981" : "#e2e8f0",
-                      color: sendMode === "test" ? "#fff" : "#64748b",
+                      background: sendMode === "test" ? "#16A34A" : "var(--admin-border, #DDE3EC)",
+                      color: sendMode === "test" ? "#FFFFFF" : "var(--admin-text-muted, #64748B)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -920,7 +921,7 @@ export default function AdminCommunication() {
                       style={{
                         fontSize: "13px",
                         fontWeight: "700",
-                        color: sendMode === "test" ? "#059669" : TEXT_PRIMARY,
+                        color: sendMode === "test" ? "var(--admin-success-text, #14532D)" : TEXT_PRIMARY,
                       }}
                     >
                       TEST MODE (Sandbox)
@@ -928,7 +929,8 @@ export default function AdminCommunication() {
                     <div
                       style={{
                         fontSize: "11px",
-                        color: sendMode === "test" ? "#10b981" : TEXT_MUTED,
+                        fontWeight: "500",
+                        color: sendMode === "test" ? "var(--admin-success-subtext, #166534)" : TEXT_MUTED,
                         marginTop: "2px",
                       }}
                     >
@@ -937,7 +939,7 @@ export default function AdminCommunication() {
                   </div>
                 </div>
 
-                {/* Production Mode Option — amber selected state is intentional safety indicator */}
+                {/* Production Mode Option */}
                 <div
                   id="btn-mode-production"
                   onClick={() => setSendMode("production")}
@@ -949,17 +951,18 @@ export default function AdminCommunication() {
                     padding: "12px 14px",
                     borderRadius: RADIUS_MD,
                     cursor: "pointer",
-                    border: sendMode === "production" ? "1px solid #f59e0b" : `1px solid ${BORDER}`,
-                    background: sendMode === "production" ? "rgba(245,158,11,0.08)" : SURFACE_ALT,
+                    border: sendMode === "production" ? "1.5px solid var(--admin-warning-border, #FCD34D)" : `1px solid ${BORDER}`,
+                    background: sendMode === "production" ? "var(--admin-warning-bg, #FFFBEB)" : SURFACE_ALT,
+                    boxShadow: sendMode === "production" ? "0 1px 3px rgba(217, 119, 6, 0.08)" : "none",
                     transition: "all 0.15s ease",
                   }}
                 >
                   <div
                     style={{
-                      padding: "6px",
+                      padding: "7px",
                       borderRadius: "6px",
-                      background: sendMode === "production" ? "#f59e0b" : "#e2e8f0",
-                      color: sendMode === "production" ? "#fff" : "#64748b",
+                      background: sendMode === "production" ? "#D97706" : "var(--admin-border, #DDE3EC)",
+                      color: sendMode === "production" ? "#FFFFFF" : "var(--admin-text-muted, #64748B)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -972,7 +975,7 @@ export default function AdminCommunication() {
                       style={{
                         fontSize: "13px",
                         fontWeight: "700",
-                        color: sendMode === "production" ? "#b45309" : TEXT_PRIMARY,
+                        color: sendMode === "production" ? "var(--admin-warning-text, #78350F)" : TEXT_PRIMARY,
                       }}
                     >
                       PRODUCTION MODE
@@ -980,7 +983,8 @@ export default function AdminCommunication() {
                     <div
                       style={{
                         fontSize: "11px",
-                        color: sendMode === "production" ? "#d97706" : TEXT_MUTED,
+                        fontWeight: "500",
+                        color: sendMode === "production" ? "var(--admin-warning-subtext, #92400E)" : TEXT_MUTED,
                         marginTop: "2px",
                       }}
                     >
@@ -990,43 +994,43 @@ export default function AdminCommunication() {
                 </div>
               </div>
 
-              {/* Mode Banner Description */}
+              {/* Mode Banner Description with clean contrast */}
               {sendMode === "test" ? (
                 <div
                   style={{
-                    background: "rgba(16,185,129,0.08)",
-                    border: "1px solid rgba(16,185,129,0.25)",
-                    borderRadius: "6px",
-                    padding: "8px 12px",
+                    background: "var(--admin-success-bg, #F0FDF4)",
+                    border: "1px solid var(--admin-success-border, #86EFAC)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
-                    fontSize: "12px",
-                    color: "#6ee7b7",
+                    gap: "10px",
+                    fontSize: "12.5px",
+                    color: "var(--admin-success-text, #14532D)",
                   }}
                 >
-                  <CheckCircle2 size={14} />
+                  <CheckCircle2 size={16} style={{ color: "#16A34A", flexShrink: 0 }} />
                   <span>
-                    <strong>Test Mode Active:</strong> All test emails will only be delivered to the configured test recipient (<strong>{testRecipient || "not set"}</strong>). Audience broadcasts are safely blocked.
+                    <strong style={{ color: "var(--admin-success-text, #14532D)" }}>Test Mode Active:</strong> All test emails will only be delivered to the configured test recipient (<strong>{testRecipient || "not set"}</strong>). Audience broadcasts are safely blocked.
                   </span>
                 </div>
               ) : (
                 <div
                   style={{
-                    background: "rgba(245,158,11,0.08)",
-                    border: "1px solid rgba(245,158,11,0.3)",
-                    borderRadius: "6px",
-                    padding: "8px 12px",
+                    background: "var(--admin-warning-bg, #FFFBEB)",
+                    border: "1px solid var(--admin-warning-border, #FCD34D)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
-                    fontSize: "12px",
-                    color: "#fde68a",
+                    gap: "10px",
+                    fontSize: "12.5px",
+                    color: "var(--admin-warning-text, #78350F)",
                   }}
                 >
-                  <AlertCircle size={14} />
+                  <AlertCircle size={16} style={{ color: "#D97706", flexShrink: 0 }} />
                   <span>
-                    <strong>Production Mode Active:</strong> This campaign will freeze an immutable recipient snapshot and dispatch to the verified final audience ({audienceEstimate?.net_target_count ?? 0} recipients).
+                    <strong style={{ color: "var(--admin-warning-text, #78350F)" }}>Production Mode Active:</strong> This campaign will freeze an immutable recipient snapshot and dispatch to the verified final audience ({audienceEstimate?.net_target_count ?? 0} recipients).
                   </span>
                 </div>
               )}

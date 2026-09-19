@@ -13,9 +13,6 @@ export const FIRM = {
 
 export const OFFICES = [
   { city: "Kolkata", role: "Headquarters" },
-  { city: "Delhi", role: "Office" },
-  { city: "Siliguri", role: "Office" },
-  { city: "Patna", role: "Office" },
 ];
 
 export const STATS = [
@@ -134,7 +131,7 @@ export const SECTOR_TICKER = [
 export const DIFFERENTIATORS = [
   { no: "01", title: "Big-4 Quality · Mid-Market Access", body: "The rigour of global firms, delivered to mid-market and enterprise clients without the layered overheads." },
   { no: "02", title: "AI & Technology-Enabled Delivery", body: "Barcode systems, DMS integration, real-time analytics dashboards, and data-driven audit methodologies embedded into every engagement." },
-  { no: "03", title: "Pan-India Presence", body: "15+ states · 75+ cities · 4 offices — Kolkata, Delhi, Siliguri, Patna." },
+  { no: "03", title: "Pan-India Presence", body: "Uniform assurance standards and real-time reporting delivered across India without regional fragmentation." },
   { no: "04", title: "Sector-Specific Intelligence", body: "12 industries served, with deepest exposure in automotive, FMCG, hospitality, manufacturing, and retail." },
   { no: "05", title: "₹950Cr+ Inventory Audited", body: "India's most rigorous inventory audit practice — 150+ dealerships, 7+ OEM partnerships." },
   { no: "06", title: "Long-Term Partnerships", body: "7+ year average client relationship — built on independence, integrity, and senior-led delivery." },

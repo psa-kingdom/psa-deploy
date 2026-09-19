@@ -18,7 +18,7 @@ export default function About() {
                 Built on Integrity.<br /><span className="italic text-gold">Driven by Expertise.</span>
               </h1>
               <p className="font-body text-lg md:text-xl text-ivory/70 mt-10 max-w-3xl leading-relaxed">
-                P Suman &amp; Associates is a technology-enabled Chartered Accountancy and advisory firm headquartered in Kolkata, with offices in Delhi, Siliguri, and Patna. Over 15+ years, PSA has built India&apos;s most rigorous inventory intelligence practice and a full-spectrum audit and advisory capability — serving 200+ clients across 12 sectors and 15+ states.
+                P Suman &amp; Associates is a technology-enabled Chartered Accountancy and advisory firm headquartered in Kolkata with PAN-India practice reach. Over 15+ years, PSA has built India&apos;s most rigorous inventory intelligence practice and a full-spectrum audit and advisory capability — serving 200+ clients across 12 sectors and 15+ states.
               </p>
             </div>
           </div>
