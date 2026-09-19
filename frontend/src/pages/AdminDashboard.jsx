@@ -385,6 +385,7 @@ export default function AdminDashboard() {
   }, [visitorDays]);
 
   const loadAll = useCallback(async (isRefresh = false) => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchVisitors();
     if (isRefresh) setRefreshing(true);
 
@@ -442,7 +443,8 @@ export default function AdminDashboard() {
       setDataLoading(false);
       setRefreshing(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchVisitors]);
 
   useEffect(() => {
     loadAll();
