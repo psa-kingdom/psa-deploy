@@ -53,7 +53,7 @@ def test_wrapped_template_contains_exactly_one_corporate_header_and_footer():
     assert full_html.count("P SUMAN & ASSOCIATES") == 1
     assert full_html.count("Chartered Accountants · Audit · Advisory") == 1
     # Footer checks
-    assert full_html.count("New Delhi · Hyderabad · PAN-India Advisory") == 1
+    assert full_html.count("PAN India Presence") == 1
     assert full_html.count("Official Website:") == 1
     assert full_html.count("https://psumanassociates.com/unsub?tok=123") == 1
 

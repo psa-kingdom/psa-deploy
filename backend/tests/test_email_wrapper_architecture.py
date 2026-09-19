@@ -50,7 +50,7 @@ def test_admin_authored_html_sent_directly_without_wrapper():
 
     # Must NOT have corporate layout wrapper
     assert "Chartered Accountants · Audit · Advisory" not in final_html
-    assert "New Delhi · Hyderabad · PAN-India Advisory" not in final_html
+    assert "PAN India Presence" not in final_html
     assert "<!DOCTYPE html>" not in final_html
 
     # Must contain exact authored HTML structure with interpolated variables

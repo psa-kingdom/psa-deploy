@@ -154,7 +154,8 @@ def get_newsletter_welcome_fragment() -> str:
 
     <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid {PSA_BRAND_BORDER};">
         <p style="margin: 0; font-size: 13px; font-weight: 600; color: {PSA_BRAND_PRIMARY};">Editorial Desk</p>
-        <p style="margin: 2px 0 0; font-size: 12px; color: {PSA_BRAND_MUTED};">P Suman &amp; Associates</p>
+        <p style="margin: 2px 0 0; font-size: 12px; color: {PSA_BRAND_MUTED};">P Suman &amp; Associates · PAN India Presence</p>
+        <p style="margin: 4px 0 0; font-size: 12px; color: {PSA_BRAND_MUTED};">Email: <a href="mailto:psumanassociates@gmail.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none;">psumanassociates@gmail.com</a> | Phone: <a href="tel:+919831546721" style="color: {PSA_BRAND_ACCENT}; text-decoration: none;">+91 9831546721</a></p>
     </div>
     """
 

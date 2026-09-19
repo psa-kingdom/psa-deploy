@@ -185,7 +185,10 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
                                 P Suman & Associates — Chartered Accountants
                             </p>
                             <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.5;">
-                                New Delhi · Hyderabad · PAN-India Advisory
+                                PAN India Presence
+                            </p>
+                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.5;">
+                                Email: <a href="mailto:psumanassociates@gmail.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">psumanassociates@gmail.com</a> &nbsp;|&nbsp; Phone: <a href="tel:+919831546721" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">+91 9831546721</a>
                             </p>
                             <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED};">
                                 Official Website: <a href="https://psumanassociates.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">psumanassociates.com</a>
