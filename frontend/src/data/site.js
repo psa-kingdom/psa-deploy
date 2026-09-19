@@ -19,15 +19,15 @@ export const OFFICES = [
 ];
 
 export const STATS = [
-  { value: 500, suffix: "+", label: "Clients Served" },
   { text: "PAN India", label: "Presence" },
+  { value: 500, suffix: "+", label: "Clients Served" },
   { value: 950, prefix: "₹", suffix: "Cr+", label: "Inventory Audited" },
   { value: 20, suffix: "+", label: "Years of Practice" },
 ];
 
 export const STATS_EXTENDED = [
-  { value: 500, suffix: "+", label: "Clients" },
   { text: "PAN India", label: "Presence" },
+  { value: 500, suffix: "+", label: "Clients" },
   { value: 75, suffix: "+", label: "Cities" },
   { value: 150, suffix: "+", label: "Dealerships Audited" },
   { value: 950, prefix: "₹", suffix: "Cr+", label: "Inventory Value Audited" },

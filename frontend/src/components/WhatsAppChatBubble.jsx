@@ -4,7 +4,7 @@ import { MessageCircle, X } from "lucide-react";
 export default function WhatsAppChatBubble() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const phoneNumber = "918743855527";
+  const phoneNumber = "919831546721";
   const defaultMessage = "I want to know more about this";
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`;
 
