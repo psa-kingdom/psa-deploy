@@ -37,7 +37,7 @@ export default function AdminLogin() {
     axios
       .get(`${BACKEND_URL}/api/admin/auth/me`, { withCredentials: true })
       .then(() => navigate("/admin", { replace: true }))
-      .catch(() => {});
+      .catch(() => { });
   }, [navigate]);
 
   // Cooldown countdown timer

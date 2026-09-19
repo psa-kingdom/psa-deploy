@@ -41,7 +41,7 @@ class Settings:
     RESEND_WEBHOOK_SECRET: str = os.getenv("RESEND_WEBHOOK_SECRET", "")
 
     # Recovery Email for Admin Password Reset
-    ADMIN_RECOVERY_EMAIL: str = os.getenv("ADMIN_RECOVERY_EMAIL", "shubhamkumar224488@gmail.com")
+    ADMIN_RECOVERY_EMAIL: str = os.getenv("ADMIN_RECOVERY_EMAIL", "psumanassociates@gmail.com")
 
     # Admin Portal Authentication
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
