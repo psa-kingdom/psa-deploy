@@ -3,13 +3,23 @@ import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, HTTPException, status, Header, Depends
 from typing import Optional
+import re
 from svix.webhooks import Webhook, WebhookVerificationError
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from backend.core.config import settings
-from backend.models.email import RecipientStatus, EmailSuppression
+from backend.models.email import RecipientStatus, EmailSuppression, EmailReply
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+
+
+def normalize_subject(subj: Optional[str]) -> str:
+    """Strips reply and forward prefixes to group replies by original subject."""
+    if not subj:
+        return "No Subject"
+    cleaned = re.sub(r"^(?:(?:re|fwd|fw|aw|sv|vs)\s*:\s*)+", "", subj, flags=re.IGNORECASE).strip()
+    return cleaned if cleaned else subj.strip()
+
 
 
 def get_db() -> AsyncIOMotorDatabase:
@@ -174,7 +184,55 @@ async def handle_resend_webhook(
                 {"resend_message_id": email_id},
                 {"$set": {"delivery_status": "sent"}}
             )
+    elif event_type in ("email.received", "inbound.received"):
+        # Inbound reply received
+        raw_subject = data.get("subject") or "No Subject"
+        clean_subj = normalize_subject(raw_subject)
+
+        sender_raw = data.get("from") or ""
+        sender_name = None
+        sender_email = sender_raw
+        if "<" in sender_raw and ">" in sender_raw:
+            match = re.match(r"^(.*?)\s*<([^>]+)>", sender_raw)
+            if match:
+                sender_name = match.group(1).strip().strip('"')
+                sender_email = match.group(2).strip()
+
+        # Try to find corresponding campaign by matching subject
+        campaign_id = None
+        campaign_title = None
+        if clean_subj:
+            campaign = await db.email_campaigns.find_one({
+                "subject": {"$regex": f"^{re.escape(clean_subj)}$", "$options": "i"}
+            })
+            if campaign:
+                campaign_id = campaign.get("campaign_id")
+                campaign_title = campaign.get("title")
+
+        snippet = data.get("snippet") or data.get("text") or ""
+        if len(snippet) > 300:
+            snippet = snippet[:297] + "..."
+
+        reply_record = EmailReply(
+            email_id=email_id,
+            sender_email=sender_email.lower().strip() if sender_email else "unknown",
+            sender_name=sender_name,
+            recipient_email=recipient_email or "contact@psumanassociates.com",
+            subject=raw_subject,
+            clean_subject=clean_subj,
+            campaign_id=campaign_id,
+            campaign_title=campaign_title,
+            snippet=snippet,
+            received_at=now,
+            source="webhook"
+        )
+        await db.email_replies.insert_one(reply_record.model_dump())
+        logger.info(
+            "[INBOUND REPLY INGESTED] Sender: %s | Subject: %s | Cleaned: %s | Campaign: %s",
+            sender_email, raw_subject, clean_subj, campaign_id
+        )
 
     return {"status": "processed", "event_type": event_type}
+
 
 

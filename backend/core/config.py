@@ -28,7 +28,7 @@ class Settings:
     # Email
     EMAIL_ENVIRONMENT: str = os.getenv("EMAIL_ENVIRONMENT", "development").lower()  # development | staging | production
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
-    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <updates@psumanassociates.com>")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <updates@updates.psumanassociates.com>")
     RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "contact@psumanassociates.com")
 
     # Dispatch rate (conservative default: 2.0 req/s to respect standard Resend rate limits)
@@ -56,9 +56,15 @@ class Settings:
     R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
     R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
     R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "psa-attachments")
-    R2_PUBLIC_DOMAIN: str = os.getenv("R2_PUBLIC_DOMAIN", "").rstrip("/")
 
     @property
+    def R2_PUBLIC_DOMAIN(self) -> str:
+        domain = os.getenv("R2_PUBLIC_DOMAIN")
+        if not domain:
+            load_dotenv(ROOT_DIR / '.env', override=True)
+            domain = os.getenv("R2_PUBLIC_DOMAIN", "")
+        return (domain or "").strip().rstrip("/")
+
     def is_r2_configured(self) -> bool:
         return bool(self.R2_ACCOUNT_ID and self.R2_ACCESS_KEY_ID and self.R2_SECRET_ACCESS_KEY and self.R2_BUCKET_NAME)
 

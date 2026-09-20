@@ -181,18 +181,23 @@ def render_base_layout(content_html: str, preheader: str = "", unsubscribe_url: 
                     <!-- Footer -->
                     <tr>
                         <td class="email-footer" style="background-color: {PSA_BRAND_IVORY}; padding: 26px 38px; border-top: 1px solid {PSA_BRAND_BORDER}; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; font-weight: 600; color: {PSA_BRAND_PRIMARY}; letter-spacing: 0.2px;">
-                                P Suman & Associates — Chartered Accountants
-                            </p>
-                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.5;">
-                                PAN India Presence
-                            </p>
-                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.5;">
+                            <p style="margin: 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.6;">
                                 Email: <a href="mailto:psumanassociates@gmail.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">psumanassociates@gmail.com</a> &nbsp;|&nbsp; Phone: <a href="tel:+919831546721" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">+91 9831546721</a>
                             </p>
-                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED};">
-                                Official Website: <a href="https://psumanassociates.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none; font-weight: 500;">psumanassociates.com</a>
+                            <p style="margin: 4px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; line-height: 1.5;">
+                                Presence: PAN India Presence
                             </p>
+                            <div style="margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed {PSA_BRAND_BORDER};">
+                                <p style="margin: 0; font-size: 12px; font-weight: 600; color: {PSA_BRAND_PRIMARY};">
+                                    Warm regards,
+                                </p>
+                                <p style="margin: 2px 0 0; font-size: 13px; font-weight: 700; color: {PSA_BRAND_PRIMARY}; letter-spacing: 0.3px;">
+                                    P Suman &amp; Associates
+                                </p>
+                                <p style="margin: 2px 0 0; font-size: 11px; color: {PSA_BRAND_MUTED}; text-transform: uppercase; letter-spacing: 0.8px;">
+                                    Chartered Accountants · Audit · Advisory
+                                </p>
+                            </div>
                             {unsub_section}
                         </td>
                     </tr>

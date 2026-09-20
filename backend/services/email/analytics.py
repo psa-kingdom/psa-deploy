@@ -177,10 +177,23 @@ async def get_email_analytics(
     if result is None:
         result = await _get_local_metrics(db, period_key)
 
-    # 4. Store in cache
+    # 4. Enrich with reply stats from MongoDB
+    if db is not None:
+        try:
+            total_replies = await db.email_replies.count_documents({})
+            sent_val = result.get("sent", 0)
+            result["replies"] = total_replies
+            result["reply_rate"] = round((total_replies / sent_val * 100), 2) if sent_val > 0 else 0.0
+        except Exception as e:
+            logger.warning("Could not append reply stats to analytics: %s", e)
+            result["replies"] = 0
+            result["reply_rate"] = 0.0
+
+    # 5. Store in cache
     _analytics_cache[period_key] = {
         "_cached_ts": now_ts,
         "data": result,
     }
 
     return result
+

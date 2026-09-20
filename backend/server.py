@@ -400,6 +400,7 @@ try:
         admin_insights,
         admin_attachments,
         admin_visitors,
+        admin_replies,
         webhooks,
         unsubscribe
     )
@@ -413,6 +414,7 @@ except ImportError:
         admin_insights,
         admin_attachments,
         admin_visitors,
+        admin_replies,
         webhooks,
         unsubscribe
     )
@@ -466,6 +468,7 @@ api_router.include_router(admin_insights.public_router)
 api_router.include_router(admin_attachments.admin_router)
 api_router.include_router(admin_attachments.public_router)
 api_router.include_router(admin_visitors.router)
+api_router.include_router(admin_replies.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(unsubscribe.router)
 

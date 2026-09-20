@@ -97,6 +97,9 @@ async def upload_attachment(
         )
 
     # Store record in MongoDB
+    if settings.R2_PUBLIC_DOMAIN and meta.get("file_key"):
+        meta["download_url"] = f"{settings.R2_PUBLIC_DOMAIN.rstrip('/')}/{meta['file_key']}"
+
     try:
         db = _get_db(request)
         if db is not None:
@@ -120,6 +123,10 @@ async def list_attachments(
         db = _get_db(request)
         if db is not None:
             items = await db.attachments.find({}, {"_id": 0}).sort("uploaded_at", -1).limit(50).to_list(50)
+            if settings.R2_PUBLIC_DOMAIN:
+                for item in items:
+                    if item.get("file_key"):
+                        item["download_url"] = f"{settings.R2_PUBLIC_DOMAIN.rstrip('/')}/{item['file_key']}"
             return {"attachments": items}
     except Exception as e:
         logger.error("Failed to query attachments: %s", e)

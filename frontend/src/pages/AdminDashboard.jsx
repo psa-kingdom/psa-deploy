@@ -109,10 +109,10 @@ function statusBadge(status) {
 /* ─────────────────────────── sub-components ─────────────────────────── */
 
 /** Spotlight KPI card — single metric */
-function KPICard({ label, value, icon: Icon, accent, loading, sublabel }) {
+function KPICard({ label, value, icon: Icon, accent, loading, sublabel, link }) {
   const [hovered, setHovered] = useState(false);
 
-  return (
+  const cardContent = (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -123,11 +123,13 @@ function KPICard({ label, value, icon: Icon, accent, loading, sublabel }) {
         border: `1px solid ${hovered ? accent + "50" : BORDER}`,
         borderRadius: RADIUS_LG,
         padding: "20px 22px",
-        cursor: "default",
+        cursor: link ? "pointer" : "default",
         transition: "border-color 0.2s ease, box-shadow 0.2s ease",
         boxShadow: hovered
           ? `0 4px 16px ${accent}14, ${SHADOW_SM}`
           : SHADOW_SM,
+        height: "100%",
+        boxSizing: "border-box",
       }}
     >
       {/* Subtle top-right radial accent */}
@@ -190,6 +192,16 @@ function KPICard({ label, value, icon: Icon, accent, loading, sublabel }) {
       )}
     </div>
   );
+
+  if (link) {
+    return (
+      <Link to={link} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }
 
 /** Campaign row for the recent table */
@@ -369,6 +381,7 @@ export default function AdminDashboard() {
   const [visitorDays, setVisitorDays] = useState(30);
   const [visitorData, setVisitorData] = useState(null);
   const [visitorLoading, setVisitorLoading] = useState(true);
+  const [repliesStats, setRepliesStats] = useState(null);
 
   const fetchVisitors = useCallback(async (days = visitorDays) => {
     setVisitorLoading(true);
@@ -390,11 +403,12 @@ export default function AdminDashboard() {
     if (isRefresh) setRefreshing(true);
 
     try {
-      const [statsRes, campaignsRes, enquiriesRes, inqStatsRes] = await Promise.allSettled([
+      const [statsRes, campaignsRes, enquiriesRes, inqStatsRes, repliesStatsRes] = await Promise.allSettled([
         axios.get(`${BACKEND_URL}/api/admin/communication/logs/stats`, { withCredentials: true }),
         axios.get(`${BACKEND_URL}/api/admin/communication/campaigns`, { withCredentials: true }),
         axios.get(`${BACKEND_URL}/api/admin/inquiries?limit=5`, { withCredentials: true }),
         axios.get(`${BACKEND_URL}/api/admin/inquiries/stats`, { withCredentials: true }),
+        axios.get(`${BACKEND_URL}/api/admin/communication/replies/stats`, { withCredentials: true }),
       ]);
 
       // Handle Inquiries with graceful fallback to /api/contact if /api/admin/inquiries is not yet deployed on backend
@@ -433,6 +447,10 @@ export default function AdminDashboard() {
         setCampaigns(all.slice(0, 5));
       }
 
+      if (repliesStatsRes.status === "fulfilled" && repliesStatsRes.value?.data) {
+        setRepliesStats(repliesStatsRes.value.data);
+      }
+
       setEnquiries(inqList);
 
       setLastRefresh(new Date());
@@ -457,6 +475,15 @@ export default function AdminDashboard() {
       icon: LayoutGrid,
       accent: "#0EA5E9",
       sublabel: "All time",
+      link: "/admin/communication?tab=campaigns",
+    },
+    {
+      label: "Replies Received",
+      value: repliesStats?.total_replies ?? null,
+      icon: MessageSquare,
+      accent: "#0284C7",
+      sublabel: `${repliesStats?.unique_subjects_count ?? 0} active subject threads`,
+      link: "/admin/communication?tab=replies",
     },
     {
       label: "Website Visitors",
@@ -471,6 +498,7 @@ export default function AdminDashboard() {
       icon: Inbox,
       accent: "#8B5CF6",
       sublabel: "Website enquiries",
+      link: "/admin/inquiries",
     },
     {
       label: "Emails Sent",
@@ -478,6 +506,7 @@ export default function AdminDashboard() {
       icon: CheckCircle2,
       accent: "#16A34A",
       sublabel: "All time deliveries",
+      link: "/admin/communication?tab=analytics",
     },
     {
       label: "Failed Deliveries",
@@ -485,6 +514,7 @@ export default function AdminDashboard() {
       icon: XCircle,
       accent: "#DC2626",
       sublabel: "All time failures",
+      link: "/admin/communication?tab=logs",
     },
   ];
 

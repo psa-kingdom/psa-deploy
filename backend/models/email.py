@@ -52,6 +52,8 @@ class EmailTemplateStudio(BaseModel):
     template_id: str
     name: str
     category: str = "announcement"  # announcement | transactional | newsletter | advisory | greeting | custom
+    subcategory: Optional[str] = None
+    occasions: Optional[List[str]] = None
     description: Optional[str] = ""
     published_subject: Optional[str] = ""
     published_body_html: Optional[str] = ""
@@ -103,6 +105,8 @@ class TemplateCreate(BaseModel):
     template_id: str
     name: str
     category: str = "announcement"
+    subcategory: Optional[str] = None
+    occasions: Optional[List[str]] = None
     description: Optional[str] = ""
     subject: str
     body_html: str
@@ -319,4 +323,30 @@ class FileImportResponse(BaseModel):
     net_count: int
     valid_emails: List[str]
     invalid_samples: List[str]
+
+
+# --- Inbound Email Replies ---
+class EmailReply(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    reply_id: str = Field(default_factory=generate_uuid)
+    email_id: Optional[str] = None  # Provider message ID from webhook
+    sender_email: str
+    sender_name: Optional[str] = None
+    recipient_email: str  # Inbound address received at
+    subject: str          # Raw subject (e.g. "Re: Year-End Tax Advisory 2026")
+    clean_subject: str    # Normalized subject (e.g. "Year-End Tax Advisory 2026")
+    campaign_id: Optional[str] = None
+    campaign_title: Optional[str] = None
+    snippet: Optional[str] = ""
+    received_at: datetime = Field(default_factory=get_utc_now)
+    source: str = "webhook"  # "webhook" | "manual" | "simulation"
+
+
+class EmailReplyCreate(BaseModel):
+    sender_email: EmailStr
+    sender_name: Optional[str] = None
+    recipient_email: Optional[str] = "contact@psumanassociates.com"
+    subject: str
+    snippet: Optional[str] = ""
+    campaign_id: Optional[str] = None
 

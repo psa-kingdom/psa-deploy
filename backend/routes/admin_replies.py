@@ -1,0 +1,340 @@
+import asyncio
+import logging
+import re
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
+import resend
+
+from backend.core.auth import get_current_admin
+from backend.core.config import settings
+from backend.models.email import EmailReply, EmailReplyCreate, get_utc_now
+from backend.routes.webhooks import normalize_subject
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/admin/communication/replies", tags=["Admin Email Replies"])
+
+
+def _get_db(request: Request = None) -> AsyncIOMotorDatabase:
+    if request and hasattr(request.app.state, "db") and request.app.state.db is not None:
+        return request.app.state.db
+    try:
+        from backend.server import db
+        return db
+    except Exception:
+        pass
+    try:
+        from server import db
+        return db
+    except Exception:
+        pass
+    return None
+
+
+@router.get("/stats", dependencies=[Depends(get_current_admin)])
+async def get_replies_stats(request: Request):
+    """
+    Returns aggregated stats on email replies received:
+    - Total reply count
+    - Unique subjects count
+    - Breakdown grouped by email subject
+    - Most recent replies feed
+    """
+    db = _get_db(request)
+    if db is None:
+        return {
+            "total_replies": 0,
+            "unique_subjects_count": 0,
+            "by_subject": [],
+            "recent_replies": []
+        }
+
+    try:
+        total_replies = await db.email_replies.count_documents({})
+
+        # Aggregation by clean_subject
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$clean_subject",
+                    "clean_subject": {"$first": "$clean_subject"},
+                    "sample_raw_subject": {"$first": "$subject"},
+                    "reply_count": {"$sum": 1},
+                    "latest_reply_at": {"$max": "$received_at"},
+                    "first_reply_at": {"$min": "$received_at"},
+                    "senders": {"$addToSet": "$sender_email"},
+                    "campaign_id": {"$first": "$campaign_id"},
+                    "campaign_title": {"$first": "$campaign_title"},
+                }
+            },
+            {"$sort": {"reply_count": -1, "latest_reply_at": -1}},
+            {"$limit": 100}
+        ]
+
+        by_subject_docs = await db.email_replies.aggregate(pipeline).to_list(100)
+
+        # Clean documents for JSON serialization
+        by_subject = []
+        for doc in by_subject_docs:
+            clean_sub = doc.get("clean_subject") or doc.get("_id") or "No Subject"
+            # Limit senders sample to max 8
+            senders = list(doc.get("senders") or [])[:8]
+            by_subject.append({
+                "clean_subject": clean_sub,
+                "sample_raw_subject": doc.get("sample_raw_subject") or clean_sub,
+                "reply_count": doc.get("reply_count", 0),
+                "latest_reply_at": doc.get("latest_reply_at"),
+                "first_reply_at": doc.get("first_reply_at"),
+                "senders": senders,
+                "unique_senders_count": len(doc.get("senders") or []),
+                "campaign_id": doc.get("campaign_id"),
+                "campaign_title": doc.get("campaign_title"),
+            })
+
+        # Recent 15 replies across all subjects
+        recent_docs = await db.email_replies.find(
+            {}, {"_id": 0}
+        ).sort("received_at", -1).limit(15).to_list(15)
+
+        return {
+            "total_replies": total_replies,
+            "unique_subjects_count": len(by_subject),
+            "by_subject": by_subject,
+            "recent_replies": recent_docs
+        }
+    except Exception as e:
+        logger.error("Error generating email replies stats: %s", e, exc_info=True)
+        return {
+            "total_replies": 0,
+            "unique_subjects_count": 0,
+            "by_subject": [],
+            "recent_replies": []
+        }
+
+
+@router.get("", dependencies=[Depends(get_current_admin)])
+async def list_replies(
+    request: Request,
+    subject: Optional[str] = Query(None, description="Filter by subject or clean subject"),
+    sender: Optional[str] = Query(None, description="Filter by sender email"),
+    limit: int = Query(50, ge=1, le=200)
+):
+    """Lists individual replies received, optionally filtered by subject or sender."""
+    db = _get_db(request)
+    if db is None:
+        return {"replies": []}
+
+    query = {}
+    if subject:
+        clean = normalize_subject(subject)
+        query["$or"] = [
+            {"clean_subject": {"$regex": f"^{re.escape(clean)}$", "$options": "i"}},
+            {"subject": {"$regex": re.escape(subject), "$options": "i"}}
+        ]
+    if sender:
+        query["sender_email"] = {"$regex": re.escape(sender.strip()), "$options": "i"}
+
+    items = await db.email_replies.find(query, {"_id": 0}).sort("received_at", -1).limit(limit).to_list(limit)
+    return {"replies": items}
+
+
+@router.post("", dependencies=[Depends(get_current_admin)])
+async def create_manual_or_test_reply(
+    payload: EmailReplyCreate,
+    request: Request
+):
+    """
+    Logs or simulates an incoming email reply.
+    Useful for testing the dashboard or recording replies tracked through custom channels.
+    """
+    db = _get_db(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    raw_subject = payload.subject.strip()
+    clean_subj = normalize_subject(raw_subject)
+
+    # Check for matched campaign
+    campaign_id = payload.campaign_id
+    campaign_title = None
+
+    if not campaign_id and clean_subj:
+        campaign = await db.email_campaigns.find_one({
+            "subject": {"$regex": f"^{re.escape(clean_subj)}$", "$options": "i"}
+        })
+        if campaign:
+            campaign_id = campaign.get("campaign_id")
+            campaign_title = campaign.get("title")
+    elif campaign_id:
+        campaign = await db.email_campaigns.find_one({"campaign_id": campaign_id})
+        if campaign:
+            campaign_title = campaign.get("title")
+
+    reply = EmailReply(
+        sender_email=payload.sender_email.strip().lower(),
+        sender_name=payload.sender_name,
+        recipient_email=payload.recipient_email or "contact@psumanassociates.com",
+        subject=raw_subject,
+        clean_subject=clean_subj,
+        campaign_id=campaign_id,
+        campaign_title=campaign_title,
+        snippet=payload.snippet or "",
+        received_at=get_utc_now(),
+        source="simulation" if not payload.campaign_id else "manual"
+    )
+
+    await db.email_replies.insert_one(reply.model_dump())
+    return {"success": True, "reply": reply.model_dump()}
+
+
+@router.post("/sync", dependencies=[Depends(get_current_admin)])
+async def sync_replies_from_resend(request: Request):
+    """
+    Directly pulls inbound received emails from Resend Receiving API
+    (resend.Emails.Receiving.list()) and idempotently ingests them into MongoDB.
+    This provides an instant manual/automated sync without requiring public webhooks.
+    """
+    db = _get_db(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    if not settings.RESEND_API_KEY:
+        raise HTTPException(
+            status_code=400,
+            detail="RESEND_API_KEY is not configured on the server."
+        )
+
+    resend.api_key = settings.RESEND_API_KEY
+
+    try:
+        # Fetch remote list from Resend Receiving API
+        response = await asyncio.to_thread(resend.Emails.Receiving.list)
+        remote_items = response.get("data", []) if isinstance(response, dict) else getattr(response, "data", [])
+    except Exception as exc:
+        logger.error("Failed to query Resend Receiving API: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to communicate with Resend Receiving API: {exc}"
+        )
+
+    synced_count = 0
+    already_existing_count = 0
+
+    for item in remote_items:
+        # Item may be dict or pydantic model
+        item_dict = item if isinstance(item, dict) else item.__dict__
+        email_id = item_dict.get("id")
+        if not email_id:
+            continue
+
+        existing = await db.email_replies.find_one({"email_id": email_id})
+        if existing:
+            already_existing_count += 1
+            continue
+
+        raw_subject = item_dict.get("subject") or "No Subject"
+        clean_subj = normalize_subject(raw_subject)
+
+        sender_raw = item_dict.get("from") or ""
+        sender_name = None
+        sender_email = sender_raw
+        if "<" in sender_raw and ">" in sender_raw:
+            match = re.match(r"^(.*?)\s*<([^>]+)>", sender_raw)
+            if match:
+                sender_name = match.group(1).strip().strip('"')
+                sender_email = match.group(2).strip()
+
+        to_list = item_dict.get("to") or []
+        recipient_email = to_list[0] if isinstance(to_list, list) and to_list else "contact@psumanassociates.com"
+
+        # Attempt to match to an existing campaign
+        campaign_id = None
+        campaign_title = None
+        if clean_subj:
+            campaign = await db.email_campaigns.find_one({
+                "subject": {"$regex": f"^{re.escape(clean_subj)}$", "$options": "i"}
+            })
+            if campaign:
+                campaign_id = campaign.get("campaign_id")
+                campaign_title = campaign.get("title")
+
+        # Optional: try fetching full text snippet if detail call succeeds
+        snippet = ""
+        try:
+            full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
+            full_dict = full_detail if isinstance(full_detail, dict) else full_detail.__dict__
+            raw_text = full_dict.get("text") or full_dict.get("html") or ""
+            # Strip tags if html
+            clean_text = re.sub(r"<[^>]+>", " ", raw_text)
+            clean_text = re.sub(r"\s+", " ", clean_text).strip()
+            snippet = clean_text[:297] + ("..." if len(clean_text) > 297 else "")
+        except Exception:
+            pass
+
+        # Parse date
+        received_at = get_utc_now()
+        created_str = item_dict.get("created_at")
+        if created_str:
+            try:
+                # handles ISO formatted strings
+                received_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+            except Exception:
+                pass
+
+        reply_record = EmailReply(
+            email_id=email_id,
+            sender_email=sender_email.lower().strip() if sender_email else "unknown",
+            sender_name=sender_name,
+            recipient_email=recipient_email,
+            subject=raw_subject,
+            clean_subject=clean_subj,
+            campaign_id=campaign_id,
+            campaign_title=campaign_title,
+            snippet=snippet,
+            received_at=received_at,
+            source="resend_sync"
+        )
+        await db.email_replies.insert_one(reply_record.model_dump())
+        synced_count += 1
+        logger.info(
+            "[SYNC INGESTED] ID: %s | From: %s | Subj: %s",
+            email_id, sender_email, clean_subj
+        )
+
+    return {
+        "success": True,
+        "synced_count": synced_count,
+        "already_existing_count": already_existing_count,
+        "total_remote_received": len(remote_items),
+        "message": (
+            f"Successfully synced {synced_count} new replies from Resend."
+            if synced_count > 0
+            else (
+                "Resend Receiving mailbox is currently empty. Incoming replies sent to "
+                "updates@updates.psumanassociates.com will appear here once received."
+                if len(remote_items) == 0
+                else f"All {len(remote_items)} remote emails are already up-to-date in database."
+            )
+        )
+    }
+
+
+@router.delete("/{reply_id}", dependencies=[Depends(get_current_admin)])
+async def delete_reply(
+    reply_id: str,
+    request: Request
+):
+    """Deletes a reply record by ID."""
+    db = _get_db(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    result = await db.email_replies.delete_one({"reply_id": reply_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reply record not found")
+
+    return {"success": True, "message": "Reply deleted"}

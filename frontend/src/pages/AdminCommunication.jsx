@@ -20,6 +20,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Send,
@@ -32,6 +33,7 @@ import {
   FileText,
   BarChart3,
   Plus,
+  MessageSquare,
 } from "lucide-react";
 import AudienceSelector from "../components/admin/AudienceSelector";
 import TemplateEditor from "../components/admin/TemplateEditor";
@@ -39,7 +41,9 @@ import AdminAnalyticsCards from "../components/admin/AdminAnalyticsCards";
 import CampaignReviewModal from "../components/admin/CampaignReviewModal";
 import CampaignProgress from "../components/admin/CampaignProgress";
 import DeliveryLogsTable from "../components/admin/DeliveryLogsTable";
+import RepliesDashboard from "../components/admin/RepliesDashboard";
 import AdminLayout from "../components/admin/AdminLayout";
+
 import { BACKEND_URL } from "../config";
 import {
   SURFACE, SURFACE_ALT, BORDER,
@@ -55,6 +59,15 @@ const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 
 export default function AdminCommunication() {
   const [activeTab, setActiveTab] = useState("campaigns");
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && ["campaigns", "templates", "analytics", "logs", "replies"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
 
   // Environment state
   const [environment, setEnvironment] = useState("development");
@@ -114,6 +127,7 @@ export default function AdminCommunication() {
 
   // Test Send State
   const [testSending, setTestSending] = useState(false);
+  const [hoveredCategoryTemplateId, setHoveredCategoryTemplateId] = useState(null);
 
   const fetchEnvironment = useCallback(async () => {
     try {
@@ -699,6 +713,11 @@ export default function AdminCommunication() {
             <Clock size={13} /> Audit Logs
           </span>
         </button>
+        <button style={styles.tab(activeTab === "replies")} onClick={() => setActiveTab("replies")}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <MessageSquare size={13} /> Replies &amp; Inbound
+          </span>
+        </button>
       </div>
 
       {/* TAB: CAMPAIGNS */}
@@ -1232,11 +1251,15 @@ export default function AdminCommunication() {
               {templates.map((t) => {
                 const isSelected =
                   (studioSelectedTemplateId || selectedTemplateId) === t.template_id;
+                const isCategoryHovered = hoveredCategoryTemplateId === t.template_id;
+                const hasOccasions = Array.isArray(t.occasions) && t.occasions.length > 0;
+
                 return (
                   <div
                     key={t.template_id}
                     onClick={() => handleStudioTemplateSelect(t.template_id)}
                     style={{
+                      position: "relative",
                       background: isSelected ? "rgba(14,165,233,0.06)" : SURFACE_ALT,
                       border: isSelected ? "2px solid #0ea5e9" : `1px solid ${BORDER}`,
                       borderRadius: RADIUS_MD,
@@ -1251,19 +1274,218 @@ export default function AdminCommunication() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         marginBottom: "6px",
+                        gap: "6px",
+                        flexWrap: "wrap",
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: "700",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          color: ACCENT,
-                        }}
+                      {/* Category Badge with Hover Subcategory Popover */}
+                      <div
+                        style={{ position: "relative", display: "inline-block" }}
+                        onMouseEnter={() => setHoveredCategoryTemplateId(t.template_id)}
+                        onMouseLeave={() => setHoveredCategoryTemplateId(null)}
                       >
-                        {t.category}
-                      </span>
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: "700",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                            color: isCategoryHovered ? "#0284c7" : ACCENT,
+                            background: isCategoryHovered ? "rgba(14,165,233,0.14)" : "rgba(14,165,233,0.08)",
+                            border: `1px solid ${isCategoryHovered ? "rgba(14,165,233,0.35)" : "rgba(14,165,233,0.18)"}`,
+                            padding: "2px 7px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {t.category}
+                          {t.subcategory && (
+                            <span
+                              style={{
+                                fontSize: "9px",
+                                opacity: 0.7,
+                                transform: isCategoryHovered ? "rotate(180deg)" : "none",
+                                transition: "transform 0.15s ease",
+                              }}
+                            >
+                              ▼
+                            </span>
+                          )}
+                        </span>
+
+                        {/* Floating Subcategory & Occasions Popover (revealed on hovering category) */}
+                        {isCategoryHovered && t.subcategory && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "100%",
+                              left: "0",
+                              paddingTop: "6px",
+                              zIndex: 250,
+                              minWidth: "270px",
+                              maxWidth: "340px",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div
+                              style={{
+                                background: "#ffffff",
+                                border: "1px solid #cbd5e1",
+                                borderRadius: "8px",
+                                boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18), 0 6px 12px -4px rgba(0, 0, 0, 0.08)",
+                                padding: "12px 14px",
+                                animation: "fadeIn 0.15s ease-out",
+                              }}
+                            >
+                              {/* Subcategory Name & Details */}
+                              <div
+                                style={{
+                                  marginBottom: hasOccasions ? "10px" : "0",
+                                  borderBottom: hasOccasions ? "1px solid #f1f5f9" : "none",
+                                  paddingBottom: hasOccasions ? "8px" : "0",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: "9.5px",
+                                    fontWeight: "700",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    color: "#64748b",
+                                    marginBottom: "3px",
+                                  }}
+                                >
+                                  Subcategory
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "12.5px",
+                                    fontWeight: "700",
+                                    color: "#0f172a",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                  }}
+                                >
+                                  <span style={{ color: ACCENT }}>📁</span>
+                                  <span>{t.subcategory}</span>
+                                </div>
+                              </div>
+
+                              {/* If occasions exist, display interactive occasion variation selector */}
+                              {hasOccasions && (
+                                <div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      marginBottom: "6px",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontSize: "10.5px",
+                                        fontWeight: "700",
+                                        color:
+                                          t.category === "compliance"
+                                            ? "#0369a1"
+                                            : t.category === "taxation"
+                                            ? "#047857"
+                                            : t.category === "newsletter"
+                                            ? "#9d174d"
+                                            : "#92400e",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <span>✨ Curated Variations ({t.occasions.length})</span>
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "9px",
+                                        color: "#94a3b8",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                      }}
+                                    >
+                                      Click to load theme
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: "4px",
+                                      maxHeight: "190px",
+                                      overflowY: "auto",
+                                    }}
+                                  >
+                                    {t.occasions.map((occ, idx) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          handleStudioTemplateSelect(t.template_id);
+                                          setHoveredCategoryTemplateId(null);
+                                          try {
+                                            const res = await api.get(
+                                              `/api/admin/communication/templates/${t.template_id}/curated-variation?occasion=${encodeURIComponent(occ)}`
+                                            );
+                                            if (res.data) {
+                                              setStudioSubject(res.data.subject);
+                                              setStudioPreheader(res.data.preheader);
+                                              setStudioBodyHtml(res.data.body_html);
+                                              showToast(`Loaded ${t.name} with curated theme for: ${occ}`, "success");
+                                            }
+                                          } catch (_) {
+                                            setStudioSubject(`${occ} — P Suman & Associates`);
+                                            setStudioPreheader(
+                                              `Special corporate update on ${occ} from P Suman & Associates.`
+                                            );
+                                            showToast(`Loaded ${t.name} for: ${occ}`, "info");
+                                          }
+                                        }}
+                                        style={{
+                                          textAlign: "left",
+                                          padding: "7px 9px",
+                                          borderRadius: "5px",
+                                          fontSize: "11px",
+                                          fontWeight: "500",
+                                          color: "#1e293b",
+                                          background: "#f8fafc",
+                                          border: "1px solid #e2e8f0",
+                                          cursor: "pointer",
+                                          transition: "all 0.12s ease",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = "#eff6ff";
+                                          e.currentTarget.style.borderColor = "#93c5fd";
+                                          e.currentTarget.style.color = "#1d4ed8";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = "#f8fafc";
+                                          e.currentTarget.style.borderColor = "#e2e8f0";
+                                          e.currentTarget.style.color = "#1e293b";
+                                        }}
+                                      >
+                                        • {occ}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {t.is_system_template ? (
                         <span
                           style={{
@@ -1292,6 +1514,7 @@ export default function AdminCommunication() {
                         </span>
                       )}
                     </div>
+
                     <div
                       style={{
                         fontSize: "13px",
@@ -1302,14 +1525,32 @@ export default function AdminCommunication() {
                     >
                       {t.name}
                     </div>
-                    <div style={{ fontSize: "11px", color: TEXT_MUTED }}>
-                      {t.has_pending_draft ? (
-                        <span style={{ color: "#d97706", fontWeight: "600" }}>
-                          ● Pending Draft (v{t.version})
-                        </span>
-                      ) : (
-                        <span style={{ color: "#16a34a", fontWeight: "600" }}>
-                          ✓ Live (v{t.version})
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px", color: TEXT_MUTED }}>
+                      <div>
+                        {t.has_pending_draft ? (
+                          <span style={{ color: "#d97706", fontWeight: "600" }}>
+                            ● Pending Draft (v{t.version})
+                          </span>
+                        ) : (
+                          <span style={{ color: "#16a34a", fontWeight: "600" }}>
+                            ✓ Live (v{t.version})
+                          </span>
+                        )}
+                      </div>
+                      {hasOccasions && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            color: "#92400e",
+                            background: "#fef3c7",
+                            border: "1px solid #fde68a",
+                            borderRadius: "4px",
+                            padding: "1px 6px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          ✨ {t.occasions.length} Occasions
                         </span>
                       )}
                     </div>
@@ -1354,7 +1595,10 @@ export default function AdminCommunication() {
       {/* TAB: DELIVERABILITY & ANALYTICS */}
       {activeTab === "analytics" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-          <AdminAnalyticsCards backendUrl={BACKEND_URL} />
+          <AdminAnalyticsCards
+            backendUrl={BACKEND_URL}
+            onNavigateToReplies={() => setActiveTab("replies")}
+          />
         </div>
       )}
 
@@ -1364,6 +1608,14 @@ export default function AdminCommunication() {
           backendUrl={BACKEND_URL}
           campaigns={campaignsList}
           onRefreshCampaigns={fetchCampaigns}
+        />
+      )}
+
+      {/* TAB: REPLIES & INBOUND */}
+      {activeTab === "replies" && (
+        <RepliesDashboard
+          backendUrl={BACKEND_URL}
+          campaigns={campaignsList}
         />
       )}
 

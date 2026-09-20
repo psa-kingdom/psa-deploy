@@ -119,7 +119,7 @@ export default function TemplateEditor({
       } catch (_) {
         // Fallback default
         setApprovedSenders([
-          { name: "P Suman & Associates", email: "updates@psumanassociates.com" },
+          { name: "P Suman & Associates", email: "updates@updates.psumanassociates.com" },
         ]);
       }
     };
@@ -298,6 +298,27 @@ export default function TemplateEditor({
   const showToast = (msg, type = "success") => {
     setActionNotice({ msg, type });
     setTimeout(() => setActionNotice(null), 4000);
+  };
+
+  // Apply curated theme and content for a selected occasion / sub-theme
+  const handleApplyCuratedVariation = async (occ) => {
+    if (!activeTemplate) return;
+    try {
+      const res = await axios.get(
+        `${backendUrl}/api/admin/communication/templates/${activeTemplate.template_id}/curated-variation?occasion=${encodeURIComponent(occ)}`,
+        { withCredentials: true }
+      );
+      if (res.data) {
+        if (onSubjectChange && res.data.subject) onSubjectChange(res.data.subject);
+        if (onPreheaderChange && res.data.preheader) onPreheaderChange(res.data.preheader);
+        if (onBodyHtmlChange && res.data.body_html) onBodyHtmlChange(res.data.body_html);
+        showToast(`Applied curated theme for: ${occ}`, "success");
+      }
+    } catch (_) {
+      if (onSubjectChange) onSubjectChange(`${occ} — P Suman & Associates`);
+      if (onPreheaderChange) onPreheaderChange(`Special corporate update on ${occ} from P Suman & Associates.`);
+      showToast(`Applied: ${occ}`, "info");
+    }
   };
 
   // Variable insertion
@@ -599,7 +620,7 @@ export default function TemplateEditor({
             <option value="">-- Custom (No Template) --</option>
             {templates.map((t) => (
               <option key={t.template_id} value={t.template_id}>
-                {t.name} ({t.category}) {t.has_pending_draft ? "• [Draft]" : `[v${t.version}]`}
+                {t.name} {t.subcategory ? `[${t.subcategory}]` : `(${t.category})`} {t.has_pending_draft ? "• [Draft]" : `[v${t.version}]`}
               </option>
             ))}
           </select>
@@ -639,12 +660,12 @@ export default function TemplateEditor({
         </div>
       </div>
 
-      {/* System Template Warning Banner */}
+      {/* System Template Notice */}
       {activeTemplate?.is_system_template && (
         <div
           style={{
-            background: "rgba(14,165,233,0.06)",
-            border: "1px solid rgba(14,165,233,0.3)",
+            background: "rgba(14,165,233,0.08)",
+            border: "1px solid rgba(14,165,233,0.25)",
             borderRadius: RADIUS_MD,
             padding: "10px 14px",
             display: "flex",
@@ -658,6 +679,67 @@ export default function TemplateEditor({
           <span>
             <strong>System Autoresponder Template:</strong> This template is utilized by public automated flows (e.g. inquiry confirmations or newsletter welcome). Edits are saved safely as a draft; only clicking <strong>Publish to Live</strong> updates future dispatches.
           </span>
+        </div>
+      )}
+
+      {/* Occasion / Subcategory Variation Selector */}
+      {activeTemplate?.occasions && activeTemplate.occasions.length > 0 && (
+        <div
+          className={`rounded-lg p-3 border transition-colors ${
+            activeTemplate.category === "compliance"
+              ? "bg-sky-50/80 border-sky-200"
+              : activeTemplate.category === "taxation"
+              ? "bg-emerald-50/80 border-emerald-200"
+              : activeTemplate.category === "newsletter"
+              ? "bg-rose-50/80 border-rose-200"
+              : "bg-amber-50/80 border-amber-200"
+          }`}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <span
+              className={`text-xs font-bold flex items-center gap-1.5 ${
+                activeTemplate.category === "compliance"
+                  ? "text-sky-900"
+                  : activeTemplate.category === "taxation"
+                  ? "text-emerald-900"
+                  : activeTemplate.category === "newsletter"
+                  ? "text-rose-900"
+                  : "text-amber-900"
+              }`}
+            >
+              <span>✨ Curated Theme &amp; Subcategory Variations:</span>
+              {activeTemplate.subcategory && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                    activeTemplate.category === "compliance"
+                      ? "bg-sky-200/80 text-sky-800"
+                      : activeTemplate.category === "taxation"
+                      ? "bg-emerald-200/80 text-emerald-800"
+                      : activeTemplate.category === "newsletter"
+                      ? "bg-rose-200/80 text-rose-800"
+                      : "bg-amber-200/80 text-amber-800"
+                  }`}
+                >
+                  {activeTemplate.subcategory}
+                </span>
+              )}
+            </span>
+            <span className="text-[11px] text-slate-500">
+              Click any variation to apply curated subject, preheader &amp; HTML theme
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {activeTemplate.occasions.map((occ, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleApplyCuratedVariation(occ)}
+                className="text-xs px-2.5 py-1.5 rounded-md bg-white border border-slate-300 hover:border-sky-500 hover:bg-sky-50/60 text-slate-800 font-medium transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+              >
+                <span>{occ}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -866,7 +948,7 @@ export default function TemplateEditor({
                 onChange={(e) => onSenderEmailChange && onSenderEmailChange(e.target.value)}
                 className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs text-slate-800 font-mono"
               >
-                <option value="">Default (updates@psumanassociates.com)</option>
+                <option value="">Default (updates@updates.psumanassociates.com)</option>
                 {approvedSenders.map((s, idx) => (
                   <option key={idx} value={s.email}>
                     {s.name} &lt;{s.email}&gt;
@@ -884,9 +966,12 @@ export default function TemplateEditor({
                 type="email"
                 value={replyTo}
                 onChange={(e) => onReplyToChange && onReplyToChange(e.target.value)}
-                placeholder="contact@psumanassociates.com"
+                placeholder="updates@updates.psumanassociates.com"
                 className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs text-slate-800 font-mono"
               />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                Use an @updates.psumanassociates.com address (or leave empty) to capture inbound replies in the Replies Dashboard.
+              </span>
             </div>
 
             <div>

@@ -520,7 +520,7 @@ async def send_test_email(payload: TestSendRequest, db: AsyncIOMotorDatabase = D
         )
 
     sender_name = payload.sender_name or "P Suman & Associates"
-    sender_email = payload.sender_email or "updates@psumanassociates.com"
+    sender_email = payload.sender_email or "updates@updates.psumanassociates.com"
     sender_str = f"{sender_name} <{sender_email}>" if (payload.sender_name or payload.sender_email) else settings.RESEND_FROM_EMAIL
 
     vars_map = {

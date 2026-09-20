@@ -10,6 +10,8 @@ import {
   Clock,
   Info,
   XCircle,
+  MessageSquare,
+  ArrowRight,
 } from "lucide-react";
 import {
   SURFACE,
@@ -25,9 +27,10 @@ import {
   SHADOW_SM,
 } from "../../utils/adminTheme";
 
-export default function AdminAnalyticsCards({ backendUrl }) {
+export default function AdminAnalyticsCards({ backendUrl, onNavigateToReplies }) {
   const [period, setPeriod] = useState("7d");
   const [metrics, setMetrics] = useState(null);
+  const [repliesStats, setRepliesStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -36,11 +39,23 @@ export default function AdminAnalyticsCards({ backendUrl }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get(
-          `${backendUrl}/api/admin/communication/analytics?period=${period}&refresh=${forceRefresh}`,
-          { withCredentials: true }
-        );
-        setMetrics(res.data);
+        const [analyticsRes, repliesRes] = await Promise.allSettled([
+          axios.get(
+            `${backendUrl}/api/admin/communication/analytics?period=${period}&refresh=${forceRefresh}`,
+            { withCredentials: true }
+          ),
+          axios.get(
+            `${backendUrl}/api/admin/communication/replies/stats`,
+            { withCredentials: true }
+          ),
+        ]);
+
+        if (analyticsRes.status === "fulfilled") {
+          setMetrics(analyticsRes.value.data);
+        }
+        if (repliesRes.status === "fulfilled" && repliesRes.value.data) {
+          setRepliesStats(repliesRes.value.data);
+        }
       } catch (err) {
         console.error("Failed to load metrics:", err);
         setError("Unable to load deliverability metrics.");
@@ -112,6 +127,18 @@ export default function AdminAnalyticsCards({ backendUrl }) {
       icon: XCircle,
       color: metrics?.failed > 0 ? "#dc2626" : "#64748b",
       bg: metrics?.failed > 0 ? "rgba(220, 38, 38, 0.08)" : "rgba(100, 116, 139, 0.08)",
+    },
+    {
+      title: "Replies Received",
+      value: repliesStats?.total_replies ?? (metrics?.replies ?? 0),
+      subtext:
+        repliesStats?.unique_subjects_count !== undefined
+          ? `${repliesStats.unique_subjects_count} active subjects`
+          : "Inbound responses",
+      icon: MessageSquare,
+      color: "#0284c7",
+      bg: "rgba(2, 132, 199, 0.08)",
+      onClick: onNavigateToReplies,
     },
   ];
 
@@ -321,6 +348,7 @@ export default function AdminAnalyticsCards({ backendUrl }) {
           return (
             <div
               key={idx}
+              onClick={c.onClick}
               style={{
                 background: SURFACE_ALT,
                 border: `1px solid ${BORDER}`,
@@ -329,6 +357,8 @@ export default function AdminAnalyticsCards({ backendUrl }) {
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
+                cursor: c.onClick ? "pointer" : "default",
+                transition: "all 0.15s ease",
               }}
             >
               <div
@@ -387,6 +417,125 @@ export default function AdminAnalyticsCards({ backendUrl }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Inbound Replies by Mail Subject Table */}
+      <div
+        style={{
+          marginTop: "24px",
+          paddingTop: "20px",
+          borderTop: `1px solid ${BORDER}`,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "14px",
+          }}
+        >
+          <div>
+            <h4
+              style={{
+                fontSize: "14px",
+                fontWeight: "700",
+                color: TEXT_PRIMARY,
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <MessageSquare size={15} style={{ color: ACCENT }} />
+              Inbound Replies by Mail Subject
+            </h4>
+            <span style={{ fontSize: "11.5px", color: TEXT_MUTED }}>
+              Total {repliesStats?.total_replies ?? 0} responses across {repliesStats?.unique_subjects_count ?? 0} mail subjects
+            </span>
+          </div>
+
+          {onNavigateToReplies && (
+            <button
+              type="button"
+              onClick={onNavigateToReplies}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "12px",
+                fontWeight: "600",
+                color: ACCENT,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px 8px",
+              }}
+            >
+              Open Full Replies Tab &amp; Simulator
+              <ArrowRight size={13} />
+            </button>
+          )}
+        </div>
+
+        {repliesStats?.by_subject && repliesStats.by_subject.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {repliesStats.by_subject.map((subj, sIdx) => (
+              <div
+                key={sIdx}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
+                  background: SURFACE_ALT,
+                  borderRadius: RADIUS_MD,
+                  border: `1px solid ${BORDER}`,
+                  fontSize: "12px",
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1, paddingRight: "12px" }}>
+                  <span style={{ fontWeight: "700", color: TEXT_PRIMARY, display: "block" }}>
+                    {subj.clean_subject}
+                  </span>
+                  <span style={{ fontSize: "11px", color: TEXT_MUTED }}>
+                    {subj.unique_senders_count} {subj.unique_senders_count === 1 ? "sender" : "senders"} ({subj.senders?.slice(0, 3).join(", ")})
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      padding: "3px 8px",
+                      borderRadius: "10px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      background: "rgba(22, 163, 74, 0.1)",
+                      color: "#15803D",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {subj.reply_count} {subj.reply_count === 1 ? "reply" : "replies"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: "16px",
+              textAlign: "center",
+              background: SURFACE_ALT,
+              borderRadius: RADIUS_MD,
+              fontSize: "12px",
+              color: TEXT_MUTED,
+            }}
+          >
+            No email replies recorded yet. Click <strong>"Replies &amp; Inbound"</strong> tab to simulate a reply or await inbound traffic.
+          </div>
+        )}
       </div>
 
       {/* Privacy Notice & Metadata */}

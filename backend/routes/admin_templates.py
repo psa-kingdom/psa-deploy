@@ -28,7 +28,11 @@ from backend.services.email.templates import (
     get_contact_acknowledgement_fragment,
     get_contact_acknowledgement_template,
     get_newsletter_welcome_fragment,
-    get_newsletter_welcome_template
+    get_newsletter_welcome_template,
+    get_advance_tax_alert_html,
+    get_itr_checklist_html,
+    get_monthly_tax_digest_html,
+    get_festive_greetings_html,
 )
 
 router = APIRouter(prefix="/admin/communication/templates", tags=["Admin Templates"])
@@ -41,7 +45,7 @@ def get_db() -> AsyncIOMotorDatabase:
 APPROVED_SENDER_IDENTITIES = [
     {"name": "P Suman & Associates", "email": "info@psuman.com", "role": "General & Advisory Inquiries"},
     {"name": "P Suman & Associates", "email": "info@psumanassociates.com", "role": "General Corporate Inquiries"},
-    {"name": "P Suman & Associates", "email": "updates@psumanassociates.com", "role": "Default Corporate Broadcast"},
+    {"name": "P Suman & Associates", "email": "updates@updates.psumanassociates.com", "role": "Default Corporate Broadcast"},
     {"name": "PSA Advisory", "email": "advisory@updates.psumanassociates.com", "role": "Regulatory & Tax Advisory"},
     {"name": "PSA Insights", "email": "insights@updates.psumanassociates.com", "role": "Thought Leadership & Newsletter"},
     {"name": "PSA Client Support", "email": "contact@updates.psumanassociates.com", "role": "Inquiry Acknowledgements"},
@@ -69,9 +73,77 @@ def _is_approved_sender_email(email_str: str) -> bool:
 
 
 SYSTEM_TEMPLATES_DEFINITIONS = {
+    "advance_tax_alert": {
+        "name": "Advance Tax Quarterly Alert",
+        "category": "compliance",
+        "subcategory": "Advance Tax Due Dates",
+        "occasions": [
+            "Q1 (June 15) — 15% Installment",
+            "Q2 (September 15) — 45% Installment",
+            "Q3 (December 15) — 75% Installment",
+            "Q4 (March 15) — 100% Installment",
+        ],
+        "description": "Statutory reminder for advance tax quarterly installments with interest penalty warnings under Sec 234B/C.",
+        "subject": "Advance Tax Due Date Alert — Mandatory Installment Notice",
+        "preheader": "Formal statutory reminder for upcoming advance tax quarterly installment.",
+        "get_fragment": get_advance_tax_alert_html,
+        "variables": ["name", "company", "unsubscribe_url"]
+    },
+    "itr_checklist_reminder": {
+        "name": "ITR Filing & Document Checklist Request",
+        "category": "taxation",
+        "subcategory": "Annual Tax Compliance",
+        "occasions": [
+            "Individual & Salaried (Due July 31)",
+            "Corporate & Business Entities (Due October 31)",
+            "Tax Audit & Transfer Pricing (Due November 30)",
+            "Belated & Revised Returns (Sec 139(4)/(5))",
+        ],
+        "description": "Checklist and preparation guidance for annual Income Tax Return collation and reconciliation.",
+        "subject": "Income Tax Return Filing & Required Documents Checklist — P Suman & Associates",
+        "preheader": "Essential document checklist and preparation guidelines for your ITR filing.",
+        "get_fragment": get_itr_checklist_html,
+        "variables": ["name", "company", "unsubscribe_url"]
+    },
+    "monthly_tax_digest": {
+        "name": "Monthly PSA Tax & Regulatory Digest",
+        "category": "newsletter",
+        "subcategory": "Executive Intelligence Bulletin",
+        "occasions": [
+            "Direct Tax & Judicial Precedents Edition",
+            "GST & Indirect Tax Circulars Edition",
+            "Corporate Laws & MCA Regulatory Edition",
+            "Banking, FEMA & RBI Guidelines Edition",
+        ],
+        "description": "Monthly curated regulatory briefing covering direct tax, GST circulars, and MCA corporate governance.",
+        "subject": "PSA Monthly Tax & Regulatory Digest — Executive Briefing",
+        "preheader": "Executive tax intelligence, circular highlights, and statutory amendments.",
+        "get_fragment": get_monthly_tax_digest_html,
+        "variables": ["name", "company", "unsubscribe_url"]
+    },
+    "festive_greetings": {
+        "name": "Diwali / Festive Greetings",
+        "category": "greetings",
+        "subcategory": "Festive Occasions & Milestones",
+        "occasions": [
+            "Diwali & Dhanteras Wishes",
+            "New Year 2026 Greetings",
+            "Holi Celebrations",
+            "Navratri & Dussehra Wishes",
+            "Independence Day (15th August)",
+            "Republic Day (26th January)",
+        ],
+        "description": "Warm corporate greetings and wishes for clients and partners across major festivals and national milestones.",
+        "subject": "Warm Festive Greetings & Best Wishes — P Suman & Associates",
+        "preheader": "Wishing you joy, prosperity, and continued success this festive season.",
+        "get_fragment": get_festive_greetings_html,
+        "variables": ["name", "company", "unsubscribe_url"]
+    },
     "independence_day_2026": {
         "name": "Independence Day 2026 Greetings",
         "category": "announcement",
+        "subcategory": "National Celebrations",
+        "occasions": ["Independence Day (15th August)"],
         "description": "Formal Independence Day corporate greetings for clients and partners.",
         "subject": "Happy Independence Day — P Suman & Associates",
         "preheader": "Warm greetings and corporate wishes on India's 80th Independence Day.",
@@ -81,6 +153,8 @@ SYSTEM_TEMPLATES_DEFINITIONS = {
     "contact_acknowledgement": {
         "name": "Contact Inquiry Acknowledgment",
         "category": "transactional",
+        "subcategory": "Client Inquiries",
+        "occasions": ["New Advisory Inquiry"],
         "description": "Instant confirmation sent upon inquiry form submission.",
         "subject": "Inquiry Received — P Suman & Associates",
         "preheader": "We have received your advisory inquiry.",
@@ -90,6 +164,8 @@ SYSTEM_TEMPLATES_DEFINITIONS = {
     "newsletter_welcome": {
         "name": "Newsletter Welcome & Insights",
         "category": "newsletter",
+        "subcategory": "Subscriber Onboarding",
+        "occasions": ["New Subscriber Welcome"],
         "description": "Welcome email for new PSA Insights subscribers.",
         "subject": "Welcome to PSA Insights — P Suman & Associates",
         "preheader": "Welcome to executive tax & audit intelligence.",
@@ -114,6 +190,8 @@ async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
         fragment_html = defn["get_fragment"]()
         subject = defn["subject"]
         preheader = defn.get("preheader", "")
+        subcategory = defn.get("subcategory")
+        occasions = defn.get("occasions")
 
         if existing:
             old_version = existing.get("version", 1)
@@ -134,6 +212,8 @@ async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
             update_data = {
                 "name": defn["name"],
                 "category": defn["category"],
+                "subcategory": subcategory,
+                "occasions": occasions,
                 "description": defn["description"],
                 "published_subject": subject,
                 "published_body_html": fragment_html,
@@ -157,6 +237,8 @@ async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
                 template_id=tid,
                 name=defn["name"],
                 category=defn["category"],
+                subcategory=subcategory,
+                occasions=occasions,
                 description=defn["description"],
                 published_subject=subject,
                 published_body_html=fragment_html,
@@ -171,6 +253,8 @@ async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
                 has_pending_draft=False,
                 version=1,
                 variables=defn["variables"],
+                sender_name="P Suman & Associates",
+                sender_email="updates@updates.psumanassociates.com",
                 created_at=now,
                 updated_at=now
             )
@@ -204,6 +288,140 @@ async def list_templates(
         query["is_archived"] = {"$ne": True}
     templates = await db.email_templates_studio.find(query, {"_id": 0}).sort("created_at", 1).to_list(100)
     return [EmailTemplateStudio(**t) for t in templates]
+
+
+def get_curated_template_variation(template_id: str, occasion: Optional[str] = None) -> Dict[str, str]:
+    """
+    Returns curated subject, preheader, and body_html for a given template and occasion/sub-theme.
+    """
+    if template_id == "advance_tax_alert":
+        occ = (occasion or "").lower()
+        if "q1" in occ or "june" in occ or "15%" in occ:
+            subj = "Advance Tax Alert: 1st Installment (15%) Due on 15th June — P Suman & Associates"
+            pre = "Mandatory 15% Advance Tax deposit deadline reminder under Section 208."
+        elif "q2" in occ or "september" in occ or "45%" in occ:
+            subj = "Advance Tax Alert: 2nd Installment (45%) Due on 15th September — P Suman & Associates"
+            pre = "Mandatory cumulative 45% Advance Tax deposit deadline reminder."
+        elif "q3" in occ or "december" in occ or "75%" in occ:
+            subj = "Advance Tax Alert: 3rd Installment (75%) Due on 15th December — P Suman & Associates"
+            pre = "Mandatory cumulative 75% Advance Tax deposit deadline reminder."
+        elif "q4" in occ or "march" in occ or "100%" in occ:
+            subj = "Advance Tax Alert: Final Installment (100%) Due on 15th March — P Suman & Associates"
+            pre = "Mandatory 100% year-end Advance Tax settlement notice."
+        else:
+            subj = "Advance Tax Due Date Alert — Mandatory Installment Notice"
+            pre = "Formal statutory reminder for upcoming advance tax quarterly installment."
+        return {
+            "subject": subj,
+            "preheader": pre,
+            "body_html": get_advance_tax_alert_html(occasion),
+            "occasion": occasion or ""
+        }
+
+    elif template_id == "itr_checklist_reminder":
+        occ = (occasion or "").lower()
+        if "individual" in occ or "salaried" in occ or "july" in occ:
+            subj = "ITR Filing Checklist for Individuals & Salaried Taxpayers — Due 31st July"
+            pre = "Collate Form 16, AIS, TIS and investment proofs for timely error-free filing."
+        elif "corporate" in occ or "business" in occ or "october" in occ:
+            subj = "Corporate Income Tax Return (ITR-6) Checklist & Filing Notice — Due 31st October"
+            pre = "Checklist for corporate tax returns, audited balance sheets, and statutory disclosures."
+        elif "audit" in occ or "transfer pricing" in occ or "november" in occ:
+            subj = "Tax Audit (Form 3CD) & Transfer Pricing Checklist — Due 30th November"
+            pre = "Critical documentation guidelines for tax audit and international transactions."
+        elif "belated" in occ or "revised" in occ or "139" in occ:
+            subj = "Notice for Filing Belated or Revised Returns (Sec 139(4)/(5)) — P Suman & Associates"
+            pre = "Statutory cut-off notice to rectify returns and mitigate late filing fees."
+        else:
+            subj = "Income Tax Return Filing & Required Documents Checklist — P Suman & Associates"
+            pre = "Essential document checklist and preparation guidelines for your ITR filing."
+        return {
+            "subject": subj,
+            "preheader": pre,
+            "body_html": get_itr_checklist_html(occasion),
+            "occasion": occasion or ""
+        }
+
+    elif template_id == "monthly_tax_digest":
+        occ = (occasion or "").lower()
+        if "direct" in occ or "judicial" in occ:
+            subj = "Direct Tax Digest: Landmark Judicial Precedents & Rulings — PSA Insights"
+            pre = "Executive briefing on High Court & ITAT decisions, Section 14A, and CBDT circulars."
+        elif "gst" in occ or "indirect" in occ:
+            subj = "GST Regulatory Briefing: Recent Circulars, ITC Norms & E-Invoicing — PSA Insights"
+            pre = "CBIC notifications, corporate guarantee valuations, and ITC reconciliation mandates."
+        elif "corporate" in occ or "mca" in occ:
+            subj = "MCA Corporate Governance: Demat of Shares, SBO & CSR Audits — PSA Insights"
+            pre = "Companies Act updates, private company share dematerialization, and annual filings."
+        elif "fema" in occ or "banking" in occ or "rbi" in occ:
+            subj = "Cross-Border & Banking Digest: FEMA, ODI & RBI Directions — PSA Insights"
+            pre = "Overseas direct investments, foreign liabilities reporting, and ECB compliance."
+        else:
+            subj = "PSA Monthly Tax & Regulatory Digest — Executive Briefing"
+            pre = "Executive tax intelligence, circular highlights, and statutory amendments."
+        return {
+            "subject": subj,
+            "preheader": pre,
+            "body_html": get_monthly_tax_digest_html(occasion),
+            "occasion": occasion or ""
+        }
+
+    elif template_id == "festive_greetings":
+        occ = (occasion or "").lower()
+        if "diwali" in occ or "dhanteras" in occ:
+            subj = "Shubh Deepawali & Dhanteras Wishes — P Suman & Associates"
+            pre = "Wishing you, your family, and your enterprise immense joy, health, and financial prosperity."
+        elif "new year" in occ or "2026" in occ:
+            subj = "Happy New Year 2026 — Warm Wishes from P Suman & Associates"
+            pre = "Celebrating new milestones, bold aspirations, and continued professional excellence in 2026."
+        elif "holi" in occ:
+            subj = "Joyous & Colorful Holi Greetings — P Suman & Associates"
+            pre = "Wishing you and your loved ones a joyful, vibrant, and prosperous Holi."
+        elif "navratri" in occ or "dussehra" in occ:
+            subj = "Auspicious Navratri & Vijayadashami Greetings — P Suman & Associates"
+            pre = "May this auspicious season bring victory of good over evil and enduring success."
+        elif "independence" in occ or "15th august" in occ:
+            subj = "Happy 80th Independence Day — P Suman & Associates"
+            pre = "One Vision for Viksit Bharat 2047 — Warm Independence Day Wishes."
+        elif "republic" in occ or "26th january" in occ:
+            subj = "Happy Republic Day — P Suman & Associates"
+            pre = "Celebrating the Constitution, democratic values, and economic sovereignty of India."
+        else:
+            subj = "Warm Festive Greetings & Best Wishes — P Suman & Associates"
+            pre = "Wishing you joy, prosperity, and continued success this festive season."
+        return {
+            "subject": subj,
+            "preheader": pre,
+            "body_html": get_festive_greetings_html(occasion),
+            "occasion": occasion or ""
+        }
+
+    return {
+        "subject": "",
+        "preheader": "",
+        "body_html": "",
+        "occasion": occasion or ""
+    }
+
+
+@router.get("/{template_id}/curated-variation", dependencies=[Depends(get_current_admin)])
+async def get_curated_variation(
+    template_id: str,
+    occasion: Optional[str] = Query(None),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    variation = get_curated_template_variation(template_id, occasion)
+    if not variation["body_html"]:
+        t = await db.email_templates_studio.find_one({"template_id": template_id}, {"_id": 0})
+        if not t:
+            raise HTTPException(status_code=404, detail="Template not found")
+        return {
+            "subject": t.get("published_subject") or t.get("draft_subject"),
+            "preheader": t.get("published_preheader") or t.get("draft_preheader") or "",
+            "body_html": t.get("published_body_html") or t.get("draft_body_html") or "",
+            "occasion": occasion or ""
+        }
+    return variation
 
 
 @router.get("/{template_id}", response_model=EmailTemplateStudio, dependencies=[Depends(get_current_admin)])
@@ -615,7 +833,7 @@ async def preview_template(payload: TemplatePreviewRequest):
     )
 
     from_name = payload.sender_name or "P Suman & Associates"
-    from_email = payload.sender_email or "updates@psumanassociates.com"
+    from_email = payload.sender_email or "updates@updates.psumanassociates.com"
     from_header = f"{from_name} <{from_email}>"
 
     return {
