@@ -148,7 +148,7 @@ class TemplatePreviewRequest(BaseModel):
     reply_to: Optional[str] = None
     cc: Optional[List[str]] = None
     bcc: Optional[List[str]] = None
-    recipient_name: Optional[str] = "Valued Client"
+    recipient_name: Optional[str] = "Valued Customer"
     recipient_company: Optional[str] = "Acme Corp"
     recipient_email: Optional[str] = "client@example.com"
 

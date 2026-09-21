@@ -572,3 +572,4 @@ async def shutdown_event():
         await outbox_worker.stop()
     client.close()
     logger.info("Application shutdown complete.")
+# reload trigger

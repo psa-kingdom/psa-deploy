@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -26,17 +26,24 @@ from backend.services.email.audience import (
     extract_and_deduplicate_audience,
     get_suppressed_emails,
     parse_recipient_file,
-    clean_email_token
 )
 from backend.services.email.renderer import render_final_email, interpolate_variables, html_to_plain_text
 from backend.services.email.provider import send_email_via_provider
 from backend.routes.admin_templates import _is_approved_sender_email
 import re
+import secrets
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/communication", tags=["Admin Campaigns"])
+
+# ---------- Models ----------
+
+class AdminSubscriberCreate(BaseModel):
+    email: str
+    name: Optional[str] = None
+
 
 # ---------- Helpers ----------
 
@@ -218,6 +225,153 @@ async def estimate_audience_post(
     including custom manual emails with breakdown metrics (POST body).
     """
     return await _compute_audience_estimate(target_filter, db)
+
+
+# ---------- Subscriber & Audience Management Endpoints ----------
+
+@router.get("/subscribers", dependencies=[Depends(get_current_admin)])
+async def list_subscribers_admin(
+    q: Optional[str] = None,
+    limit: int = 1000,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    List newsletter subscribers with search support for admin management.
+    """
+    query = {}
+    if q:
+        query["email"] = {"$regex": re.escape(q.strip()), "$options": "i"}
+    docs = await db.newsletter_subscriptions.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    for d in docs:
+        if isinstance(d.get("created_at"), datetime):
+            d["created_at"] = d["created_at"].isoformat()
+        if isinstance(d.get("unsubscribed_at"), datetime):
+            d["unsubscribed_at"] = d["unsubscribed_at"].isoformat()
+        if isinstance(d.get("reactivated_at"), datetime):
+            d["reactivated_at"] = d["reactivated_at"].isoformat()
+    return docs
+
+
+@router.post("/subscribers", dependencies=[Depends(get_current_admin)])
+async def add_subscriber_admin(
+    payload: AdminSubscriberCreate,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Admin endpoint to add a new newsletter subscriber or reactivate an existing one.
+    """
+    raw_email = payload.email.strip()
+    clean_email = _normalize_email(raw_email)
+    if not _is_valid_email(clean_email):
+        raise HTTPException(status_code=400, detail=f"Invalid email address format: '{raw_email}'")
+
+    existing = await db.newsletter_subscriptions.find_one({"email": clean_email})
+    now = datetime.now(timezone.utc)
+    if existing:
+        await db.newsletter_subscriptions.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {
+                "unsubscribed": False,
+                "unsubscribed_at": None,
+                "reactivated_at": now,
+                "name": payload.name or existing.get("name")
+            }}
+        )
+        await db.email_suppressions.delete_many({"email": clean_email})
+        updated = await db.newsletter_subscriptions.find_one({"_id": existing["_id"]}, {"_id": 0})
+        if isinstance(updated.get("created_at"), datetime):
+            updated["created_at"] = updated["created_at"].isoformat()
+        return {"status": "success", "message": f"Subscriber '{clean_email}' reactivated successfully", "subscriber": updated}
+
+    sub_doc = {
+        "id": generate_uuid(),
+        "email": clean_email,
+        "name": payload.name.strip() if payload.name else None,
+        "source": "admin_portal",
+        "unsubscribe_token": secrets.token_urlsafe(32),
+        "unsubscribed": False,
+        "created_at": now,
+    }
+    await db.newsletter_subscriptions.insert_one(sub_doc)
+    await db.email_suppressions.delete_many({"email": clean_email})
+
+    res_doc = dict(sub_doc)
+    res_doc.pop("_id", None)
+    res_doc["created_at"] = now.isoformat()
+    return {"status": "success", "message": f"Subscriber '{clean_email}' added successfully", "subscriber": res_doc}
+
+
+@router.delete("/subscribers/{email_or_id}", dependencies=[Depends(get_current_admin)])
+async def delete_subscriber_admin(
+    email_or_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Admin endpoint to permanently delete/remove a subscriber from the newsletter database.
+    """
+    clean_target = _normalize_email(email_or_id)
+    res = await db.newsletter_subscriptions.delete_one({
+        "$or": [
+            {"email": clean_target},
+            {"id": email_or_id}
+        ]
+    })
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Subscriber '{email_or_id}' not found")
+
+    return {"status": "success", "message": f"Subscriber '{email_or_id}' deleted successfully"}
+
+
+@router.post("/audience/recipients", dependencies=[Depends(get_current_admin)])
+async def get_audience_recipients(
+    target_filter: TargetFilter,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Authoritative list of resolved recipients for current audience settings,
+    including their source, email, and whether they are active or excluded.
+    """
+    from backend.services.email.audience import clean_email_token
+    suppressed_set = await get_suppressed_emails(db)
+
+    excluded_set = set()
+    if target_filter.excluded_emails:
+        for e in target_filter.excluded_emails:
+            c = clean_email_token(str(e))
+            if c:
+                excluded_set.add(c)
+
+    pre_filter = TargetFilter(
+        source=target_filter.source,
+        custom_emails=target_filter.custom_emails,
+        excluded_emails=None
+    )
+    all_recipients = await extract_and_deduplicate_audience(db, pre_filter)
+
+    annotated = []
+    net_count = 0
+    for r in all_recipients:
+        email = r["email"]
+        is_excluded = email in excluded_set
+        status_val = "excluded" if is_excluded else "active"
+        if not is_excluded:
+            net_count += 1
+        annotated.append({
+            "email": email,
+            "name": r.get("name"),
+            "company": r.get("company"),
+            "source": r.get("source"),
+            "source_id": r.get("source_id"),
+            "status": status_val,
+            "is_excluded": is_excluded
+        })
+
+    return {
+        "total": len(annotated),
+        "net_target_count": net_count,
+        "recipients": annotated
+    }
+
 
 
 @router.post("/recipients/parse-file", response_model=FileImportResponse, dependencies=[Depends(get_current_admin)])

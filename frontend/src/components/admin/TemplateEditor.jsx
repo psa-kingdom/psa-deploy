@@ -83,6 +83,10 @@ export default function TemplateEditor({
   testRecipient = "",
   onTestSend,
   standaloneStudio = false,
+  sendMode = "test",
+  manualEmails = [],
+  selectedSource = "newsletter_subscriptions",
+  audienceEstimate = null,
 }) {
   const [previewDevice, setPreviewDevice] = useState("desktop");
   const [attachments, setAttachments] = useState([]);
@@ -100,6 +104,80 @@ export default function TemplateEditor({
   const [savingAction, setSavingAction] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
+  // Format recipient display name from email address
+  const formatRecipientName = (email, fallback = "Valued Client") => {
+    if (!email || !email.includes("@")) return fallback;
+    const part = email.split("@")[0].replace(/[._-]/g, " ");
+    return (
+      part
+        .split(" ")
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ") || fallback
+    );
+  };
+
+  // Compute actual recipient information for live preview
+  let actualRecipientEmail = "contact@psumanassociates.com";
+  let actualRecipientName = "Valued Customer";
+  let actualToDisplay = "";
+
+  if (standaloneStudio) {
+    if (testRecipient && testRecipient.trim()) {
+      actualRecipientEmail = testRecipient.trim();
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = testRecipient.trim();
+    } else {
+      actualRecipientEmail = "preview@psumanassociates.com";
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = "preview@psumanassociates.com";
+    }
+  } else if (sendMode === "test") {
+    if (testRecipient && testRecipient.trim()) {
+      actualRecipientEmail = testRecipient.trim();
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = testRecipient.trim();
+    } else {
+      actualRecipientEmail = "test@psumanassociates.com";
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = "(No test recipient configured yet — set in Step 2)";
+    }
+  } else {
+    // Production Mode
+    if (selectedSource === "manual") {
+      if (manualEmails && manualEmails.length > 0) {
+        actualRecipientEmail = manualEmails[0];
+        actualRecipientName = "Valued Customer";
+        if (manualEmails.length === 1) {
+          actualToDisplay = manualEmails[0];
+        } else if (manualEmails.length === 2) {
+          actualToDisplay = `${manualEmails[0]}, ${manualEmails[1]}`;
+        } else {
+          actualToDisplay = `${manualEmails[0]}, ${manualEmails[1]} (+${manualEmails.length - 2} more)`;
+        }
+      } else {
+        actualRecipientEmail = "client@domain.com";
+        actualRecipientName = "Valued Customer";
+        actualToDisplay = "(No manual recipients added yet — add in Step 2)";
+      }
+    } else if (selectedSource === "newsletter_subscriptions") {
+      const count = audienceEstimate?.net_target_count ?? 0;
+      actualRecipientEmail = "subscriber@client-domain.com";
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = count > 0
+        ? `Newsletter Subscribers (${count} verified opt-in recipients)`
+        : "Newsletter Subscribers (Website Opt-ins)";
+    } else {
+      // combined
+      const count = audienceEstimate?.net_target_count ?? (manualEmails.length || 0);
+      actualRecipientEmail = manualEmails[0] || "subscriber@domain.com";
+      actualRecipientName = "Valued Customer";
+      actualToDisplay = count > 0
+        ? `Combined Audience (${count} total verified recipients)`
+        : "Subscribers + Manual Recipient List";
+    }
+  }
+
   // CC/BCC raw input helpers
   const [rawCc, setRawCc] = useState(Array.isArray(cc) ? cc.join(", ") : "");
   const [rawBcc, setRawBcc] = useState(Array.isArray(bcc) ? bcc.join(", ") : "");
@@ -108,23 +186,20 @@ export default function TemplateEditor({
   const activeTemplate = templates.find((t) => t.template_id === selectedTemplateId);
 
   // Fetch approved senders
-  useEffect(() => {
-    const loadSenders = async () => {
-      try {
-        const res = await axios.get(
-          `${backendUrl}/api/admin/communication/templates/senders/approved`,
-          { withCredentials: true }
-        );
-        setApprovedSenders(res.data || []);
-      } catch (_) {
-        // Fallback default
-        setApprovedSenders([
-          { name: "P Suman & Associates", email: "updates@updates.psumanassociates.com" },
-        ]);
-      }
-    };
-    loadSenders();
+  const fetchApprovedSenders = useCallback(async () => {
+    try {
+      const res = await axios.get(`${backendUrl}/api/admin/communication/templates/senders`, {
+        withCredentials: true,
+      });
+      setApprovedSenders(res.data || []);
+    } catch (_) {
+      // Fallback
+    }
   }, [backendUrl]);
+
+  useEffect(() => {
+    fetchApprovedSenders();
+  }, [fetchApprovedSenders]);
 
   // Sync CC/BCC raw inputs when props change
   useEffect(() => {
@@ -177,14 +252,14 @@ export default function TemplateEditor({
           preheader: preheader || "",
           body_html: bodyHtml,
           apply_wrapper: applyWrapper,
-          sender_name: senderName,
-          sender_email: senderEmail,
-          reply_to: replyTo,
+          sender_name: senderName || "P Suman & Associates",
+          sender_email: senderEmail || "updates@updates.psumanassociates.com",
+          reply_to: replyTo || "contact@psumanassociates.com",
           cc: Array.isArray(cc) ? cc : [],
           bcc: Array.isArray(bcc) ? bcc : [],
-          recipient_name: "Valued Subscriber",
-          recipient_company: "Subscriber Organization",
-          recipient_email: "subscriber@example.com",
+          recipient_name: actualRecipientName,
+          recipient_company: "P Suman & Associates Client",
+          recipient_email: actualRecipientEmail,
         },
         {
           withCredentials: true,
@@ -210,6 +285,8 @@ export default function TemplateEditor({
     replyTo,
     cc,
     bcc,
+    actualRecipientEmail,
+    actualRecipientName,
   ]);
 
   useEffect(() => {
@@ -618,11 +695,32 @@ export default function TemplateEditor({
             className="text-xs bg-white border border-slate-300 rounded-md px-3 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-navy"
           >
             <option value="">-- Custom (No Template) --</option>
-            {templates.map((t) => (
-              <option key={t.template_id} value={t.template_id}>
-                {t.name} {t.subcategory ? `[${t.subcategory}]` : `(${t.category})`} {t.has_pending_draft ? "• [Draft]" : `[v${t.version}]`}
-              </option>
-            ))}
+            {templates
+              .filter((t) => {
+                const name = (t.name || "").toLowerCase();
+                const id = (t.template_id || "").toLowerCase();
+                const cat = (t.category || "").toLowerCase();
+
+                // Remove standalone Independence Day (already present in Festive Greetings)
+                if (name.includes("independence day") || id.includes("independence_day")) return false;
+
+                // Remove legacy duplicate Welcome template
+                if (name === "welcome template" || id === "f990c681-48dd-4d64-b17f-790ae0bca3ba") return false;
+
+                // In campaign mode, hide transactional website autoresponders from campaign broadcast dropdown
+                if (!standaloneStudio) {
+                  if (cat === "transactional") return false;
+                  if (id === "contact_acknowledgement" || id === "newsletter_welcome") return false;
+                  if (t.subcategory === "Client Inquiries" || t.subcategory === "Subscriber Onboarding") return false;
+                }
+
+                return true;
+              })
+              .map((t) => (
+                <option key={t.template_id} value={t.template_id}>
+                  {t.name} {t.subcategory ? `[${t.subcategory}]` : `(${t.category})`} {t.has_pending_draft ? "• [Draft]" : `[v${t.version}]`}
+                </option>
+              ))}
           </select>
 
           {selectedTemplateId && (
@@ -1243,44 +1341,41 @@ export default function TemplateEditor({
           </div>
 
           {/* Delivery Metadata Preview Header */}
-          {previewData?.metadata && (
-            <div className="bg-slate-50 border border-slate-200 rounded p-2.5 text-[11px] font-mono text-slate-600 space-y-1">
-              <div className="flex items-center justify-between">
-                <span>
-                  <strong>From:</strong> {previewData.metadata.from}
-                </span>
-                <span className="text-[10px] text-slate-400 font-sans">
-                  {previewData.metadata.layout_mode}
-                </span>
-              </div>
-              <div>
-                <strong>To:</strong> {previewData.metadata.to}
-              </div>
-              {previewData.metadata.reply_to && (
-                <div>
-                  <strong>Reply-To:</strong> {previewData.metadata.reply_to}
-                </div>
-              )}
-              {previewData.metadata.cc?.length > 0 && (
-                <div>
-                  <strong>CC:</strong> {previewData.metadata.cc.join(", ")}
-                </div>
-              )}
-              {previewData.metadata.bcc?.length > 0 && (
-                <div className="text-slate-400">
-                  <strong>BCC (Admin Only):</strong> {previewData.metadata.bcc.join(", ")}
-                </div>
-              )}
-              <div className="truncate text-slate-700 font-bold font-sans">
-                <strong>Subject:</strong> {previewData.subject}
-              </div>
-              {previewData.preheader && (
-                <div className="truncate text-slate-500 italic font-sans">
-                  <strong>Preheader:</strong> {previewData.preheader}
-                </div>
-              )}
+          <div className="bg-slate-50 border border-slate-200 rounded p-2.5 text-[11px] font-mono text-slate-600 space-y-1">
+            <div className="flex items-center justify-between">
+              <span>
+                <strong>From:</strong> {previewData?.metadata?.from || `${senderName || "P Suman & Associates"} <${senderEmail || "updates@updates.psumanassociates.com"}>`}
+              </span>
+              <span className="text-[10px] text-slate-500 font-sans font-medium px-2 py-0.5 bg-slate-200/70 rounded">
+                {applyWrapper ? "PSA Corporate Layout (780px)" : "Raw Custom HTML"}
+              </span>
             </div>
-          )}
+            <div>
+              <strong>To:</strong>{" "}
+              <span className={actualToDisplay.startsWith("(") ? "text-amber-700 italic font-sans" : "text-slate-900 font-semibold font-sans"}>
+                {actualToDisplay}
+              </span>
+            </div>
+            <div>
+              <strong>Reply-To:</strong> {replyTo || previewData?.metadata?.reply_to || "contact@psumanassociates.com"}
+            </div>
+            {((cc && cc.length > 0) || previewData?.metadata?.cc?.length > 0) && (
+              <div>
+                <strong>CC:</strong> {(Array.isArray(cc) && cc.length > 0 ? cc : previewData?.metadata?.cc || []).join(", ")}
+              </div>
+            )}
+            {((bcc && bcc.length > 0) || previewData?.metadata?.bcc?.length > 0) && (
+              <div className="text-slate-400">
+                <strong>BCC (Admin Only):</strong> {(Array.isArray(bcc) && bcc.length > 0 ? bcc : previewData?.metadata?.bcc || []).join(", ")}
+              </div>
+            )}
+            <div className="truncate text-slate-700 font-bold font-sans">
+              <strong>Subject:</strong> {subject ? subject : <span className="text-amber-600 italic font-normal font-sans">(No subject entered yet)</span>}
+            </div>
+            <div className="truncate text-slate-500 italic font-sans">
+              <strong>Preheader:</strong> {preheader ? preheader : <span className="text-slate-400 italic text-[10px] font-sans">(None — inbox preview text will be empty)</span>}
+            </div>
+          </div>
 
           {/* Iframe Viewport */}
           <div

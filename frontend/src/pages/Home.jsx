@@ -34,7 +34,7 @@ export default function Home() {
               <span className="text-gold">Enterprise-Grade Assurance.</span>
             </h1>
             <p className="font-body text-base md:text-lg text-ivory/70 mt-10 max-w-2xl leading-relaxed">
-              India&apos;s technology-enabled audit and advisory firm — trusted by leading enterprises across 15+ states.
+              India&apos;s technology-enabled audit and advisory firm — trusted by leading enterprises with a PAN-India presence.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link to="/contact" data-testid="hero-cta-primary" className="bg-sky text-white px-7 py-4 text-[13px] font-semibold uppercase tracking-[0.18em] hover:bg-sky-dark transition-colors duration-500 inline-flex items-center gap-2 border border-sky hover:border-sky-dark">

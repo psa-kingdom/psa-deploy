@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from backend.server import app
 from backend.routes.webhooks import normalize_subject, get_db as get_webhooks_db
-from backend.routes.admin_replies import _get_db as get_replies_db
 from backend.core.auth import get_current_admin
 
 
@@ -137,7 +136,6 @@ def test_normalize_subject():
 
 def test_webhook_inbound_reply_ingestion(client, mock_db):
     import json
-    import time
     from svix.webhooks import Webhook
     from backend.core.config import settings
 

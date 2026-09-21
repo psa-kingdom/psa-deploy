@@ -43,7 +43,7 @@ def get_independence_day_campaign_html() -> str:
     </div>
 
     <p style="margin: 0 0 18px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
 
@@ -109,7 +109,7 @@ def get_contact_acknowledgement_fragment() -> str:
     </h2>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
@@ -120,6 +120,7 @@ def get_contact_acknowledgement_fragment() -> str:
         <p style="margin: 0 0 8px; font-size: 11px; font-weight: 700; color: {PSA_BRAND_MUTED}; text-transform: uppercase; letter-spacing: 0.5px;">
             Summary of Your Inquiry
         </p>
+        <p style="margin: 0 0 6px; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Inquirer Name:</strong> {{{{name}}}}</p>
         <p style="margin: 0 0 6px; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Service:</strong> {{{{service_of_interest}}}}</p>
         <p style="margin: 0; font-size: 14px; color: {PSA_BRAND_TEXT};"><strong>Company:</strong> {{{{company}}}}</p>
     </div>
@@ -168,9 +169,7 @@ def get_independence_day_template(variables: Dict[str, Any]) -> Tuple[str, str, 
     raw_subject = "Happy Independence Day — P Suman & Associates"
     content_html = get_independence_day_campaign_html()
     
-    name = variables.get("name") or "Valued Partner"
-    company = variables.get("company")
-    salutation = f"Dear {name}," if not company else f"Dear {name} ({company}),"
+    salutation = "Dear Valued Customer,"
     content_html = content_html.replace("Dear {{name}},", salutation)
 
     subject = interpolate_variables(raw_subject, variables)
@@ -191,7 +190,7 @@ def get_contact_acknowledgement_template(variables: Dict[str, Any]) -> Tuple[str
     from backend.services.email.renderer import render_final_email
     subject = "Inquiry Received — P Suman & Associates"
     vars_map = {
-        "name": variables.get("name") or "Valued Client",
+        "name": variables.get("name") or "Valued Customer",
         "service_of_interest": variables.get("service_of_interest") or "General Advisory",
         "company": variables.get("company") or "Not specified",
         "unsubscribe_url": variables.get("unsubscribe_url")
@@ -280,7 +279,7 @@ def get_advance_tax_alert_html(occasion: Optional[str] = None) -> str:
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
     <p style="margin: 0 0 18px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
@@ -400,7 +399,7 @@ def get_itr_checklist_html(occasion: Optional[str] = None) -> str:
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
     <p style="margin: 0 0 18px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
@@ -515,7 +514,7 @@ def get_monthly_tax_digest_html(occasion: Optional[str] = None) -> str:
     </p>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
     <p style="margin: 0 0 18px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
@@ -661,7 +660,7 @@ def get_festive_greetings_html(occasion: Optional[str] = None) -> str:
     </div>
 
     <p style="margin: 0 0 16px; font-size: 15px; color: {PSA_BRAND_TEXT};">
-        Dear {{{{name}}}},
+        Dear Valued Customer,
     </p>
 
     <p style="margin: 0 0 18px; font-size: 15px; color: {PSA_BRAND_TEXT}; line-height: 1.7;">
@@ -704,5 +703,33 @@ def get_festive_greetings_html(occasion: Optional[str] = None) -> str:
         </p>
     </div>
     """
+
+
+def get_blank_corporate_template_html() -> str:
+    """
+    Returns clean, open HTML fragment for a Blank Corporate Template.
+    Designed with a clean editable body area and professional sign-off,
+    wrapped in PSA's official corporate header and footer.
+    """
+    return f"""
+    <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: {PSA_BRAND_TEXT};">
+        Dear Valued Customer,
+    </p>
+
+    <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: {PSA_BRAND_TEXT};">
+        Write your message here...
+    </p>
+
+    <div style="margin-top: 32px; padding-top: 18px; border-top: 1px solid {PSA_BRAND_BORDER};">
+        <p style="margin: 0; font-size: 14px; color: {PSA_BRAND_TEXT}; line-height: 1.6;">
+            Warm regards,<br>
+            <strong>P Suman &amp; Associates</strong><br>
+            <span style="font-size: 12px; color: {PSA_BRAND_MUTED};">Chartered Accountants · Audit · Advisory</span><br>
+            <span style="font-size: 12px; color: {PSA_BRAND_MUTED};">Presence: PAN India</span><br>
+            <span style="font-size: 12px; color: {PSA_BRAND_MUTED};">Email: <a href="mailto:contact@psumanassociates.com" style="color: {PSA_BRAND_ACCENT}; text-decoration: none;">contact@psumanassociates.com</a></span>
+        </p>
+    </div>
+    """
+
 
 

@@ -146,49 +146,55 @@ export default function AdminCommunication() {
     try {
       const res = await api.get("/api/admin/communication/templates");
       const list = res.data || [];
-      setTemplates(list);
-
-      // Default selection: automatically select the Welcome Template if none is selected yet
+      setTemplates(list);      // Default selection: automatically select the clean Blank Corporate Template if none is selected yet
       if (list.length > 0) {
-        const welcomeTpl = list.find((t) =>
-          t.name?.toLowerCase().includes("welcome") ||
-          t.slug?.toLowerCase().includes("welcome") ||
-          t.template_id === "f990c681-48dd-4d64-b17f-790ae0bca3ba"
-        ) || list[0];
+        const cleanList = list.filter((t) => {
+          const name = (t.name || "").toLowerCase();
+          const id = (t.template_id || "").toLowerCase();
+          if (name.includes("independence day") || id.includes("independence_day")) return false;
+          if (name === "welcome template" || id === "f990c681-48dd-4d64-b17f-790ae0bca3ba") return false;
+          if (t.category === "transactional" || id === "contact_acknowledgement" || id === "newsletter_welcome") return false;
+          return true;
+        });
 
-        if (welcomeTpl) {
+        const defaultTpl =
+          cleanList.find((t) => t.template_id === "blank_corporate_template" || t.name?.toLowerCase().includes("blank corporate")) ||
+          cleanList[0] ||
+          list[0];
+
+        if (defaultTpl) {
           setSelectedTemplateId((prev) => {
             if (!prev) {
-              setSubject(welcomeTpl.published_subject || welcomeTpl.draft_subject || "");
-              setPreheader(welcomeTpl.published_preheader || welcomeTpl.draft_preheader || "");
-              setBodyHtml(welcomeTpl.published_body_html || welcomeTpl.draft_body_html || "");
-              if (welcomeTpl.apply_wrapper !== undefined && welcomeTpl.apply_wrapper !== null) {
-                setApplyWrapper(welcomeTpl.apply_wrapper);
+              setSubject(defaultTpl.published_subject || defaultTpl.draft_subject || "");
+              setPreheader(defaultTpl.published_preheader || defaultTpl.draft_preheader || "");
+              setBodyHtml(defaultTpl.published_body_html || defaultTpl.draft_body_html || "");
+              if (defaultTpl.apply_wrapper !== undefined && defaultTpl.apply_wrapper !== null) {
+                setApplyWrapper(defaultTpl.apply_wrapper);
               } else {
                 setApplyWrapper(true);
               }
-              if (welcomeTpl.sender_name) setSenderName(welcomeTpl.sender_name);
-              if (welcomeTpl.sender_email) setSenderEmail(welcomeTpl.sender_email);
-              if (welcomeTpl.reply_to) setReplyTo(welcomeTpl.reply_to);
-              if (welcomeTpl.cc) setCc(welcomeTpl.cc);
-              if (welcomeTpl.bcc) setBcc(welcomeTpl.bcc);
-              return welcomeTpl.template_id;
+              if (defaultTpl.sender_name) setSenderName(defaultTpl.sender_name);
+              if (defaultTpl.sender_email) setSenderEmail(defaultTpl.sender_email);
+              if (defaultTpl.reply_to) setReplyTo(defaultTpl.reply_to);
+              if (defaultTpl.cc) setCc(defaultTpl.cc);
+              if (defaultTpl.bcc) setBcc(defaultTpl.bcc);
+              return defaultTpl.template_id;
             }
             return prev;
           });
 
           setStudioSelectedTemplateId((prev) => {
             if (!prev) {
-              setStudioSubject(welcomeTpl.draft_subject || welcomeTpl.published_subject || "");
-              setStudioPreheader(welcomeTpl.draft_preheader || welcomeTpl.published_preheader || "");
-              setStudioBodyHtml(welcomeTpl.draft_body_html || welcomeTpl.published_body_html || "");
-              setStudioApplyWrapper(welcomeTpl.apply_wrapper ?? true);
-              setStudioSenderName(welcomeTpl.sender_name || "P Suman & Associates");
-              setStudioSenderEmail(welcomeTpl.sender_email || "");
-              setStudioReplyTo(welcomeTpl.reply_to || "");
-              setStudioCc(welcomeTpl.cc || []);
-              setStudioBcc(welcomeTpl.bcc || []);
-              return welcomeTpl.template_id;
+              setStudioSubject(defaultTpl.draft_subject || defaultTpl.published_subject || "");
+              setStudioPreheader(defaultTpl.draft_preheader || defaultTpl.published_preheader || "");
+              setStudioBodyHtml(defaultTpl.draft_body_html || defaultTpl.published_body_html || "");
+              setStudioApplyWrapper(defaultTpl.apply_wrapper ?? true);
+              if (defaultTpl.sender_name) setStudioSenderName(defaultTpl.sender_name);
+              if (defaultTpl.sender_email) setStudioSenderEmail(defaultTpl.sender_email);
+              if (defaultTpl.reply_to) setStudioReplyTo(defaultTpl.reply_to);
+              if (defaultTpl.cc) setStudioCc(defaultTpl.cc);
+              if (defaultTpl.bcc) setStudioBcc(defaultTpl.bcc);
+              return defaultTpl.template_id;
             }
             return prev;
           });
@@ -384,22 +390,27 @@ export default function AdminCommunication() {
   };
 
   const handleCreateAndReview = async () => {
-    if (!campaignTitle || !subject || !bodyHtml) {
-      showToast("Please fill in Title, Subject, and HTML Content.", "error");
+    const effectiveTitle = (campaignTitle && campaignTitle.trim()) || (subject && subject.trim()) || `Campaign ${new Date().toLocaleDateString()}`;
+    if (!subject || !bodyHtml) {
+      showToast("Please enter an email Subject and Content before sending.", "error");
       return;
     }
     if (
       (selectedSource === "manual" || selectedSource === "combined") &&
       manualEmails.length === 0
     ) {
-      showToast("Please enter at least one manual recipient email.", "error");
+      showToast("Please enter at least one recipient email address.", "error");
       return;
+    }
+
+    if (!campaignTitle.trim()) {
+      setCampaignTitle(effectiveTitle);
     }
 
     setLoading(true);
     try {
       const res = await api.post("/api/admin/communication/campaigns", {
-        title: campaignTitle,
+        title: effectiveTitle,
         campaign_type: "announcement",
         template_id: selectedTemplateId || null,
         send_mode: sendMode,
@@ -596,6 +607,19 @@ export default function AdminCommunication() {
     btnGreen: BTN_SUCCESS_STYLE,
   };
 
+  // Live Readiness Checks for layman clarity
+  const hasSubject = Boolean(subject && subject.trim());
+  const hasContent = Boolean(bodyHtml && bodyHtml.trim() && bodyHtml !== "<p></p>");
+  const hasTestRecipient = Boolean(testRecipient && testRecipient.trim());
+
+  const hasAudience =
+    selectedSource === "newsletter_subscriptions"
+      ? true
+      : manualEmails.length > 0;
+
+  const isTestReady = hasTestRecipient && hasSubject && hasContent;
+  const isProdReady = hasAudience && hasSubject && hasContent;
+
   return (
     <AdminLayout>
       {/* Toast — light-themed with colored left border accent */}
@@ -723,163 +747,6 @@ export default function AdminCommunication() {
       {/* TAB: CAMPAIGNS */}
       {activeTab === "campaigns" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", maxWidth: "100%" }}>
-          {/* TEST MODE panel — single server-controlled test recipient with tag chip UX */}
-          {sendMode === "test" && (
-            <div style={styles.testModeCard}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Mail size={14} style={{ color: "#16A34A" }} />
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      letterSpacing: "0.06em",
-                      color: "#14532D",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    TEST MODE ACTIVE
-                  </span>
-                </div>
-                <span style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>
-                  Safety Layer 1 &amp; 2 Enforced
-                </span>
-              </div>
-
-              <label style={{ ...styles.label, color: "#166534", fontWeight: "700" }}>Configured Test Recipient</label>
-
-              {testRecipient && !isEditingTestRecipient ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: "#ffffff",
-                      border: "1px solid #86EFAC",
-                      padding: "6px 14px",
-                      borderRadius: "6px",
-                      color: "#0A2540",
-                      fontFamily: "monospace",
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      boxShadow: "0 1px 3px rgba(10, 37, 64, 0.05)",
-                    }}
-                  >
-                    <span>{testRecipient}</span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveTestRecipient}
-                      disabled={savingTestRecipient}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#9ca3af",
-                        cursor: "pointer",
-                        padding: 0,
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                      title="Remove test recipient"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTestRecipientInput(testRecipient);
-                      setIsEditingTestRecipient(true);
-                    }}
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #CBD5E1",
-                      borderRadius: "6px",
-                      padding: "6px 12px",
-                      color: "#334155",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      boxShadow: "0 1px 2px rgba(10, 37, 64, 0.04)",
-                    }}
-                  >
-                    Change Recipient
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    id="test-recipient-input"
-                    type="email"
-                    value={testRecipientInput}
-                    onChange={(e) => setTestRecipientInput(e.target.value)}
-                    placeholder="e.g. yourname@domain.com"
-                    style={{
-                      ...styles.input,
-                      flex: 1,
-                      // Green border on saved: intentional safety indicator, do not change
-                      borderColor: testRecipientSaved ? "#16a34a" : BORDER,
-                      background: SURFACE,
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "#22c55e")}
-                    onBlur={(e) =>
-                      (e.target.style.borderColor = testRecipientSaved ? "#16a34a" : BORDER)
-                    }
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveTestRecipient()}
-                  />
-                  <button
-                    id="btn-save-test-recipient"
-                    onClick={handleSaveTestRecipient}
-                    disabled={savingTestRecipient || !testRecipientInput.trim()}
-                    style={{
-                      ...styles.btnGreen,
-                      opacity: savingTestRecipient || !testRecipientInput.trim() ? 0.6 : 1,
-                      cursor: savingTestRecipient || !testRecipientInput.trim() ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    <Save size={13} />
-                    {savingTestRecipient ? "Saving…" : "Save Test Recipient"}
-                  </button>
-                  {testRecipient && isEditingTestRecipient && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingTestRecipient(false)}
-                      style={{
-                        background: SURFACE,
-                        border: `1px solid ${BORDER}`,
-                        color: TEXT_MUTED,
-                        borderRadius: RADIUS_MD,
-                        padding: "6px 10px",
-                        fontSize: "11px",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <p
-                style={{
-                  fontSize: "12px",
-                  color: "#047857",
-                  marginTop: "10px",
-                  lineHeight: "1.5",
-                }}
-              >
-                In Test Mode, emails are dispatched <strong>ONLY</strong> to the single server-controlled test recipient above.
-                {!testRecipient && (
-                  <span style={{ color: "#fbbf24", display: "block", marginTop: "4px" }}>
-                    ⚠ No test recipient configured. Save an address above before testing.
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
-
           {/* Active campaign progress monitor */}
           {activeCampaign && (
             <CampaignProgress
@@ -889,174 +756,386 @@ export default function AdminCommunication() {
             />
           )}
 
-          {/* Composer card */}
-          <div style={styles.card}>
-            {/* Runtime Send Mode Switcher */}
-            <div style={{ marginBottom: "20px" }}>
-              <label style={styles.label}>Campaign Send Mode</label>
-              {/* Test Mode / Production Mode option cards */}
+          {/* STEP 1: Choose Sending Goal */}
+          <div style={{ ...styles.card, borderTop: "4px solid #0EA5E9" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: "10px",
-                  marginTop: "6px",
-                  marginBottom: "12px",
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: "#0EA5E9",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  flexShrink: 0,
                 }}
               >
-                {/* Test Mode Option */}
-                <div
-                  id="btn-mode-test"
-                  onClick={() => setSendMode("test")}
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 14px",
-                    borderRadius: RADIUS_MD,
-                    cursor: "pointer",
-                    border: sendMode === "test" ? "1.5px solid var(--admin-success-border, #86EFAC)" : `1px solid ${BORDER}`,
-                    background: sendMode === "test" ? "var(--admin-success-bg, #F0FDF4)" : SURFACE_ALT,
-                    boxShadow: sendMode === "test" ? "0 1px 3px rgba(22, 163, 74, 0.08)" : "none",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "7px",
-                      borderRadius: "6px",
-                      background: sendMode === "test" ? "#16A34A" : "var(--admin-border, #DDE3EC)",
-                      color: sendMode === "test" ? "#FFFFFF" : "var(--admin-text-muted, #64748B)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Mail size={16} />
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: "700",
-                        color: sendMode === "test" ? "var(--admin-success-text, #14532D)" : TEXT_PRIMARY,
-                      }}
-                    >
-                      TEST MODE (Sandbox)
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: "500",
-                        color: sendMode === "test" ? "var(--admin-success-subtext, #166534)" : TEXT_MUTED,
-                        marginTop: "2px",
-                      }}
-                    >
-                      Strictly delivers only to configured test recipient
-                    </div>
-                  </div>
-                </div>
+                1
+              </div>
+              <div>
+                <h2 style={{ fontSize: "15px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                  Choose What You Want to Do
+                </h2>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "2px 0 0" }}>
+                  Select whether you are sending a test sample to yourself or broadcasting live to clients &amp; subscribers.
+                </p>
+              </div>
+            </div>
 
-                {/* Production Mode Option */}
+            {/* Mode selection cards */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "12px",
+              }}
+            >
+              {/* Option A: Test Mode */}
+              <div
+                id="btn-mode-test"
+                onClick={() => setSendMode("test")}
+                style={{
+                  padding: "16px",
+                  borderRadius: RADIUS_MD,
+                  border: sendMode === "test" ? "2px solid #16A34A" : `1px solid ${BORDER}`,
+                  background: sendMode === "test" ? "#F0FDF4" : SURFACE_ALT,
+                  cursor: "pointer",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "flex-start",
+                  transition: "all 0.15s ease",
+                  boxShadow: sendMode === "test" ? "0 2px 6px rgba(22,163,74,0.12)" : "none",
+                }}
+              >
                 <div
-                  id="btn-mode-production"
-                  onClick={() => setSendMode("production")}
                   style={{
-                    position: "relative",
+                    padding: "8px",
+                    borderRadius: "8px",
+                    background: sendMode === "test" ? "#16A34A" : "#CBD5E1",
+                    color: "#FFFFFF",
                     display: "flex",
                     alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 14px",
-                    borderRadius: RADIUS_MD,
-                    cursor: "pointer",
-                    border: sendMode === "production" ? "1.5px solid var(--admin-warning-border, #FCD34D)" : `1px solid ${BORDER}`,
-                    background: sendMode === "production" ? "var(--admin-warning-bg, #FFFBEB)" : SURFACE_ALT,
-                    boxShadow: sendMode === "production" ? "0 1px 3px rgba(217, 119, 6, 0.08)" : "none",
-                    transition: "all 0.15s ease",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <div
+                  <Mail size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <strong style={{ fontSize: "13.5px", color: sendMode === "test" ? "#14532D" : TEXT_PRIMARY }}>
+                      🧪 Send a Test Email
+                    </strong>
+                    {sendMode === "test" && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          color: "#16A34A",
+                          background: "#DCFCE7",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        SELECTED
+                      </span>
+                    )}
+                  </div>
+                  <p
                     style={{
-                      padding: "7px",
-                      borderRadius: "6px",
-                      background: sendMode === "production" ? "#D97706" : "var(--admin-border, #DDE3EC)",
-                      color: sendMode === "production" ? "#FFFFFF" : "var(--admin-text-muted, #64748B)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      fontSize: "11.5px",
+                      color: sendMode === "test" ? "#166534" : TEXT_MUTED,
+                      margin: "4px 0 0",
+                      lineHeight: "1.4",
                     }}
                   >
-                    <Send size={16} />
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: "700",
-                        color: sendMode === "production" ? "var(--admin-warning-text, #78350F)" : TEXT_PRIMARY,
-                      }}
-                    >
-                      PRODUCTION MODE
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: "500",
-                        color: sendMode === "production" ? "var(--admin-warning-subtext, #92400E)" : TEXT_MUTED,
-                        marginTop: "2px",
-                      }}
-                    >
-                      Live broadcast — requires 2-step verification &amp; freeze
-                    </div>
-                  </div>
+                    Send a sample email to yourself or a colleague to check formatting. Safe sandbox — no real audience receives this.
+                  </p>
                 </div>
               </div>
 
-              {/* Mode Banner Description with clean contrast */}
-              {sendMode === "test" ? (
+              {/* Option B: Production Mode */}
+              <div
+                id="btn-mode-production"
+                onClick={() => setSendMode("production")}
+                style={{
+                  padding: "16px",
+                  borderRadius: RADIUS_MD,
+                  border: sendMode === "production" ? "2px solid #D97706" : `1px solid ${BORDER}`,
+                  background: sendMode === "production" ? "#FFFBEB" : SURFACE_ALT,
+                  cursor: "pointer",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "flex-start",
+                  transition: "all 0.15s ease",
+                  boxShadow: sendMode === "production" ? "0 2px 6px rgba(217,119,6,0.12)" : "none",
+                }}
+              >
                 <div
                   style={{
-                    background: "var(--admin-success-bg, #F0FDF4)",
-                    border: "1px solid var(--admin-success-border, #86EFAC)",
+                    padding: "8px",
                     borderRadius: "8px",
-                    padding: "10px 14px",
+                    background: sendMode === "production" ? "#D97706" : "#CBD5E1",
+                    color: "#FFFFFF",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
-                    fontSize: "12.5px",
-                    color: "var(--admin-success-text, #14532D)",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <CheckCircle2 size={16} style={{ color: "#16A34A", flexShrink: 0 }} />
-                  <span>
-                    <strong style={{ color: "var(--admin-success-text, #14532D)" }}>Test Mode Active:</strong> All test emails will only be delivered to the configured test recipient (<strong>{testRecipient || "not set"}</strong>). Audience broadcasts are safely blocked.
-                  </span>
+                  <Send size={18} />
                 </div>
-              ) : (
-                <div
-                  style={{
-                    background: "var(--admin-warning-bg, #FFFBEB)",
-                    border: "1px solid var(--admin-warning-border, #FCD34D)",
-                    borderRadius: "8px",
-                    padding: "10px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontSize: "12.5px",
-                    color: "var(--admin-warning-text, #78350F)",
-                  }}
-                >
-                  <AlertCircle size={16} style={{ color: "#D97706", flexShrink: 0 }} />
-                  <span>
-                    <strong style={{ color: "var(--admin-warning-text, #78350F)" }}>Production Mode Active:</strong> This campaign will freeze an immutable recipient snapshot and dispatch to the verified final audience ({audienceEstimate?.net_target_count ?? 0} recipients).
-                  </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <strong style={{ fontSize: "13.5px", color: sendMode === "production" ? "#78350F" : TEXT_PRIMARY }}>
+                      🚀 Send Live Campaign
+                    </strong>
+                    {sendMode === "production" && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          color: "#D97706",
+                          background: "#FEF3C7",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        SELECTED
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "11.5px",
+                      color: sendMode === "production" ? "#92400E" : TEXT_MUTED,
+                      margin: "4px 0 0",
+                      lineHeight: "1.4",
+                    }}
+                  >
+                    Broadcast this email to your real audience (newsletter subscribers, manual recipient list, or both).
+                  </p>
                 </div>
-              )}
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 2: Choose Recipients */}
+          <div style={{ ...styles.card, borderTop: "4px solid #0EA5E9" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: "#0EA5E9",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  flexShrink: 0,
+                }}
+              >
+                2
+              </div>
+              <div>
+                <h2 style={{ fontSize: "15px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                  {sendMode === "test" ? "Where Should We Send Your Test Email?" : "Choose Who Receives Your Campaign"}
+                </h2>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "2px 0 0" }}>
+                  {sendMode === "test"
+                    ? "Enter your own email address to receive a sample copy of this email."
+                    : "Select the verified recipients for this broadcast."}
+                </p>
+              </div>
             </div>
 
-            <div style={{ marginBottom: "20px" }}>
-              <label style={styles.label}>Campaign Title</label>
+            {sendMode === "test" ? (
+              <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: RADIUS_MD, padding: "16px" }}>
+                <label style={{ ...styles.label, color: "#166534", marginBottom: "6px" }}>
+                  Your Test Email Address
+                </label>
+                {testRecipient && !isEditingTestRecipient ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "#FFFFFF",
+                        border: "1px solid #86EFAC",
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        fontFamily: "monospace",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#0A2540",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <span>{testRecipient}</span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveTestRecipient}
+                        disabled={savingTestRecipient}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#9ca3af",
+                          cursor: "pointer",
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Remove test recipient"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTestRecipientInput(testRecipient);
+                        setIsEditingTestRecipient(true);
+                      }}
+                      style={{
+                        background: "#FFFFFF",
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: "6px",
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: TEXT_SECONDARY,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Change Address
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <input
+                      type="email"
+                      value={testRecipientInput}
+                      onChange={(e) => setTestRecipientInput(e.target.value)}
+                      placeholder="e.g. yourname@domain.com"
+                      style={{ ...styles.input, flex: 1, background: "#FFFFFF" }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveTestRecipient()}
+                    />
+                    <button
+                      onClick={handleSaveTestRecipient}
+                      disabled={savingTestRecipient || !testRecipientInput.trim()}
+                      style={{
+                        ...styles.btnGreen,
+                        opacity: savingTestRecipient || !testRecipientInput.trim() ? 0.6 : 1,
+                        cursor: savingTestRecipient || !testRecipientInput.trim() ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      <Save size={13} />
+                      {savingTestRecipient ? "Saving…" : "Save Test Address"}
+                    </button>
+                    {testRecipient && isEditingTestRecipient && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingTestRecipient(false)}
+                        style={{
+                          background: "#FFFFFF",
+                          border: `1px solid ${BORDER}`,
+                          borderRadius: "6px",
+                          padding: "6px 10px",
+                          fontSize: "11px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                )}
+                <p style={{ fontSize: "11.5px", color: "#15803d", marginTop: "10px", lineHeight: "1.4" }}>
+                  🛡️ In Test Mode, emails are dispatched <strong>ONLY</strong> to this address. Real subscribers and client lists are 100% blocked.
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Explicit Reassurance Banner in Production Mode */}
+                <div
+                  style={{
+                    background: "#FFFBEB",
+                    border: "1px solid #FCD34D",
+                    borderRadius: RADIUS_MD,
+                    padding: "12px 16px",
+                    marginBottom: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    fontSize: "12.5px",
+                    color: "#78350F",
+                  }}
+                >
+                  <CheckCircle2 size={16} style={{ color: "#D97706", flexShrink: 0 }} />
+                  <span>
+                    <strong>Live Broadcast Active:</strong> The test email address is completely bypassed. Emails will only be sent to your verified audience selected below.
+                  </span>
+                </div>
+
+                <AudienceSelector
+                  backendUrl={BACKEND_URL}
+                  selectedSource={selectedSource}
+                  onChange={setSelectedSource}
+                  manualEmails={manualEmails}
+                  onManualEmailsChange={setManualEmails}
+                  excludedEmails={excludedEmails}
+                  onExcludedEmailsChange={setExcludedEmails}
+                  onEstimateLoaded={setAudienceEstimate}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* STEP 3: Compose Your Email */}
+          <div style={{ ...styles.card, borderTop: "4px solid #0EA5E9" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: "#0EA5E9",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  flexShrink: 0,
+                }}
+              >
+                3
+              </div>
+              <div>
+                <h2 style={{ fontSize: "15px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                  Compose Your Email
+                </h2>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "2px 0 0" }}>
+                  Give your campaign an internal title, select a template (optional), and author your subject and message.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={styles.label}>
+                Internal Campaign Title{" "}
+                <span style={{ color: TEXT_MUTED, textTransform: "none", fontWeight: "normal" }}>
+                  (for your records)
+                </span>
+              </label>
               <input
                 id="campaign-title"
                 type="text"
@@ -1067,57 +1146,188 @@ export default function AdminCommunication() {
               />
             </div>
 
-            {/* Unified Audience Selection & Chip Recipient Management */}
-            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: "20px", marginBottom: "20px" }}>
-              <AudienceSelector
-                backendUrl={BACKEND_URL}
-                selectedSource={selectedSource}
-                onChange={setSelectedSource}
-                manualEmails={manualEmails}
-                onManualEmailsChange={setManualEmails}
-                excludedEmails={excludedEmails}
-                onExcludedEmailsChange={setExcludedEmails}
-                onEstimateLoaded={setAudienceEstimate}
-              />
+            <TemplateEditor
+              backendUrl={BACKEND_URL}
+              templates={templates}
+              selectedTemplateId={selectedTemplateId}
+              onTemplateSelect={handleTemplateSelect}
+              onTemplatesRefresh={fetchTemplates}
+              subject={subject}
+              onSubjectChange={setSubject}
+              preheader={preheader}
+              onPreheaderChange={setPreheader}
+              bodyHtml={bodyHtml}
+              onBodyHtmlChange={setBodyHtml}
+              applyWrapper={applyWrapper}
+              onApplyWrapperChange={setApplyWrapper}
+              senderName={senderName}
+              onSenderNameChange={setSenderName}
+              senderEmail={senderEmail}
+              onSenderEmailChange={setSenderEmail}
+              replyTo={replyTo}
+              onReplyToChange={setReplyTo}
+              cc={cc}
+              onCcChange={setCc}
+              bcc={bcc}
+              onBccChange={setBcc}
+              testRecipient={testRecipient || testRecipientInput}
+              onTestSend={sendMode === "test" ? handleTestSend : null}
+              standaloneStudio={false}
+              sendMode={sendMode}
+              manualEmails={manualEmails}
+              selectedSource={selectedSource}
+              audienceEstimate={audienceEstimate}
+            />
+          </div>
+
+          {/* STEP 4: Review & Send */}
+          <div
+            style={{
+              ...styles.card,
+              borderTop: sendMode === "production" ? "4px solid #D97706" : "4px solid #16A34A",
+              background: sendMode === "production" ? "#FFFCF5" : "#FAFFFA",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: sendMode === "production" ? "#D97706" : "#16A34A",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  flexShrink: 0,
+                }}
+              >
+                4
+              </div>
+              <div>
+                <h2 style={{ fontSize: "15px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                  Review &amp; Send
+                </h2>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "2px 0 0" }}>
+                  {sendMode === "test"
+                    ? "Verify your test address and dispatch a sample email."
+                    : "Review readiness, freeze the audience snapshot, and authorize live delivery."}
+                </p>
+              </div>
             </div>
 
-            {/* Template & Content Editor */}
-            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: "20px", marginBottom: "20px" }}>
-              <TemplateEditor
-                backendUrl={BACKEND_URL}
-                templates={templates}
-                selectedTemplateId={selectedTemplateId}
-                onTemplateSelect={handleTemplateSelect}
-                onTemplatesRefresh={fetchTemplates}
-                subject={subject}
-                onSubjectChange={setSubject}
-                preheader={preheader}
-                onPreheaderChange={setPreheader}
-                bodyHtml={bodyHtml}
-                onBodyHtmlChange={setBodyHtml}
-                applyWrapper={applyWrapper}
-                onApplyWrapperChange={setApplyWrapper}
-                senderName={senderName}
-                onSenderNameChange={setSenderName}
-                senderEmail={senderEmail}
-                onSenderEmailChange={setSenderEmail}
-                replyTo={replyTo}
-                onReplyToChange={setReplyTo}
-                cc={cc}
-                onCcChange={setCc}
-                bcc={bcc}
-                onBccChange={setBcc}
-                testRecipient={testRecipient}
-                onTestSend={handleTestSend}
-                standaloneStudio={false}
-              />
-            </div>
-
-            {/* Actions row */}
+            {/* Live Readiness Checklist */}
             <div
               style={{
-                borderTop: `1px solid ${BORDER}`,
-                paddingTop: "20px",
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS_MD,
+                padding: "14px 16px",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: TEXT_MUTED,
+                  marginBottom: "10px",
+                }}
+              >
+                Pre-Flight Readiness Checklist
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {/* 1. Mode */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px" }}>
+                  <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                  <span>
+                    Mode:{" "}
+                    <strong>{sendMode === "test" ? "🧪 Test Mode (Sandbox)" : "🚀 Production Mode"}</strong>
+                  </span>
+                </div>
+
+                {/* 2. Recipient */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px" }}>
+                  {sendMode === "test" ? (
+                    hasTestRecipient ? (
+                      <>
+                        <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                        <span style={{ color: "#15803d" }}>
+                          Test Address: <strong>{testRecipient}</strong>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={14} style={{ color: "#DC2626" }} />
+                        <span style={{ color: "#DC2626", fontWeight: "600" }}>Test email missing</span>
+                      </>
+                    )
+                  ) : hasAudience ? (
+                    <>
+                      <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                      <span style={{ color: "#15803d" }}>
+                        Audience:{" "}
+                        <strong>
+                          {selectedSource === "newsletter_subscriptions"
+                            ? "Newsletter Subscribers"
+                            : `${audienceEstimate?.net_target_count ?? manualEmails.length} recipients ready`}
+                        </strong>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={14} style={{ color: "#DC2626" }} />
+                      <span style={{ color: "#DC2626", fontWeight: "600" }}>No recipients added yet</span>
+                    </>
+                  )}
+                </div>
+
+                {/* 3. Subject */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px" }}>
+                  {hasSubject ? (
+                    <>
+                      <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                      <span style={{ color: "#15803d" }}>Subject line filled</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={14} style={{ color: "#DC2626" }} />
+                      <span style={{ color: "#DC2626", fontWeight: "600" }}>Subject line missing</span>
+                    </>
+                  )}
+                </div>
+
+                {/* 4. Content */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px" }}>
+                  {hasContent ? (
+                    <>
+                      <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                      <span style={{ color: "#15803d" }}>Message content ready</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={14} style={{ color: "#DC2626" }} />
+                      <span style={{ color: "#DC2626", fontWeight: "600" }}>Message content empty</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Single Action Row */}
+            <div
+              style={{
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
@@ -1125,55 +1335,67 @@ export default function AdminCommunication() {
                 gap: "16px",
               }}
             >
-              {/* Test Send Button (Always available for pre-flight testing) */}
               <div>
-                <button
-                  id="btn-test-send"
-                  onClick={handleTestSend}
-                  disabled={testSending || !testRecipient}
-                  title={
-                    !testRecipient
-                      ? "Set a Test Recipient above first"
-                      : `Send test email to ${testRecipient}`
-                  }
-                  style={{
-                    ...styles.btnSecondary,
-                    opacity: testSending || !testRecipient ? 0.4 : 1,
-                    cursor: testSending || !testRecipient ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <Send size={13} />
-                  {testSending
-                    ? "Sending Test…"
-                    : `Send Test Email${testRecipient ? ` → ${testRecipient}` : ""}`}
-                </button>
-                {!testRecipient && (
-                  <div style={{ fontSize: "11px", color: "#f59e0b", marginTop: "4px" }}>
-                    Configure a test recipient above to enable test sending
-                  </div>
+                {sendMode === "test" ? (
+                  !isTestReady ? (
+                    <span style={{ fontSize: "12px", color: "#B45309" }}>
+                      ⚠ Please enter a test email address, subject, and content above to enable test sending.
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "500" }}>
+                      Ready! Click the button to dispatch a test email to <strong>{testRecipient}</strong>.
+                    </span>
+                  )
+                ) : !isProdReady ? (
+                  <span style={{ fontSize: "12px", color: "#B45309" }}>
+                    ⚠ Please add at least 1 recipient, an email subject, and content above to enable broadcast.
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "12px", color: "#92400E", fontWeight: "500" }}>
+                    Ready! Click to freeze audience and review the 2-step confirmation.
+                  </span>
                 )}
               </div>
 
-              {/* Production Review & Freeze Action */}
-              {sendMode === "production" ? (
+              {sendMode === "test" ? (
+                <button
+                  id="btn-test-send"
+                  onClick={handleTestSend}
+                  disabled={testSending || !isTestReady}
+                  style={{
+                    ...styles.btnGreen,
+                    padding: "12px 24px",
+                    fontSize: "13.5px",
+                    opacity: testSending || !isTestReady ? 0.5 : 1,
+                    cursor: testSending || !isTestReady ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <Send size={15} />
+                  {testSending ? "Sending Test…" : `Send Test Email Now →`}
+                </button>
+              ) : (
                 <button
                   id="btn-review-dispatch"
                   onClick={handleCreateAndReview}
-                  disabled={loading}
-                  title="Freeze audience snapshot and review campaign confirmation"
+                  disabled={loading || !isProdReady}
                   style={{
                     ...styles.btnPrimary,
-                    opacity: loading ? 0.4 : 1,
-                    cursor: loading ? "not-allowed" : "pointer",
+                    background: "#D97706",
+                    padding: "12px 24px",
+                    fontSize: "13.5px",
+                    opacity: loading || !isProdReady ? 0.5 : 1,
+                    cursor: loading || !isProdReady ? "not-allowed" : "pointer",
                   }}
                 >
-                  <Send size={14} />
-                  {loading ? "Preparing Snapshot…" : "Review & Freeze Audience →"}
+                  <Send size={15} />
+                  {loading
+                    ? "Preparing Audience…"
+                    : `Review & Send to ${
+                        selectedSource === "newsletter_subscriptions"
+                          ? "Subscribers"
+                          : `${audienceEstimate?.net_target_count ?? manualEmails.length} Recipients`
+                      } →`}
                 </button>
-              ) : (
-                <div style={{ fontSize: "11px", color: TEXT_MUTED, fontStyle: "italic" }}>
-                  Switch Send Mode to Production above to freeze &amp; broadcast to the full audience.
-                </div>
               )}
             </div>
 
@@ -1182,13 +1404,23 @@ export default function AdminCommunication() {
                 style={{
                   fontSize: "11px",
                   color: TEXT_MUTED,
-                  marginTop: "12px",
+                  marginTop: "14px",
                   paddingTop: "12px",
                   borderTop: `1px solid ${BORDER}`,
                 }}
               >
                 Production campaign dispatch is guarded in Test Mode. Set{" "}
-                <code style={{ background: SURFACE_ALT, border: `1px solid ${BORDER}`, padding: "1px 4px", borderRadius: "3px", fontFamily: "monospace", fontSize: "11px", color: TEXT_SECONDARY }}>
+                <code
+                  style={{
+                    background: SURFACE_ALT,
+                    border: `1px solid ${BORDER}`,
+                    padding: "1px 4px",
+                    borderRadius: "3px",
+                    fontFamily: "monospace",
+                    fontSize: "11px",
+                    color: TEXT_SECONDARY,
+                  }}
+                >
                   EMAIL_ENVIRONMENT=production
                 </code>{" "}
                 in Railway to enable live audience broadcast.
@@ -1584,7 +1816,7 @@ export default function AdminCommunication() {
               onCcChange={setStudioCc}
               bcc={studioBcc}
               onBccChange={setStudioBcc}
-              testRecipient={testRecipient}
+              testRecipient={testRecipient || testRecipientInput}
               onTestSend={handleStudioTestSend}
               standaloneStudio={true}
             />

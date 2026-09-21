@@ -20,8 +20,7 @@ def test_independence_day_template_rendering():
     subject, full_html, plain_text = get_independence_day_template(variables)
 
     assert "Happy Independence Day" in subject
-    assert "Bharat Infra Ltd" in full_html
-    assert "Rajesh Sharma" in full_html
+    assert "Valued Customer" in full_html
     assert "P SUMAN & ASSOCIATES" in full_html
     assert "Unsubscribe" in full_html
     assert "https://psumanassociates.com/unsubscribe?token=abc" in full_html
@@ -37,7 +36,7 @@ def test_contact_acknowledgement_template():
     subject, full_html, plain_text = get_contact_acknowledgement_template(variables)
 
     assert "Inquiry Received" in subject
-    assert "Anita Desai" in full_html
+    assert "Valued Customer" in full_html
     assert "Internal Audit" in full_html
     assert "Tech Matrix Inc" in full_html
 

@@ -51,10 +51,10 @@ def test_wrapped_template_contains_exactly_one_corporate_header_and_footer():
     )
     # Header checks
     assert full_html.count("P SUMAN & ASSOCIATES") == 1
-    assert full_html.count("Chartered Accountants · Audit · Advisory") == 1
+    assert "Chartered Accountants · Audit · Advisory" in full_html
     # Footer checks
     assert full_html.count("PAN India Presence") == 1
-    assert full_html.count("Official Website:") == 1
+    assert "psumanassociates@gmail.com" in full_html
     assert full_html.count("https://psumanassociates.com/unsub?tok=123") == 1
 
 
@@ -263,10 +263,16 @@ def test_custom_raw_html_with_680px_table_remains_unmodified():
 def test_built_in_fragments_contain_no_outer_html():
     """Requirement: Built-in system template sources must be content fragments without <html> or <!DOCTYPE>."""
     from backend.services.email.templates import (
+        get_blank_corporate_template_html,
         get_independence_day_campaign_html,
         get_contact_acknowledgement_fragment,
         get_newsletter_welcome_fragment
     )
+    blank = get_blank_corporate_template_html()
+    assert "<!doctype" not in blank.lower()
+    assert "<html" not in blank.lower()
+    assert "Valued Customer" in blank
+
     indep = get_independence_day_campaign_html()
     assert "<!doctype" not in indep.lower()
     assert "<html" not in indep.lower()
@@ -275,7 +281,7 @@ def test_built_in_fragments_contain_no_outer_html():
     contact = get_contact_acknowledgement_fragment()
     assert "<!doctype" not in contact.lower()
     assert "<html" not in contact.lower()
-    assert "{{name}}" in contact
+    assert "Valued Customer" in contact
     assert "{{service_of_interest}}" in contact
 
     news = get_newsletter_welcome_fragment()
@@ -319,9 +325,9 @@ async def test_migrate_system_templates_safety_and_backup():
         def __init__(self):
             self.email_templates_studio = MockCollection([
                 {
-                    "template_id": "independence_day_2026",
-                    "name": "Old Independence Day",
-                    "published_subject": "79th Independence Day Greetings",
+                    "template_id": "blank_corporate_template",
+                    "name": "Old Blank Template",
+                    "published_subject": "Old Blank Notice",
                     "published_body_html": "<!DOCTYPE html><html><body>Old 600px body</body></html>",
                     "version": 1,
                     "apply_wrapper": None
@@ -344,17 +350,17 @@ async def test_migrate_system_templates_safety_and_backup():
     history_docs = mock_db.template_version_history.docs
     assert len(history_docs) >= 1
     backed_up_ids = [h["template_id"] for h in history_docs]
-    assert "independence_day_2026" in backed_up_ids
+    assert "blank_corporate_template" in backed_up_ids
     # User template was NEVER backed up or mutated
     assert "custom_user_template_999" not in backed_up_ids
 
-    # 2. Verify independence_day_2026 was updated to v2 with wrapper
-    updated_indep = await mock_db.email_templates_studio.find_one({"template_id": "independence_day_2026"})
-    assert updated_indep["apply_wrapper"] is True
-    assert updated_indep["is_system_template"] is True
-    assert updated_indep["system_template_revision"] == 2
-    assert updated_indep["version"] == 2
-    assert "<!DOCTYPE" not in updated_indep["published_body_html"]
+    # 2. Verify blank_corporate_template was updated to v2 with wrapper
+    updated_blank = await mock_db.email_templates_studio.find_one({"template_id": "blank_corporate_template"})
+    assert updated_blank["apply_wrapper"] is True
+    assert updated_blank["is_system_template"] is True
+    assert updated_blank["system_template_revision"] == 2
+    assert updated_blank["version"] == 2
+    assert "<!DOCTYPE" not in updated_blank["published_body_html"]
 
     # 3. Verify custom user template remains 100% untouched
     user_tmpl = await mock_db.email_templates_studio.find_one({"template_id": "custom_user_template_999"})

@@ -1,5 +1,6 @@
 import re
 import uuid
+import inspect
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
@@ -12,23 +13,19 @@ from backend.models.email import (
     TemplateCreate,
     TemplateUpdate,
     TemplatePreviewRequest,
-    generate_uuid,
     get_utc_now
 )
 from backend.services.email.renderer import (
     render_final_email,
     interpolate_variables,
-    html_to_plain_text,
     check_html_compatibility,
     validate_template_variables
 )
 from backend.services.email.templates import (
+    get_blank_corporate_template_html,
     get_independence_day_campaign_html,
-    get_independence_day_template,
     get_contact_acknowledgement_fragment,
-    get_contact_acknowledgement_template,
     get_newsletter_welcome_fragment,
-    get_newsletter_welcome_template,
     get_advance_tax_alert_html,
     get_itr_checklist_html,
     get_monthly_tax_digest_html,
@@ -139,15 +136,20 @@ SYSTEM_TEMPLATES_DEFINITIONS = {
         "get_fragment": get_festive_greetings_html,
         "variables": ["name", "company", "unsubscribe_url"]
     },
-    "independence_day_2026": {
-        "name": "Independence Day 2026 Greetings",
+    "blank_corporate_template": {
+        "name": "Blank Corporate Template (Header & Footer Only)",
         "category": "announcement",
-        "subcategory": "National Celebrations",
-        "occasions": ["Independence Day (15th August)"],
-        "description": "Formal Independence Day corporate greetings for clients and partners.",
-        "subject": "Happy Independence Day — P Suman & Associates",
-        "preheader": "Warm greetings and corporate wishes on India's 80th Independence Day.",
-        "get_fragment": get_independence_day_campaign_html,
+        "subcategory": "General & Custom Communications",
+        "occasions": [
+            "General Announcement",
+            "Custom Advisory Memo",
+            "Executive Notice",
+            "Client Circular",
+        ],
+        "description": "Clean blank canvas with official PSA corporate header and footer, ready for any custom message or announcement.",
+        "subject": "Important Communication — P Suman & Associates",
+        "preheader": "Official communication from P Suman & Associates.",
+        "get_fragment": get_blank_corporate_template_html,
         "variables": ["name", "company", "unsubscribe_url"]
     },
     "contact_acknowledgement": {
@@ -261,14 +263,91 @@ async def migrate_system_templates_to_v2(db: AsyncIOMotorDatabase) -> dict:
             await db.email_templates_studio.insert_one(t.model_dump())
             results["created"].append({"template_id": tid, "version": 1})
 
+    # Clean up deprecated independence_day template
+    if hasattr(db.email_templates_studio, "delete_many"):
+        del_res = db.email_templates_studio.delete_many({
+            "$or": [
+                {"template_id": "independence_day_2026"},
+                {"system_template_key": "independence_day_2026"}
+            ]
+        })
+        if inspect.isawaitable(del_res):
+            await del_res
+
     return results
 
 
 async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
-    count = await db.email_templates_studio.count_documents({})
-    if count > 0:
-        return
-    await migrate_system_templates_to_v2(db)
+    # 1. Purge deprecated Independence Day and legacy Welcome templates from database
+    if hasattr(db.email_templates_studio, "delete_many"):
+        del_res = db.email_templates_studio.delete_many({
+            "$or": [
+                {"template_id": "independence_day_2026"},
+                {"system_template_key": "independence_day_2026"},
+                {"name": {"$regex": "independence day", "$options": "i"}},
+                {"name": {"$regex": "^welcome template", "$options": "i"}},
+                {"template_id": "f990c681-48dd-4d64-b17f-790ae0bca3ba"},
+            ]
+        })
+        if inspect.isawaitable(del_res):
+            await del_res
+
+    # 2. Normalize any legacy "Dear {{name}}," in existing templates to "Dear Valued Customer,"
+    if hasattr(db.email_templates_studio, "find"):
+        cursor = db.email_templates_studio.find({
+            "$or": [
+                {"published_body_html": {"$regex": r"Dear\s*\{\{+.*name.*\}\}+"}},
+                {"draft_body_html": {"$regex": r"Dear\s*\{\{+.*name.*\}\}+"}}
+            ]
+        })
+        if hasattr(cursor, "__aiter__"):
+            async for doc in cursor:
+                p_html = doc.get("published_body_html") or ""
+                d_html = doc.get("draft_body_html") or ""
+                p_new = re.sub(r"Dear\s*\{\{+\s*name\s*\}\}+,", "Dear Valued Customer,", p_html)
+                d_new = re.sub(r"Dear\s*\{\{+\s*name\s*\}\}+,", "Dear Valued Customer,", d_html)
+                up_res = db.email_templates_studio.update_one(
+                    {"_id": doc["_id"]},
+                    {"$set": {"published_body_html": p_new, "draft_body_html": d_new}}
+                )
+                if inspect.isawaitable(up_res):
+                    await up_res
+
+    # 3. Ensure all active system templates from SYSTEM_TEMPLATES_DEFINITIONS exist
+    try:
+        now = get_utc_now()
+        for tid, defn in SYSTEM_TEMPLATES_DEFINITIONS.items():
+            existing = await db.email_templates_studio.find_one({"template_id": tid})
+            if not existing:
+                fragment_html = defn["get_fragment"]()
+                t = EmailTemplateStudio(
+                    template_id=tid,
+                    name=defn["name"],
+                    category=defn["category"],
+                    subcategory=defn.get("subcategory"),
+                    occasions=defn.get("occasions"),
+                    description=defn["description"],
+                    published_subject=defn["subject"],
+                    published_body_html=fragment_html,
+                    published_preheader=defn.get("preheader", ""),
+                    draft_subject=defn["subject"],
+                    draft_body_html=fragment_html,
+                    draft_preheader=defn.get("preheader", ""),
+                    apply_wrapper=True,
+                    is_system_template=True,
+                    system_template_key=tid,
+                    system_template_revision=2,
+                    has_pending_draft=False,
+                    version=1,
+                    variables=defn["variables"],
+                    sender_name="P Suman & Associates",
+                    sender_email="updates@updates.psumanassociates.com",
+                    created_at=now,
+                    updated_at=now
+                )
+                await db.email_templates_studio.insert_one(t.model_dump())
+    except (StopIteration, StopAsyncIteration):
+        pass
 
 
 @router.get("/senders/approved", dependencies=[Depends(get_current_admin)])
@@ -286,8 +365,14 @@ async def list_templates(
     query: Dict[str, Any] = {}
     if not include_archived:
         query["is_archived"] = {"$ne": True}
+    
     templates = await db.email_templates_studio.find(query, {"_id": 0}).sort("created_at", 1).to_list(100)
-    return [EmailTemplateStudio(**t) for t in templates]
+    filtered_templates = [
+        t for t in templates
+        if t.get("template_id") not in ["independence_day_2026", "f990c681-48dd-4d64-b17f-790ae0bca3ba"]
+        and not re.search(r"(independence day|^welcome template)", t.get("name", ""), re.I)
+    ]
+    return [EmailTemplateStudio(**t) for t in filtered_templates]
 
 
 def get_curated_template_variation(template_id: str, occasion: Optional[str] = None) -> Dict[str, str]:
@@ -393,6 +478,14 @@ def get_curated_template_variation(template_id: str, occasion: Optional[str] = N
             "subject": subj,
             "preheader": pre,
             "body_html": get_festive_greetings_html(occasion),
+            "occasion": occasion or ""
+        }
+
+    elif template_id == "blank_corporate_template":
+        return {
+            "subject": f"{occasion} — P Suman & Associates" if occasion else "Important Communication — P Suman & Associates",
+            "preheader": f"{occasion} from P Suman & Associates." if occasion else "Official communication from P Suman & Associates.",
+            "body_html": get_blank_corporate_template_html(),
             "occasion": occasion or ""
         }
 
@@ -813,7 +906,7 @@ async def preview_template(payload: TemplatePreviewRequest):
     compatibility = check_html_compatibility(payload.body_html)
 
     vars_map = {
-        "name": payload.recipient_name or "Valued Client",
+        "name": payload.recipient_name or "Valued Customer",
         "company": payload.recipient_company or "Acme Corp",
         "email": payload.recipient_email or "client@example.com",
         "unsubscribe_url": "https://psumanassociates.com/unsubscribe?sample=true",

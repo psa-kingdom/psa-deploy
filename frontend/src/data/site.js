@@ -4,7 +4,7 @@ export const FIRM = {
   name: "P Suman & Associates",
   short: "PSA",
   tagline: "Precision. Integrity. Enterprise-Grade Assurance.",
-  subTagline: "Trusted by India's Leading Enterprises Across 15+ States",
+  subTagline: "Trusted by India's Leading Enterprises with a PAN-India Presence",
   phones: ["+91 98315 46721", "033-4073 4189"],
   emails: ["info@psumanassociates.com", "psumanassociates@gmail.com"],
   website: "www.psumanassociates.com",

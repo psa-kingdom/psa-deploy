@@ -16,12 +16,15 @@ import {
   UploadCloud,
   FileText,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Eye,
+  RefreshCw,
+  UserCheck
 } from "lucide-react";
 import {
   SURFACE, SURFACE_ALT, BORDER,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED, TEXT_DISABLED,
-  ACCENT, ACCENT_BG, ACCENT_BORDER,
+  ACCENT, ACCENT_DARK, ACCENT_LIGHT, ACCENT_BG, ACCENT_BORDER,
   SUCCESS, SUCCESS_BG, SUCCESS_BORDER, SUCCESS_DARK,
   WARNING, WARNING_BG, WARNING_BORDER, WARNING_DARK,
   DANGER, DANGER_BG, DANGER_BORDER, DANGER_DARK,
@@ -56,6 +59,25 @@ export default function AudienceSelector({
   // Exclusions Search State
   const [excludeSearch, setExcludeSearch] = useState("");
   const [showExcludeSearch, setShowExcludeSearch] = useState(false);
+
+  // Newsletter Subscribers State
+  const [subscribers, setSubscribers] = useState([]);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+  const [newSubscriberInput, setNewSubscriberInput] = useState("");
+  const [addingSubscriber, setAddingSubscriber] = useState(false);
+  const [subscriberFeedback, setSubscriberFeedback] = useState(null);
+
+  // Unified Recipient List Modal State
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [audienceRecipients, setAudienceRecipients] = useState([]);
+  const [loadingAudienceRecipients, setLoadingAudienceRecipients] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalStatusFilter, setModalStatusFilter] = useState("all"); // 'all' | 'active' | 'excluded'
+  const [modalNewEmail, setModalNewEmail] = useState("");
+  const [modalTargetSource, setModalTargetSource] = useState("newsletter"); // 'newsletter' | 'manual'
+  const [modalAddingRecipient, setModalAddingRecipient] = useState(false);
+  const [modalFeedback, setModalFeedback] = useState(null);
+  const [actionLoadingEmail, setActionLoadingEmail] = useState(null);
 
   const sources = [
     {
@@ -120,6 +142,26 @@ export default function AudienceSelector({
     };
   }, [selectedSource, manualEmails, excludedEmails, fetchEstimate]);
 
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    // Auto-split if user typed or pasted comma, semicolon, newline, or multiple space-separated emails
+    if (val.includes(",") || val.includes(";") || val.includes("\n") || (val.includes(" ") && val.trim().includes("@"))) {
+      const parts = val
+        .split(/[,;\s]+/)
+        .map((p) => p.replace(/^["'<>\[\]\(\);,.]+|["'<>\[\]\(\);,.]+$/g, "").trim().toLowerCase())
+        .filter(Boolean);
+
+      const newItems = parts.filter((p) => !manualEmails.includes(p));
+      if (newItems.length > 0) {
+        const updated = [...manualEmails, ...newItems];
+        if (onManualEmailsChange) onManualEmailsChange(updated);
+      }
+      setNewEmailInput("");
+    } else {
+      setNewEmailInput(val);
+    }
+  };
+
   const handleAddSingleEmail = (e) => {
     if (e) e.preventDefault();
     const trimmed = newEmailInput.trim().toLowerCase();
@@ -131,7 +173,13 @@ export default function AudienceSelector({
       .map((p) => p.replace(/^["'<>\[\]\(\);,.]+|["'<>\[\]\(\);,.]+$/g, "").trim().toLowerCase())
       .filter(Boolean);
 
-    const updated = [...manualEmails, ...parts];
+    const newItems = parts.filter((p) => !manualEmails.includes(p));
+    if (newItems.length === 0) {
+      setNewEmailInput("");
+      return;
+    }
+
+    const updated = [...manualEmails, ...newItems];
     if (onManualEmailsChange) onManualEmailsChange(updated);
     setNewEmailInput("");
   };
@@ -224,7 +272,194 @@ export default function AudienceSelector({
     if (onExcludedEmailsChange) onExcludedEmailsChange(updated);
   };
 
+  // Subscriber Management Handlers
+  const fetchSubscribers = useCallback(async () => {
+    setLoadingSubscribers(true);
+    try {
+      const res = await axios.get(
+        `${backendUrl}/api/admin/communication/subscribers`,
+        { withCredentials: true }
+      );
+      setSubscribers(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch subscribers:", err);
+    } finally {
+      setLoadingSubscribers(false);
+    }
+  }, [backendUrl]);
+
+  useEffect(() => {
+    if (selectedSource === "newsletter_subscriptions" || selectedSource === "combined") {
+      fetchSubscribers();
+    }
+  }, [selectedSource, fetchSubscribers]);
+
+  const handleAddSubscriber = async (e) => {
+    if (e) e.preventDefault();
+    const email = newSubscriberInput.trim().toLowerCase();
+    if (!email) return;
+    setAddingSubscriber(true);
+    setSubscriberFeedback(null);
+    try {
+      await axios.post(
+        `${backendUrl}/api/admin/communication/subscribers`,
+        { email },
+        { withCredentials: true }
+      );
+      setNewSubscriberInput("");
+      setSubscriberFeedback({ type: "success", text: `Subscriber '${email}' added successfully!` });
+      await fetchSubscribers();
+      fetchEstimate(selectedSource, manualEmails, excludedEmails);
+    } catch (err) {
+      console.error("Failed to add subscriber:", err);
+      setSubscriberFeedback({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to add subscriber"
+      });
+    } finally {
+      setAddingSubscriber(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (email) => {
+    if (!window.confirm(`Are you sure you want to delete subscriber '${email}' from database?`)) {
+      return;
+    }
+    setActionLoadingEmail(email);
+    try {
+      await axios.delete(
+        `${backendUrl}/api/admin/communication/subscribers/${encodeURIComponent(email)}`,
+        { withCredentials: true }
+      );
+      setSubscriberFeedback({ type: "success", text: `Subscriber '${email}' deleted.` });
+      await fetchSubscribers();
+      fetchEstimate(selectedSource, manualEmails, excludedEmails);
+      if (showRecipientModal) {
+        fetchAudienceRecipients();
+      }
+    } catch (err) {
+      console.error("Failed to delete subscriber:", err);
+      alert(err.response?.data?.detail || "Failed to delete subscriber");
+    } finally {
+      setActionLoadingEmail(null);
+    }
+  };
+
+  // Full Audience Recipients for Modal
+  const fetchAudienceRecipients = useCallback(async () => {
+    setLoadingAudienceRecipients(true);
+    try {
+      const payload = {
+        source: selectedSource,
+        custom_emails: manualEmails || [],
+        excluded_emails: excludedEmails || [],
+      };
+      const res = await axios.post(
+        `${backendUrl}/api/admin/communication/audience/recipients`,
+        payload,
+        { withCredentials: true }
+      );
+      setAudienceRecipients(res.data?.recipients || []);
+    } catch (err) {
+      console.error("Failed to fetch audience recipients:", err);
+    } finally {
+      setLoadingAudienceRecipients(false);
+    }
+  }, [backendUrl, selectedSource, manualEmails, excludedEmails]);
+
+  useEffect(() => {
+    if (showRecipientModal) {
+      fetchAudienceRecipients();
+    }
+  }, [showRecipientModal, fetchAudienceRecipients]);
+
+  const handleModalAddRecipient = async (e) => {
+    if (e) e.preventDefault();
+    const email = modalNewEmail.trim().toLowerCase();
+    if (!email) return;
+
+    setModalAddingRecipient(true);
+    setModalFeedback(null);
+    try {
+      if (modalTargetSource === "newsletter" || selectedSource === "newsletter_subscriptions") {
+        await axios.post(
+          `${backendUrl}/api/admin/communication/subscribers`,
+          { email },
+          { withCredentials: true }
+        );
+        setModalNewEmail("");
+        setModalFeedback({ type: "success", text: `Added '${email}' to newsletter subscribers!` });
+        await fetchSubscribers();
+        await fetchAudienceRecipients();
+        fetchEstimate(selectedSource, manualEmails, excludedEmails);
+      } else {
+        // Manual list
+        if (!manualEmails.includes(email)) {
+          const updated = [...manualEmails, email];
+          if (onManualEmailsChange) onManualEmailsChange(updated);
+          setModalNewEmail("");
+          setModalFeedback({ type: "success", text: `Added '${email}' to manual list!` });
+          setTimeout(() => fetchAudienceRecipients(), 100);
+        } else {
+          setModalFeedback({ type: "error", text: `'${email}' is already in the manual list.` });
+        }
+      }
+    } catch (err) {
+      setModalFeedback({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to add recipient"
+      });
+    } finally {
+      setModalAddingRecipient(false);
+    }
+  };
+
+  const handleModalDeleteRecipient = async (recipient) => {
+    const email = recipient.email;
+    if (recipient.source === "newsletter_subscriptions") {
+      await handleDeleteSubscriber(email);
+    } else {
+      // Manual recipient
+      const updated = manualEmails.filter((e) => e.toLowerCase() !== email.toLowerCase());
+      if (onManualEmailsChange) onManualEmailsChange(updated);
+      setTimeout(() => fetchAudienceRecipients(), 100);
+    }
+  };
+
+  const handleOpenRecipientModal = () => {
+    if (estimate?.sample_recipients?.length > 0 && audienceRecipients.length === 0) {
+      setAudienceRecipients(
+        estimate.sample_recipients.map((r) => ({
+          ...r,
+          status: excludedEmails.includes(r.email?.toLowerCase()) ? "excluded" : "active",
+          is_excluded: excludedEmails.includes(r.email?.toLowerCase()),
+        }))
+      );
+    }
+    setShowRecipientModal(true);
+    fetchAudienceRecipients();
+  };
+
   const isManualActive = selectedSource === "manual" || selectedSource === "combined";
+  const isNewsletterActive = selectedSource === "newsletter_subscriptions" || selectedSource === "combined";
+
+  const displayRecipients = audienceRecipients.length > 0
+    ? audienceRecipients
+    : (estimate?.sample_recipients || []).map((r) => ({
+        ...r,
+        status: excludedEmails.includes(r.email?.toLowerCase()) ? "excluded" : "active",
+        is_excluded: excludedEmails.includes(r.email?.toLowerCase()),
+      }));
+
+  const filteredModalRecipients = displayRecipients.filter((rec) => {
+    if (modalStatusFilter === "active" && rec.is_excluded) return false;
+    if (modalStatusFilter === "excluded" && !rec.is_excluded) return false;
+    if (modalSearch) {
+      const q = modalSearch.toLowerCase().trim();
+      return rec.email?.toLowerCase().includes(q) || rec.name?.toLowerCase().includes(q);
+    }
+    return true;
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -334,6 +569,238 @@ export default function AudienceSelector({
         </div>
       </div>
 
+      {/* 1.5 Newsletter Subscribers Management (Shown when newsletter_subscriptions or combined) */}
+      {isNewsletterActive && (
+        <div
+          style={{
+            background: SURFACE_ALT,
+            border: `1px solid ${BORDER}`,
+            borderRadius: RADIUS_MD,
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Mail size={16} style={{ color: ACCENT }} />
+              <span style={{ fontSize: "12.5px", fontWeight: "600", color: TEXT_PRIMARY }}>
+                Newsletter Subscribers
+              </span>
+              <span style={{ fontSize: "11px", color: TEXT_MUTED }}>
+                ({loadingSubscribers ? "Loading..." : `${subscribers.length} registered in database`})
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={handleOpenRecipientModal}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  background: ACCENT_BG,
+                  border: `1px solid ${ACCENT_BORDER}`,
+                  color: ACCENT,
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  padding: "4px 10px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                <Eye size={12} /> View Full List & Manage
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchSubscribers}
+                title="Refresh subscriber list"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT_SECONDARY,
+                  fontSize: "11px",
+                  padding: "4px 8px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                <RefreshCw size={11} className={loadingSubscribers ? "animate-spin" : ""} /> Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Add single subscriber input */}
+          <form
+            onSubmit={handleAddSubscriber}
+            style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
+          >
+            <input
+              type="email"
+              placeholder="Add a new newsletter subscriber email (e.g. client@domain.com)"
+              value={newSubscriberInput}
+              onChange={(e) => setNewSubscriberInput(e.target.value)}
+              style={{
+                flex: 1,
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: "6px",
+                padding: "8px 12px",
+                color: TEXT_PRIMARY,
+                fontSize: "12px",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!newSubscriberInput.trim() || addingSubscriber}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: newSubscriberInput.trim() ? ACCENT : SURFACE_ALT,
+                color: newSubscriberInput.trim() ? "#fff" : TEXT_DISABLED,
+                border: newSubscriberInput.trim() ? "none" : `1px solid ${BORDER}`,
+                borderRadius: "6px",
+                padding: "8px 14px",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: newSubscriberInput.trim() && !addingSubscriber ? "pointer" : "not-allowed",
+              }}
+            >
+              <Plus size={13} /> {addingSubscriber ? "Adding..." : "Add Subscriber"}
+            </button>
+          </form>
+
+          {subscriberFeedback && (
+            <div
+              style={{
+                fontSize: "11.5px",
+                marginBottom: "10px",
+                padding: "6px 10px",
+                borderRadius: "5px",
+                background: subscriberFeedback.type === "success" ? SUCCESS_BG : DANGER_BG,
+                color: subscriberFeedback.type === "success" ? SUCCESS_DARK : DANGER,
+                border: `1px solid ${subscriberFeedback.type === "success" ? SUCCESS_BORDER : DANGER_BORDER}`,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              {subscriberFeedback.type === "success" ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+              {subscriberFeedback.text}
+            </div>
+          )}
+
+          {/* Subscriber chips container with individual delete controls */}
+          {subscribers.length > 0 ? (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "6px",
+                  maxHeight: "150px",
+                  overflowY: "auto",
+                  padding: "10px",
+                  background: SURFACE,
+                  borderRadius: "6px",
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                {subscribers.slice(0, 30).map((sub) => {
+                  const subEmail = sub.email;
+                  return (
+                    <span
+                      key={sub.id || subEmail}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "rgba(14,165,233,0.08)",
+                        border: "1px solid rgba(14,165,233,0.2)",
+                        color: TEXT_PRIMARY,
+                        fontSize: "12px",
+                        fontFamily: "monospace",
+                        padding: "4px 10px",
+                        borderRadius: "5px",
+                      }}
+                    >
+                      <span>{subEmail}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubscriber(subEmail)}
+                        disabled={actionLoadingEmail === subEmail}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#64748b",
+                          cursor: "pointer",
+                          padding: "2px",
+                          display: "flex",
+                          alignItems: "center",
+                          borderRadius: "3px",
+                        }}
+                        title={`Delete ${subEmail} from database`}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+              {subscribers.length > 30 && (
+                <div style={{ fontSize: "11px", color: TEXT_MUTED, marginTop: "6px", textAlign: "right" }}>
+                  Showing 30 of {subscribers.length} subscribers.{" "}
+                  <button
+                    type="button"
+                    onClick={handleOpenRecipientModal}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: ACCENT,
+                      cursor: "pointer",
+                      fontWeight: "600",
+                      padding: 0,
+                    }}
+                  >
+                    View all & search →
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: "16px",
+                background: SURFACE,
+                borderRadius: "6px",
+                border: `1px dashed ${BORDER}`,
+                textAlign: "center",
+                fontSize: "12px",
+                color: TEXT_MUTED,
+              }}
+            >
+              {loadingSubscribers
+                ? "Loading subscribers from database..."
+                : "No newsletter subscribers in database yet. Add subscribers above or select Manual Recipients."}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 2. Manual Recipient Management (Shown when manual or combined) */}
       {isManualActive && (
         <div
@@ -431,13 +898,18 @@ export default function AudienceSelector({
           {/* Add single input */}
           <form
             onSubmit={handleAddSingleEmail}
-            style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
+            style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
           >
             <input
               type="text"
-              placeholder="Add recipient email (e.g. client@company.com) & press Enter"
+              placeholder="Type an email address or paste multiple (e.g. client@domain.com, user@domain.com)"
               value={newEmailInput}
-              onChange={(e) => setNewEmailInput(e.target.value)}
+              onChange={handleInputChange}
+              onBlur={() => {
+                if (newEmailInput.trim()) {
+                  handleAddSingleEmail();
+                }
+              }}
               style={{
                 flex: 1,
                 background: SURFACE,
@@ -469,6 +941,9 @@ export default function AudienceSelector({
               <Plus size={13} /> Add
             </button>
           </form>
+          <div style={{ fontSize: "11px", color: TEXT_MUTED, marginBottom: "12px" }}>
+            💡 <em>Tip: You can paste a comma-separated or space-separated list of emails here. They are added automatically.</em>
+          </div>
 
           {/* Chips container with individual [x] removal controls */}
           {manualEmails.length > 0 ? (
@@ -477,9 +952,9 @@ export default function AudienceSelector({
                 display: "flex",
                 flexWrap: "wrap",
                 gap: "6px",
-                maxHeight: "150px",
+                maxHeight: "160px",
                 overflowY: "auto",
-                padding: "8px",
+                padding: "10px",
                 background: SURFACE,
                 borderRadius: "6px",
                 border: `1px solid ${BORDER}`,
@@ -492,31 +967,32 @@ export default function AudienceSelector({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    background: SURFACE_ALT,
-                    border: `1px solid ${BORDER}`,
+                    background: "rgba(14,165,233,0.08)",
+                    border: "1px solid rgba(14,165,233,0.2)",
                     color: TEXT_PRIMARY,
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontFamily: "monospace",
-                    padding: "3px 8px",
-                    borderRadius: "4px",
+                    padding: "4px 10px",
+                    borderRadius: "5px",
                   }}
                 >
-                  {email}
+                  <span>{email}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveEmail(idx)}
                     style={{
                       background: "transparent",
                       border: "none",
-                      color: TEXT_MUTED,
+                      color: "#64748b",
                       cursor: "pointer",
-                      padding: 0,
+                      padding: "2px",
                       display: "flex",
                       alignItems: "center",
+                      borderRadius: "3px",
                     }}
                     title="Remove recipient"
                   >
-                    <X size={11} />
+                    <X size={12} />
                   </button>
                 </span>
               ))}
@@ -524,12 +1000,12 @@ export default function AudienceSelector({
           ) : (
             <div
               style={{
-                padding: "14px",
+                padding: "16px",
                 background: SURFACE,
                 borderRadius: "6px",
                 border: `1px dashed ${BORDER}`,
                 textAlign: "center",
-                fontSize: "11.5px",
+                fontSize: "12px",
                 color: TEXT_MUTED,
               }}
             >
@@ -860,20 +1336,44 @@ export default function AudienceSelector({
               >
                 Authoritative Audience Calculation
               </span>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "2px" }}>
-                <span
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "2px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                  <span
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: "800",
+                      color: TEXT_PRIMARY,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {loading ? "…" : estimate ? estimate.net_target_count : 0}
+                  </span>
+                  <span style={{ fontSize: "12px", color: ACCENT, fontWeight: "600" }}>
+                    Net Verified Recipients
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenRecipientModal}
                   style={{
-                    fontSize: "22px",
-                    fontWeight: "800",
-                    color: TEXT_PRIMARY,
-                    fontFamily: "monospace",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    background: ACCENT_BG,
+                    border: `1.5px solid ${ACCENT}`,
+                    color: ACCENT_DARK,
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    padding: "4px 10px",
+                    borderRadius: "5px",
+                    cursor: "pointer",
+                    boxShadow: SHADOW_SM,
+                    transition: "all 0.15s ease",
                   }}
                 >
-                  {loading ? "…" : estimate ? estimate.net_target_count : 0}
-                </span>
-                <span style={{ fontSize: "12px", color: ACCENT, fontWeight: "600" }}>
-                  Net Verified Recipients
-                </span>
+                  <Eye size={12} /> View & Manage Recipients ({estimate ? estimate.net_target_count : 0})
+                </button>
               </div>
             </div>
           </div>
@@ -1118,6 +1618,488 @@ export default function AudienceSelector({
           </div>
         )}
       </div>
+
+      {/* 6. Unified Recipient List Modal (View, Add, Delete, Search) */}
+      {showRecipientModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(10,37,64,0.45)",
+            backdropFilter: "blur(3px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "720px",
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              background: SURFACE,
+              border: `1px solid ${BORDER}`,
+              borderRadius: RADIUS_LG,
+              padding: "24px",
+              color: TEXT_PRIMARY,
+              boxShadow: SHADOW_MD,
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Users size={18} style={{ color: ACCENT }} />
+                  <h3 style={{ fontSize: "15px", fontWeight: "700", color: TEXT_PRIMARY, margin: 0 }}>
+                    Recipient Audience List & Management
+                  </h3>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      background: ACCENT_BG,
+                      color: ACCENT,
+                      border: `1px solid ${ACCENT_BORDER}`,
+                    }}
+                  >
+                    {sources.find((s) => s.id === selectedSource)?.title || selectedSource}
+                  </span>
+                </div>
+                <p style={{ fontSize: "12px", color: TEXT_MUTED, margin: "4px 0 0 0" }}>
+                  View, search, add, or delete recipients that make up your target campaign audience.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRecipientModal(false);
+                  setModalFeedback(null);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: TEXT_MUTED,
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Quick Add Recipient Bar */}
+            <div
+              style={{
+                background: SURFACE_ALT,
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS_MD,
+                padding: "12px 14px",
+                marginBottom: "16px",
+              }}
+            >
+              <div style={{ fontSize: "11px", fontWeight: "600", color: TEXT_SECONDARY, marginBottom: "8px" }}>
+                ➕ Add New Recipient
+              </div>
+              <form
+                onSubmit={handleModalAddRecipient}
+                style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+              >
+                <input
+                  type="email"
+                  placeholder="Enter email address (e.g. client@domain.com)"
+                  value={modalNewEmail}
+                  onChange={(e) => setModalNewEmail(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: "220px",
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: "6px",
+                    padding: "7px 12px",
+                    color: TEXT_PRIMARY,
+                    fontSize: "12px",
+                    outline: "none",
+                  }}
+                />
+
+                {selectedSource === "combined" && (
+                  <select
+                    value={modalTargetSource}
+                    onChange={(e) => setModalTargetSource(e.target.value)}
+                    style={{
+                      background: SURFACE,
+                      border: `1px solid ${BORDER}`,
+                      borderRadius: "6px",
+                      padding: "7px 10px",
+                      color: TEXT_PRIMARY,
+                      fontSize: "12px",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="newsletter">To Newsletter Subscribers</option>
+                    <option value="manual">To Manual Recipients</option>
+                  </select>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!modalNewEmail.trim() || modalAddingRecipient}
+                  style={{
+                    background: ACCENT,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "7px 14px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    cursor: modalNewEmail.trim() && !modalAddingRecipient ? "pointer" : "not-allowed",
+                    opacity: modalNewEmail.trim() && !modalAddingRecipient ? 1 : 0.6,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Plus size={13} /> {modalAddingRecipient ? "Adding..." : "Add Recipient"}
+                </button>
+              </form>
+
+              {modalFeedback && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    fontSize: "11px",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    background: modalFeedback.type === "success" ? SUCCESS_BG : DANGER_BG,
+                    color: modalFeedback.type === "success" ? SUCCESS_DARK : DANGER,
+                    border: `1px solid ${modalFeedback.type === "success" ? SUCCESS_BORDER : DANGER_BORDER}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  {modalFeedback.type === "success" ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                  {modalFeedback.text}
+                </div>
+              )}
+            </div>
+
+            {/* Search & Filter Toolbar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ position: "relative", flex: 1, minWidth: "180px" }}>
+                <Search
+                  size={14}
+                  style={{
+                    position: "absolute",
+                    left: "10px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: TEXT_MUTED,
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search recipients by email..."
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "6px 10px 6px 30px",
+                    background: SURFACE_ALT,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    color: TEXT_PRIMARY,
+                    outline: "none",
+                  }}
+                />
+                {modalSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setModalSearch("")}
+                    style={{
+                      position: "absolute",
+                      right: "8px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      color: TEXT_MUTED,
+                      cursor: "pointer",
+                      padding: "2px",
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Status filter tabs */}
+              <div style={{ display: "flex", gap: "4px" }}>
+                {[
+                  { id: "all", label: `All (${displayRecipients.length})` },
+                  { id: "active", label: `Active (${displayRecipients.filter((r) => !r.is_excluded).length})` },
+                  { id: "excluded", label: `Excluded (${displayRecipients.filter((r) => r.is_excluded).length})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setModalStatusFilter(tab.id)}
+                    style={{
+                      background: modalStatusFilter === tab.id ? ACCENT_BG : "transparent",
+                      border: `1px solid ${modalStatusFilter === tab.id ? ACCENT_BORDER : BORDER}`,
+                      color: modalStatusFilter === tab.id ? ACCENT : TEXT_MUTED,
+                      padding: "5px 10px",
+                      borderRadius: "5px",
+                      fontSize: "11px",
+                      fontWeight: modalStatusFilter === tab.id ? "700" : "500",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recipient List Scroll Area */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                border: `1px solid ${BORDER}`,
+                borderRadius: RADIUS_MD,
+                background: SURFACE,
+                minHeight: "180px",
+              }}
+            >
+              {loadingAudienceRecipients ? (
+                <div style={{ padding: "40px", textAlign: "center", color: TEXT_MUTED, fontSize: "13px" }}>
+                  <RefreshCw size={20} className="animate-spin" style={{ margin: "0 auto 10px auto", color: ACCENT }} />
+                  Loading audience recipient details...
+                </div>
+              ) : filteredModalRecipients.length === 0 ? (
+                <div style={{ padding: "40px", textAlign: "center", color: TEXT_MUTED, fontSize: "12.5px" }}>
+                  {modalSearch ? (
+                    <>No recipients match "{modalSearch}".</>
+                  ) : (
+                    <>No recipients found in this audience. You can add one using the input above.</>
+                  )}
+                </div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                  <thead>
+                    <tr style={{ background: SURFACE_ALT, borderBottom: `1px solid ${BORDER}`, textAlign: "left" }}>
+                      <th style={{ padding: "8px 12px", width: "36px", color: TEXT_MUTED, fontWeight: "600" }}>#</th>
+                      <th style={{ padding: "8px 12px", color: TEXT_SECONDARY, fontWeight: "600" }}>Email Address</th>
+                      <th style={{ padding: "8px 12px", width: "110px", color: TEXT_SECONDARY, fontWeight: "600" }}>Source</th>
+                      <th style={{ padding: "8px 12px", width: "90px", color: TEXT_SECONDARY, fontWeight: "600" }}>Status</th>
+                      <th style={{ padding: "8px 12px", width: "150px", textAlign: "right", color: TEXT_SECONDARY, fontWeight: "600" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredModalRecipients.map((rec, idx) => {
+                      const isEx = rec.is_excluded;
+                      const isNewsletter = rec.source === "newsletter_subscriptions";
+                      return (
+                        <tr
+                          key={`${rec.email}-${idx}`}
+                          style={{
+                            borderBottom: `1px solid ${BORDER}`,
+                            background: isEx ? "rgba(239,68,68,0.03)" : "transparent",
+                            opacity: isEx ? 0.75 : 1,
+                          }}
+                        >
+                          <td style={{ padding: "8px 12px", color: TEXT_MUTED, fontFamily: "monospace", fontSize: "11px" }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ padding: "8px 12px", fontFamily: "monospace", color: TEXT_PRIMARY, wordBreak: "break-all" }}>
+                            {rec.email}
+                          </td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: "600",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: isNewsletter ? "rgba(14,165,233,0.1)" : "rgba(16,185,129,0.1)",
+                                color: isNewsletter ? ACCENT : SUCCESS_DARK,
+                                border: `1px solid ${isNewsletter ? ACCENT_BORDER : SUCCESS_BORDER}`,
+                              }}
+                            >
+                              {isNewsletter ? "Newsletter" : "Manual"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "8px 12px" }}>
+                            {isEx ? (
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: "600",
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  background: DANGER_BG,
+                                  color: DANGER,
+                                  border: `1px solid ${DANGER_BORDER}`,
+                                }}
+                              >
+                                Excluded
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: "600",
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  background: SUCCESS_BG,
+                                  color: SUCCESS_DARK,
+                                  border: `1px solid ${SUCCESS_BORDER}`,
+                                }}
+                              >
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                            <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                              {/* Toggle Exclude / Restore */}
+                              {isEx ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestoreEmail(rec.email)}
+                                  title="Restore into audience"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                    background: SUCCESS_BG,
+                                    border: `1px solid ${SUCCESS_BORDER}`,
+                                    color: SUCCESS_DARK,
+                                    padding: "3px 7px",
+                                    borderRadius: "4px",
+                                    fontSize: "10.5px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <RotateCcw size={11} /> Restore
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleExcludeEmail(rec.email)}
+                                  title="Exclude from this campaign"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                    background: SURFACE_ALT,
+                                    border: `1px solid ${BORDER}`,
+                                    color: TEXT_MUTED,
+                                    padding: "3px 7px",
+                                    borderRadius: "4px",
+                                    fontSize: "10.5px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <UserX size={11} /> Exclude
+                                </button>
+                              )}
+
+                              {/* Delete button */}
+                              <button
+                                type="button"
+                                onClick={() => handleModalDeleteRecipient(rec)}
+                                disabled={actionLoadingEmail === rec.email}
+                                title={isNewsletter ? "Permanently delete subscriber from database" : "Remove from manual list"}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "3px",
+                                  background: DANGER_BG,
+                                  border: `1px solid ${DANGER_BORDER}`,
+                                  color: DANGER,
+                                  padding: "3px 7px",
+                                  borderRadius: "4px",
+                                  fontSize: "10.5px",
+                                  fontWeight: "600",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Trash2 size={11} /> {isNewsletter ? "Delete DB" : "Remove"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}
+            >
+              <div style={{ fontSize: "12px", color: TEXT_MUTED }}>
+                Net Target Audience: <strong style={{ color: ACCENT }}>{displayRecipients.filter((r) => !r.is_excluded).length}</strong> recipients will receive this campaign.
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRecipientModal(false);
+                  setModalFeedback(null);
+                }}
+                style={{
+                  background: ACCENT,
+                  border: "none",
+                  color: "#fff",
+                  padding: "6px 16px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
