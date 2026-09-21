@@ -231,7 +231,7 @@ async def sync_replies_from_resend(request: Request):
             continue
 
         existing = await db.email_replies.find_one({"email_id": email_id})
-        if existing:
+        if existing and (existing.get("body_text") or existing.get("body_html") or existing.get("snippet")):
             already_existing_count += 1
             continue
 
@@ -261,18 +261,21 @@ async def sync_replies_from_resend(request: Request):
                 campaign_id = campaign.get("campaign_id")
                 campaign_title = campaign.get("title")
 
-        # Optional: try fetching full text snippet if detail call succeeds
+        # Fetch full text and HTML body
         snippet = ""
+        body_text = ""
+        body_html = ""
         try:
             full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
             full_dict = full_detail if isinstance(full_detail, dict) else full_detail.__dict__
-            raw_text = full_dict.get("text") or full_dict.get("html") or ""
-            # Strip tags if html
+            body_text = full_dict.get("text") or ""
+            body_html = full_dict.get("html") or ""
+            raw_text = body_text or body_html or ""
             clean_text = re.sub(r"<[^>]+>", " ", raw_text)
             clean_text = re.sub(r"\s+", " ", clean_text).strip()
             snippet = clean_text[:297] + ("..." if len(clean_text) > 297 else "")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Could not fetch detail for email_id %s: %s", email_id, e)
 
         # Parse date
         received_at = get_utc_now()
@@ -294,10 +297,16 @@ async def sync_replies_from_resend(request: Request):
             campaign_id=campaign_id,
             campaign_title=campaign_title,
             snippet=snippet,
+            body_text=body_text,
+            body_html=body_html,
             received_at=received_at,
             source="resend_sync"
         )
-        await db.email_replies.insert_one(reply_record.model_dump())
+        await db.email_replies.update_one(
+            {"email_id": email_id},
+            {"$set": reply_record.model_dump()},
+            upsert=True
+        )
         synced_count += 1
         logger.info(
             "[SYNC INGESTED] ID: %s | From: %s | Subj: %s",
@@ -319,6 +328,71 @@ async def sync_replies_from_resend(request: Request):
                 else f"All {len(remote_items)} remote emails are already up-to-date in database."
             )
         )
+    }
+
+
+@router.get("/{reply_id}/content", dependencies=[Depends(get_current_admin)])
+async def get_reply_content(
+    reply_id: str,
+    request: Request
+):
+    """
+    Fetches the full message body for an email reply.
+    If not already stored in DB, queries Resend Receiving API on demand.
+    """
+    db = _get_db(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    reply = await db.email_replies.find_one({"reply_id": reply_id})
+    if not reply:
+        raise HTTPException(status_code=404, detail="Reply not found")
+
+    body_text = reply.get("body_text") or ""
+    body_html = reply.get("body_html") or ""
+    email_id = reply.get("email_id")
+
+    # If body is missing but we have an email_id from Resend, fetch on demand
+    if not body_text and not body_html and email_id and settings.RESEND_API_KEY:
+        try:
+            resend.api_key = settings.RESEND_API_KEY
+            full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
+            full_dict = full_detail if isinstance(full_detail, dict) else full_detail.__dict__
+            body_text = full_dict.get("text") or ""
+            body_html = full_dict.get("html") or ""
+            
+            # Compute updated snippet if missing
+            raw_text = body_text or body_html or ""
+            clean_text = re.sub(r"<[^>]+>", " ", raw_text)
+            clean_text = re.sub(r"\s+", " ", clean_text).strip()
+            snippet = clean_text[:297] + ("..." if len(clean_text) > 297 else "")
+
+            # Persist back to MongoDB
+            update_fields = {
+                "body_text": body_text,
+                "body_html": body_html,
+            }
+            if snippet and not reply.get("snippet"):
+                update_fields["snippet"] = snippet
+
+            await db.email_replies.update_one(
+                {"reply_id": reply_id},
+                {"$set": update_fields}
+            )
+        except Exception as exc:
+            logger.warning("Failed on-demand fetch from Resend for %s: %s", email_id, exc)
+
+    return {
+        "reply_id": reply_id,
+        "email_id": email_id,
+        "sender_email": reply.get("sender_email"),
+        "sender_name": reply.get("sender_name"),
+        "recipient_email": reply.get("recipient_email"),
+        "subject": reply.get("subject"),
+        "received_at": reply.get("received_at"),
+        "snippet": reply.get("snippet"),
+        "body_text": body_text,
+        "body_html": body_html,
     }
 
 

@@ -20,6 +20,8 @@ import {
   ChevronUp,
   CloudDownload,
   Info,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
 import {
   SURFACE,
@@ -58,11 +60,15 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
   const [simulating, setSimulating] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
 
+  // View Full Message Modal State
+  const [activeViewingReply, setActiveViewingReply] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+
   // New Reply Form State
   const [formData, setFormData] = useState({
     sender_email: "",
     sender_name: "",
-    recipient_email: "contact@psumanassociates.com",
+    recipient_email: "updates@updates.psumanassociates.com",
     subject: "",
     snippet: "",
     campaign_id: "",
@@ -71,6 +77,24 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
   const showToast = (msg, type = "success") => {
     setToastMsg({ msg, type });
     setTimeout(() => setToastMsg(null), 5000);
+  };
+
+  const handleOpenReplyContent = async (reply) => {
+    setActiveViewingReply(reply);
+    setLoadingContent(true);
+    try {
+      const res = await axios.get(
+        `${backendUrl}/api/admin/communication/replies/${reply.reply_id}/content`,
+        { withCredentials: true }
+      );
+      if (res.data) {
+        setActiveViewingReply(res.data);
+      }
+    } catch (err) {
+      console.warn("Could not load on-demand content:", err);
+    } finally {
+      setLoadingContent(false);
+    }
   };
 
   const handleSyncFromResend = async () => {
@@ -1092,6 +1116,22 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                     </span>
                     <button
                       type="button"
+                      onClick={() => handleOpenReplyContent(r)}
+                      style={{
+                        ...BTN_SECONDARY_STYLE,
+                        padding: "3px 8px",
+                        fontSize: "11px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        cursor: "pointer",
+                      }}
+                      title="View full email body"
+                    >
+                      <Eye size={12} /> View Email
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteReply(r.reply_id)}
                       style={{
                         background: "transparent",
@@ -1428,6 +1468,244 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Full Email Content Modal */}
+      {activeViewingReply && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(15, 28, 46, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 9999,
+          }}
+          onClick={() => setActiveViewingReply(null)}
+        >
+          <div
+            style={{
+              ...CARD_STYLE,
+              width: "100%",
+              maxWidth: "680px",
+              maxHeight: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              borderRadius: RADIUS_LG,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: `1px solid ${BORDER}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: SURFACE_ALT,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "rgba(14, 165, 233, 0.12)",
+                    color: ACCENT,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "700",
+                    fontSize: "14px",
+                  }}
+                >
+                  {activeViewingReply.sender_name
+                    ? activeViewingReply.sender_name[0].toUpperCase()
+                    : activeViewingReply.sender_email[0].toUpperCase()}
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: "700",
+                      color: TEXT_PRIMARY,
+                      margin: 0,
+                    }}
+                  >
+                    {activeViewingReply.subject || "No Subject"}
+                  </h3>
+                  <div style={{ fontSize: "12px", color: TEXT_MUTED }}>
+                    From:{" "}
+                    <strong style={{ color: TEXT_PRIMARY }}>
+                      {activeViewingReply.sender_name
+                        ? `${activeViewingReply.sender_name} <${activeViewingReply.sender_email}>`
+                        : activeViewingReply.sender_email}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <a
+                  href={`mailto:${activeViewingReply.sender_email}?subject=Re: ${encodeURIComponent(
+                    activeViewingReply.subject || ""
+                  )}`}
+                  style={{
+                    ...BTN_SECONDARY_STYLE,
+                    fontSize: "11.5px",
+                    padding: "6px 10px",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                  title="Open in your default mail client"
+                >
+                  <ExternalLink size={12} /> Reply
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActiveViewingReply(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: TEXT_MUTED,
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Metadata Bar */}
+            <div
+              style={{
+                padding: "10px 20px",
+                background: SURFACE,
+                borderBottom: `1px solid ${BORDER}`,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                fontSize: "11.5px",
+                color: TEXT_MUTED,
+              }}
+            >
+              <div>
+                <strong>Delivered to:</strong> {activeViewingReply.recipient_email}
+              </div>
+              <div>
+                <strong>Received:</strong>{" "}
+                {new Date(activeViewingReply.received_at).toLocaleString("en-GB", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </div>
+              {activeViewingReply.campaign_title && (
+                <div>
+                  <strong>Campaign:</strong> {activeViewingReply.campaign_title}
+                </div>
+              )}
+            </div>
+
+            {/* Email Message Content Body */}
+            <div
+              style={{
+                padding: "20px",
+                overflowY: "auto",
+                flex: 1,
+                fontSize: "13px",
+                lineHeight: 1.6,
+                color: TEXT_PRIMARY,
+                background: "#ffffff",
+              }}
+            >
+              {loadingContent ? (
+                <div style={{ textAlign: "center", padding: "40px", color: TEXT_MUTED }}>
+                  <RefreshCw
+                    size={20}
+                    style={{ animation: "spin 1s linear infinite", marginBottom: "8px" }}
+                  />
+                  <div>Loading email content from server...</div>
+                </div>
+              ) : activeViewingReply.body_html ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: activeViewingReply.body_html }}
+                  style={{ wordBreak: "break-word" }}
+                />
+              ) : activeViewingReply.body_text ? (
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    margin: 0,
+                    color: TEXT_PRIMARY,
+                  }}
+                >
+                  {activeViewingReply.body_text}
+                </pre>
+              ) : activeViewingReply.snippet ? (
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    background: SURFACE_ALT,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: RADIUS_MD,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {activeViewingReply.snippet}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: "30px",
+                    textAlign: "center",
+                    color: TEXT_MUTED,
+                    fontStyle: "italic",
+                  }}
+                >
+                  No body text recorded for this email message.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "12px 20px",
+                borderTop: `1px solid ${BORDER}`,
+                background: SURFACE_ALT,
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveViewingReply(null)}
+                style={{ ...BTN_SECONDARY_STYLE, cursor: "pointer", fontSize: "12px", padding: "6px 14px" }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

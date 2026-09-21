@@ -338,6 +338,8 @@ class EmailReply(BaseModel):
     campaign_id: Optional[str] = None
     campaign_title: Optional[str] = None
     snippet: Optional[str] = ""
+    body_text: Optional[str] = ""
+    body_html: Optional[str] = ""
     received_at: datetime = Field(default_factory=get_utc_now)
     source: str = "webhook"  # "webhook" | "manual" | "simulation"
 
@@ -345,8 +347,10 @@ class EmailReply(BaseModel):
 class EmailReplyCreate(BaseModel):
     sender_email: EmailStr
     sender_name: Optional[str] = None
-    recipient_email: Optional[str] = "contact@psumanassociates.com"
+    recipient_email: Optional[str] = "updates@updates.psumanassociates.com"
     subject: str
     snippet: Optional[str] = ""
+    body_text: Optional[str] = ""
+    body_html: Optional[str] = ""
     campaign_id: Optional[str] = None
 
