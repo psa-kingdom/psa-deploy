@@ -254,7 +254,7 @@ export default function TemplateEditor({
           apply_wrapper: applyWrapper,
           sender_name: senderName || "P Suman & Associates",
           sender_email: senderEmail || "updates@updates.psumanassociates.com",
-          reply_to: replyTo || "contact@psumanassociates.com",
+          reply_to: replyTo || "updates@updates.psumanassociates.com",
           cc: Array.isArray(cc) ? cc : [],
           bcc: Array.isArray(bcc) ? bcc : [],
           recipient_name: actualRecipientName,
@@ -1357,7 +1357,7 @@ export default function TemplateEditor({
               </span>
             </div>
             <div>
-              <strong>Reply-To:</strong> {replyTo || previewData?.metadata?.reply_to || "contact@psumanassociates.com"}
+              <strong>Reply-To:</strong> {replyTo || previewData?.metadata?.reply_to || "updates@updates.psumanassociates.com"}
             </div>
             {((cc && cc.length > 0) || previewData?.metadata?.cc?.length > 0) && (
               <div>

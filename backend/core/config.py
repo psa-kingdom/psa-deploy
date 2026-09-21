@@ -29,7 +29,7 @@ class Settings:
     EMAIL_ENVIRONMENT: str = os.getenv("EMAIL_ENVIRONMENT", "development").lower()  # development | staging | production
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "P Suman & Associates <updates@updates.psumanassociates.com>")
-    RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "contact@psumanassociates.com")
+    RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "updates@updates.psumanassociates.com")
 
     # Dispatch rate (conservative default: 2.0 req/s to respect standard Resend rate limits)
     EMAIL_DISPATCH_RATE_PER_SEC: float = float(os.getenv("EMAIL_DISPATCH_RATE_PER_SEC", "2.0"))
