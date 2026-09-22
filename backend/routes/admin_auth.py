@@ -34,15 +34,43 @@ COOKIE_NAME = "psa_admin_session"
 COOKIE_MAX_AGE_SECONDS = 8 * 60 * 60  # 8 hours
 
 
+DEV_LOCAL_USERNAME = "admin"
+DEV_LOCAL_PASSWORD_HASH = "$2b$12$JDdlv99rcfr/P8JFsLA1H.zDuWfdrpXVmD/pvVDbmzWlFGL7xIrji"  # admin123
+
+PROD_USERNAME = "psa_admin"
+PROD_PASSWORD_HASH = "$2b$12$U3raXGN/roKptdpJ1I7Yi.O1e/HZBTlBfazOVU./5x/uJJJcjFY4u"  # H5ofj_3Pd8gNzT-Xn1_x
+
+
+def _is_localhost_request(request: Request) -> bool:
+    """
+    Detects whether the request originates from or targets localhost / 127.0.0.1.
+    """
+    origin = request.headers.get("origin") or request.headers.get("referer", "")
+    host = request.headers.get("host", "")
+    client_ip = request.client.host if request.client else ""
+
+    if origin:
+        origin_lower = origin.lower()
+        if "localhost" in origin_lower or "127.0.0.1" in origin_lower:
+            return True
+    if host:
+        host_lower = host.lower()
+        if "localhost" in host_lower or "127.0.0.1" in host_lower:
+            return True
+    if client_ip in ("127.0.0.1", "::1", "localhost"):
+        return True
+    return False
+
+
 # ---------- Helpers ----------
 
-def _create_session_token() -> str:
+def _create_session_token(username: str = "admin") -> str:
     """
     Creates a signed session token using PyJWT.
     """
     import jwt
     payload = {
-        "sub": "admin",
+        "sub": username,
         "role": "admin",
         "iat": datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(seconds=COOKIE_MAX_AGE_SECONDS),
@@ -63,35 +91,37 @@ def _verify_session_token(token: str) -> Optional[dict]:
         return None
 
 
-async def _get_stored_admin_hash(db: Optional[Any] = None) -> str:
+async def _get_stored_admin_hash(username: str, db: Optional[Any] = None) -> str:
     """
-    Retrieves stored admin password hash. Checks MongoDB `admin_credentials` collection first,
-    falling back to settings.ADMIN_PASSWORD_HASH.
+    Retrieves stored admin password hash for the specified username. Checks MongoDB `admin_credentials` collection first,
+    falling back to environment settings / defaults.
     """
+    clean_user = username.strip().lower()
     if db is not None:
         try:
-            record = await db.admin_credentials.find_one({"username": settings.ADMIN_USERNAME.strip().lower()})
+            record = await db.admin_credentials.find_one({"username": clean_user})
             if record and record.get("password_hash"):
                 return record["password_hash"].strip()
         except Exception as e:
             logger.error("Error reading admin credentials from database: %s", e)
-    return settings.ADMIN_PASSWORD_HASH.strip()
+
+    if clean_user == PROD_USERNAME.lower():
+        return PROD_PASSWORD_HASH
+    return settings.ADMIN_PASSWORD_HASH.strip() or DEV_LOCAL_PASSWORD_HASH
 
 
-async def _verify_admin_password(plain: str, db: Optional[Any] = None) -> bool:
+async def _verify_admin_password(username: str, plain: str, db: Optional[Any] = None) -> bool:
     """
-    Compares plain-text password against bcrypt hash stored in DB (or settings fallback).
-    Falls back to direct comparison only in local dev when hash is not configured.
+    Compares plain-text password against bcrypt hash stored in DB (or fallback).
     """
     import bcrypt
-    stored = await _get_stored_admin_hash(db)
+    stored = await _get_stored_admin_hash(username, db)
 
     # If the stored value looks like a bcrypt hash, use bcrypt
     if stored.startswith("$2b$") or stored.startswith("$2a$"):
-        return bcrypt.checkpw(plain.encode(), stored.encode())
+        return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
 
-    # Dev fallback: plaintext comparison (only acceptable with dev-only credentials)
-    logger.warning("ADMIN_PASSWORD_HASH is not a bcrypt hash — using plaintext comparison (dev only).")
+    # Plaintext fallback (if configured as plain string)
     return plain == stored
 def _validate_request_origin(request: Request) -> None:
     """
@@ -202,29 +232,35 @@ class AdminSessionInfo(BaseModel):
 async def admin_login(payload: AdminLoginRequest, request: Request, response: Response, db: Optional[Any] = None):
     """
     Verify admin credentials and set an HttpOnly session cookie on success.
-    Validates request Origin to prevent CSRF on the login endpoint.
+    - If accessing via localhost: requires username 'admin' and password 'admin123'.
+    - If accessing non-localhost (production/Vercel/Railway): requires username 'psa_admin' and password 'H5ofj_3Pd8gNzT-Xn1_x'.
     """
     _validate_request_origin(request)
 
-    # Validate username
-    if payload.username.strip().lower() != settings.ADMIN_USERNAME.strip().lower():
+    is_local = _is_localhost_request(request)
+    expected_username = DEV_LOCAL_USERNAME if is_local else PROD_USERNAME
+
+    input_user = payload.username.strip()
+    if input_user.lower() != expected_username.lower():
+        logger.warning("Admin login failed: incorrect username '%s' for is_local=%s (expected '%s')", input_user, is_local, expected_username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials.",
         )
 
     # Validate password
-    valid = await _verify_admin_password(payload.password, db=db)
+    valid = await _verify_admin_password(expected_username, payload.password, db=db)
     if not valid:
+        logger.warning("Admin login failed: invalid password for user '%s' (is_local=%s)", input_user, is_local)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials.",
         )
 
-    token = _create_session_token()
+    token = _create_session_token(username=expected_username)
     _set_session_cookie(response, token)
-    logger.info("Admin session created.")
-    return {"authenticated": True, "username": settings.ADMIN_USERNAME, "role": "admin"}
+    logger.info("Admin session created for '%s' (is_local=%s).", expected_username, is_local)
+    return {"authenticated": True, "username": expected_username, "role": "admin"}
 
 
 @router.get("/me")
@@ -232,9 +268,10 @@ async def admin_me(session: dict = Depends(require_admin_session)):
     """
     Returns current session info. Used by frontend to check if session is still active.
     """
+    username = session.get("sub") or settings.ADMIN_USERNAME
     return {
         "authenticated": True,
-        "username": settings.ADMIN_USERNAME,
+        "username": username,
         "role": session.get("role", "admin"),
     }
 
@@ -516,7 +553,8 @@ async def admin_reset_password(payload: AdminResetPasswordRequest, request: Requ
     new_hash = bcrypt.hashpw(new_pwd.encode("utf-8"), salt).decode("utf-8")
 
     now = datetime.now(timezone.utc)
-    username = settings.ADMIN_USERNAME.strip().lower()
+    is_local = _is_localhost_request(request)
+    username = DEV_LOCAL_USERNAME if is_local else PROD_USERNAME
 
     await db.admin_credentials.update_one(
         {"username": username},

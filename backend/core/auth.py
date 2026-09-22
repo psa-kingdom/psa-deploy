@@ -24,4 +24,4 @@ def get_current_admin(request: Request) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Admin session required. Please log in at /admin/login.",
         )
-    return {"role": session.get("role", "admin"), "identity": settings.ADMIN_USERNAME}
+    return {"role": session.get("role", "admin"), "identity": session.get("sub", settings.ADMIN_USERNAME)}
