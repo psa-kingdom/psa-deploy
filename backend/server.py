@@ -50,6 +50,25 @@ title="P Suman & Associates API")
 app.state.db = db
 api_router = APIRouter(prefix="/api")
 
+@api_router.get("/health")
+async def health_check():
+    db_status = "connected"
+    db_error = None
+    try:
+        await db.command("ping")
+    except Exception as e:
+        db_status = "disconnected"
+        db_error = str(e)
+    return {
+        "status": "ok" if db_status == "connected" else "degraded",
+        "database": {
+            "status": db_status,
+            "name": settings.DB_NAME,
+            "error": db_error
+        }
+    }
+
+
 # ---------- CORS Middleware ----------
 # Must be registered before routers so preflight OPTIONS requests are handled.
 # allow_credentials=True requires explicit origins or scoped allow_origin_regex.
