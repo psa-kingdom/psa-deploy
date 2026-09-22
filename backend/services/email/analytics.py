@@ -15,11 +15,13 @@ CACHE_TTL_SECONDS = 180  # 3 minutes
 def _parse_resend_metrics(raw_data: Dict[str, Any], period: str) -> Dict[str, Any]:
     """
     Normalizes response from Resend Email Metrics API: GET /emails/metrics
+    Supports Resend 'totals' dictionary, 'data' array/dictionary, or top-level metrics dictionary.
     """
-    # The API can return a top-level dict or a list in 'data'
-    data = raw_data.get("data", raw_data)
+    data = raw_data.get("totals") or raw_data.get("data") or raw_data
     if isinstance(data, list) and len(data) > 0:
         data = data[0]
+    if not isinstance(data, dict):
+        data = raw_data
 
     sent = int(data.get("sent", 0) or 0)
     delivered = int(data.get("delivered", 0) or 0)
