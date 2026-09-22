@@ -253,40 +253,35 @@ export default function AdminAnalyticsCards({ backendUrl, onNavigateToReplies })
               padding: "2px",
             }}
           >
-            <button
-              type="button"
-              onClick={() => setPeriod("7d")}
-              style={{
-                padding: "4px 10px",
-                fontSize: "11px",
-                fontWeight: "600",
-                borderRadius: "4px",
-                border: "none",
-                background: period === "7d" ? SURFACE : "transparent",
-                color: period === "7d" ? ACCENT : TEXT_MUTED,
-                cursor: "pointer",
-                boxShadow: period === "7d" ? SHADOW_SM : "none",
-              }}
-            >
-              Last 7 Days
-            </button>
-            <button
-              type="button"
-              onClick={() => setPeriod("30d")}
-              style={{
-                padding: "4px 10px",
-                fontSize: "11px",
-                fontWeight: "600",
-                borderRadius: "4px",
-                border: "none",
-                background: period === "30d" ? SURFACE : "transparent",
-                color: period === "30d" ? ACCENT : TEXT_MUTED,
-                cursor: "pointer",
-                boxShadow: period === "30d" ? SHADOW_SM : "none",
-              }}
-            >
-              Last 30 Days
-            </button>
+            {[
+              { id: "7d", label: "7 Days" },
+              { id: "30d", label: "30 Days" },
+              { id: "90d", label: "90 Days" },
+              { id: "1y", label: "1 Year" },
+              { id: "3y", label: "3 Years" },
+              { id: "5y", label: "5 Years" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPeriod(p.id)}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: period === p.id ? SURFACE : "transparent",
+                  color: period === p.id ? ACCENT : TEXT_MUTED,
+                  cursor: "pointer",
+                  boxShadow: period === p.id ? SHADOW_SM : "none",
+                  transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
 
           <button

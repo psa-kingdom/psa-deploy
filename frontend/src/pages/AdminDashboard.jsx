@@ -684,27 +684,35 @@ export default function AdminDashboard() {
                 border: `1px solid ${BORDER}`,
               }}
             >
-              {[7, 14, 30, 60, 90].map((d) => (
+              {[
+                { d: 7, label: "7D" },
+                { d: 30, label: "30D" },
+                { d: 90, label: "90D" },
+                { d: 365, label: "1Y" },
+                { d: 1095, label: "3Y" },
+                { d: 1825, label: "5Y" },
+              ].map((p) => (
                 <button
-                  key={d}
+                  key={p.d}
                   onClick={() => {
-                    setVisitorDays(d);
-                    fetchVisitors(d);
+                    setVisitorDays(p.d);
+                    fetchVisitors(p.d);
                   }}
                   style={{
                     border: "none",
-                    background: visitorDays === d ? "#ffffff" : "transparent",
-                    color: visitorDays === d ? "#059669" : TEXT_SECONDARY,
-                    fontWeight: visitorDays === d ? "700" : "500",
+                    background: visitorDays === p.d ? "#ffffff" : "transparent",
+                    color: visitorDays === p.d ? "#059669" : TEXT_SECONDARY,
+                    fontWeight: visitorDays === p.d ? "700" : "500",
                     fontSize: "12px",
-                    padding: "5px 12px",
+                    padding: "5px 10px",
                     borderRadius: "6px",
                     cursor: "pointer",
-                    boxShadow: visitorDays === d ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                    boxShadow: visitorDays === p.d ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                     transition: "all 0.15s ease",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {d}D
+                  {p.label}
                 </button>
               ))}
             </div>
@@ -728,7 +736,7 @@ export default function AdminDashboard() {
               <input
                 type="range"
                 min="3"
-                max="90"
+                max="1825"
                 value={visitorDays}
                 onChange={(e) => {
                   const val = Number(e.target.value);
@@ -739,7 +747,7 @@ export default function AdminDashboard() {
                 style={{ width: "90px", cursor: "pointer", accentColor: "#059669" }}
               />
               <span style={{ fontSize: "12px", fontWeight: "700", color: TEXT_PRIMARY, minWidth: "35px" }}>
-                {visitorDays}d
+                {visitorDays >= 365 ? `${(visitorDays / 365).toFixed(1)}y` : `${visitorDays}d`}
               </span>
             </div>
           </div>

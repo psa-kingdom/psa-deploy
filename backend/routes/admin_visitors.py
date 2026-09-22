@@ -61,7 +61,7 @@ async def track_visit(payload: VisitPayload, request: Request, response: Respons
 
 @router.get("/admin/analytics/visitors", dependencies=[Depends(get_current_admin)])
 async def get_visitor_analytics(
-    days: int = Query(default=30, ge=1, le=365),
+    days: int = Query(default=30, ge=1, le=1825),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """
@@ -84,7 +84,7 @@ async def get_visitor_analytics(
         {"$sort": {"_id": 1}}
     ]
 
-    results = await db["site_visitors"].aggregate(pipeline).to_list(length=400)
+    results = await db["site_visitors"].aggregate(pipeline).to_list(length=2000)
     date_map = {r["_id"]: {"visits": r["visits"], "visitors": len(r["unique_visitors"])} for r in results}
 
     daily = []

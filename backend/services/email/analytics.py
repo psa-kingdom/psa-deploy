@@ -54,13 +54,43 @@ def _parse_resend_metrics(raw_data: Dict[str, Any], period: str) -> Dict[str, An
     }
 
 
+def _parse_period_days(period: str) -> int:
+    """
+    Parses period string into total days. Supports up to 5 years (1825 days).
+    Examples: 7d, 14d, 30d, 90d, 180d, 1y, 3y, 5y, all
+    """
+    p = (period or "7d").strip().lower()
+    mapping = {
+        "7d": 7,
+        "14d": 14,
+        "30d": 30,
+        "60d": 60,
+        "90d": 90,
+        "180d": 180,
+        "6m": 180,
+        "1y": 365,
+        "365d": 365,
+        "2y": 730,
+        "3y": 1095,
+        "5y": 1825,
+        "all": 1825,
+    }
+    if p in mapping:
+        return mapping[p]
+    if p.endswith("d") and p[:-1].isdigit():
+        return max(1, min(1825, int(p[:-1])))
+    if p.endswith("y") and p[:-1].isdigit():
+        return max(1, min(1825, int(p[:-1]) * 365))
+    return 7
+
+
 async def _get_local_metrics(db, period: str) -> Dict[str, Any]:
     """
     Aggregates metrics from local MongoDB collections (email_attempts, outbox_jobs, email_suppressions).
     Used as graceful fallback when Resend API is unavailable or RESEND_API_KEY is not configured.
     """
     now = datetime.now(timezone.utc)
-    days = 30 if period == "30d" else 7
+    days = _parse_period_days(period)
     since = now - timedelta(days=days)
 
     sent = 0
@@ -135,7 +165,8 @@ async def get_email_analytics(
     3. Gracefully falls back to local database stats if Resend fails or key is missing.
     4. Caches result for CACHE_TTL_SECONDS.
     """
-    period_key = "30d" if period == "30d" else "7d"
+    period_key = (period or "7d").strip().lower()
+    days = _parse_period_days(period_key)
     now_ts = time.time()
 
     # 1. Cache hit
@@ -150,7 +181,6 @@ async def get_email_analytics(
 
     # 2. Try Resend Email Metrics API
     if settings.RESEND_API_KEY and not settings.RESEND_API_KEY.startswith("mock"):
-        days = 30 if period_key == "30d" else 7
         now_dt = datetime.now(timezone.utc)
         start_date = (now_dt - timedelta(days=days)).strftime("%Y-%m-%d")
         end_date = now_dt.strftime("%Y-%m-%d")
