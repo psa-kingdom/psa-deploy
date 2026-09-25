@@ -213,6 +213,15 @@ async def handle_resend_webhook(
         if len(snippet) > 300:
             snippet = snippet[:297] + "..."
 
+        # Parse timestamp from webhook event if available
+        rec_time = now
+        created_str = data.get("created_at") or (event.get("created_at") if isinstance(event, dict) else None)
+        if created_str:
+            try:
+                rec_time = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+            except Exception:
+                pass
+
         reply_record = EmailReply(
             email_id=email_id,
             sender_email=sender_email.lower().strip() if sender_email else "unknown",
@@ -223,13 +232,13 @@ async def handle_resend_webhook(
             campaign_id=campaign_id,
             campaign_title=campaign_title,
             snippet=snippet,
-            received_at=now,
+            received_at=rec_time,
             source="webhook"
         )
         await db.email_replies.insert_one(reply_record.model_dump())
         logger.info(
-            "[INBOUND REPLY INGESTED] Sender: %s | Subject: %s | Cleaned: %s | Campaign: %s",
-            sender_email, raw_subject, clean_subj, campaign_id
+            "[INBOUND REPLY INGESTED] Sender: %s | Subject: %s | Cleaned: %s | Campaign: %s | Time: %s",
+            sender_email, raw_subject, clean_subj, campaign_id, rec_time
         )
 
     return {"status": "processed", "event_type": event_type}

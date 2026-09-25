@@ -34,6 +34,32 @@ def _get_db(request: Request = None) -> AsyncIOMotorDatabase:
     return None
 
 
+def _format_datetime_utc(val):
+    """Ensures datetime objects and ISO strings are serialized with explicit UTC timezone."""
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        if val.tzinfo is None:
+            val = val.replace(tzinfo=timezone.utc)
+        return val.isoformat()
+    if isinstance(val, str) and val.strip():
+        s = val.strip()
+        if not s.endswith("Z") and "+" not in s and "-" not in s[10:]:
+            return s + "Z"
+        return s
+    return val
+
+
+def _serialize_reply(doc: Optional[dict]) -> Optional[dict]:
+    if not doc:
+        return doc
+    clean = dict(doc)
+    clean.pop("_id", None)
+    if "received_at" in clean:
+        clean["received_at"] = _format_datetime_utc(clean.get("received_at"))
+    return clean
+
+
 @router.get("/stats", dependencies=[Depends(get_current_admin)])
 async def get_replies_stats(request: Request):
     """
@@ -86,8 +112,8 @@ async def get_replies_stats(request: Request):
                 "clean_subject": clean_sub,
                 "sample_raw_subject": doc.get("sample_raw_subject") or clean_sub,
                 "reply_count": doc.get("reply_count", 0),
-                "latest_reply_at": doc.get("latest_reply_at"),
-                "first_reply_at": doc.get("first_reply_at"),
+                "latest_reply_at": _format_datetime_utc(doc.get("latest_reply_at")),
+                "first_reply_at": _format_datetime_utc(doc.get("first_reply_at")),
                 "senders": senders,
                 "unique_senders_count": len(doc.get("senders") or []),
                 "campaign_id": doc.get("campaign_id"),
@@ -103,7 +129,7 @@ async def get_replies_stats(request: Request):
             "total_replies": total_replies,
             "unique_subjects_count": len(by_subject),
             "by_subject": by_subject,
-            "recent_replies": recent_docs
+            "recent_replies": [_serialize_reply(d) for d in recent_docs]
         }
     except Exception as e:
         logger.error("Error generating email replies stats: %s", e, exc_info=True)
@@ -138,7 +164,7 @@ async def list_replies(
         query["sender_email"] = {"$regex": re.escape(sender.strip()), "$options": "i"}
 
     items = await db.email_replies.find(query, {"_id": 0}).sort("received_at", -1).limit(limit).to_list(limit)
-    return {"replies": items}
+    return {"replies": [_serialize_reply(d) for d in items]}
 
 
 @router.post("", dependencies=[Depends(get_current_admin)])
@@ -389,7 +415,7 @@ async def get_reply_content(
         "sender_name": reply.get("sender_name"),
         "recipient_email": reply.get("recipient_email"),
         "subject": reply.get("subject"),
-        "received_at": reply.get("received_at"),
+        "received_at": _format_datetime_utc(reply.get("received_at")),
         "snippet": reply.get("snippet"),
         "body_text": body_text,
         "body_html": body_html,

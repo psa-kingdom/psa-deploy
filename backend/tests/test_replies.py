@@ -47,6 +47,24 @@ class MockCollection:
         self.docs.append(d)
         return type("Result", (), {"inserted_id": d.get("reply_id") or "id_1"})()
 
+    async def update_one(self, query, update, upsert=False):
+        set_fields = update.get("$set", {})
+        for d in self.docs:
+            match = True
+            for k, v in query.items():
+                if d.get(k) != v:
+                    match = False
+                    break
+            if match:
+                d.update(set_fields)
+                return type("Result", (), {"modified_count": 1, "upserted_id": None})()
+        if upsert:
+            new_doc = dict(query)
+            new_doc.update(set_fields)
+            self.docs.append(new_doc)
+            return type("Result", (), {"modified_count": 0, "upserted_id": "upserted_1"})()
+        return type("Result", (), {"modified_count": 0, "upserted_id": None})()
+
     async def delete_one(self, query):
         initial_len = len(self.docs)
         self.docs = [d for d in self.docs if not all(d.get(k) == v for k, v in query.items())]
@@ -187,6 +205,9 @@ def test_webhook_inbound_reply_ingestion(client, mock_db):
 
 def test_sync_replies_from_resend(client, mock_db, monkeypatch):
     import resend
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test_key_123")
 
     fake_remote_items = [
         {

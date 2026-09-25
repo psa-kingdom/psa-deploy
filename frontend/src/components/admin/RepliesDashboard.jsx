@@ -42,6 +42,39 @@ import {
   BTN_SECONDARY_STYLE,
 } from "../../utils/adminTheme";
 
+const parseDate = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    // If ISO-formatted string without timezone designation ('Z' or timezone offset),
+    // append 'Z' so it is accurately parsed as UTC time and converted to local timezone.
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(trimmed)) {
+      return new Date(trimmed.replace(" ", "T") + "Z");
+    }
+    return new Date(trimmed);
+  }
+  return new Date(val);
+};
+
+const formatDateTime = (val, options = { dateStyle: "medium", timeStyle: "short" }) => {
+  const d = parseDate(val);
+  if (!d || isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-GB", options);
+};
+
+const formatDateOnly = (val, options = { day: "numeric", month: "short", year: "numeric" }) => {
+  const d = parseDate(val);
+  if (!d || isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", options);
+};
+
+const formatTimeOnly = (val, options = { hour: "2-digit", minute: "2-digit" }) => {
+  const d = parseDate(val);
+  if (!d || isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], options);
+};
+
 export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
   const [stats, setStats] = useState({
     total_replies: 0,
@@ -626,7 +659,7 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
           </div>
           <span style={{ fontSize: "11px", color: TEXT_MUTED }}>
             {latestReply
-              ? new Date(latestReply.received_at).toLocaleString()
+              ? formatDateTime(latestReply.received_at)
               : "Awaiting incoming traffic"}
           </span>
         </div>
@@ -907,16 +940,7 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                             color: TEXT_SECONDARY,
                           }}
                         >
-                          {s.latest_reply_at
-                            ? new Date(s.latest_reply_at).toLocaleDateString(
-                                "en-GB",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                }
-                              )
-                            : "—"}
+                          {formatDateOnly(s.latest_reply_at)}
                         </div>
                         <div
                           style={{
@@ -925,12 +949,7 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                             marginTop: "2px",
                           }}
                         >
-                          {s.latest_reply_at
-                            ? new Date(s.latest_reply_at).toLocaleTimeString(
-                                [],
-                                { hour: "2-digit", minute: "2-digit" }
-                              )
-                            : ""}
+                          {formatTimeOnly(s.latest_reply_at)}
                         </div>
                       </td>
 
@@ -1112,7 +1131,7 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                       }}
                     >
                       <Clock size={12} />
-                      {new Date(r.received_at).toLocaleString()}
+                      {formatDateTime(r.received_at)}
                     </span>
                     <button
                       type="button"
@@ -1613,10 +1632,7 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
               </div>
               <div>
                 <strong>Received:</strong>{" "}
-                {new Date(activeViewingReply.received_at).toLocaleString("en-GB", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
+                {formatDateTime(activeViewingReply.received_at)}
               </div>
               {activeViewingReply.campaign_title && (
                 <div>
