@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/communication/replies", tags=["Admin Email Replies"])
 
 
-def _get_db(request: Request = None) -> AsyncIOMotorDatabase:
-    if request and hasattr(request.app.state, "db") and request.app.state.db is not None:
+def get_db(request: Request) -> AsyncIOMotorDatabase:
+    if hasattr(request.app.state, "db") and request.app.state.db is not None:
         return request.app.state.db
     try:
         from backend.server import db
@@ -61,7 +61,10 @@ def _serialize_reply(doc: Optional[dict]) -> Optional[dict]:
 
 
 @router.get("/stats", dependencies=[Depends(get_current_admin)])
-async def get_replies_stats(request: Request):
+async def get_replies_stats(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
     """
     Returns aggregated stats on email replies received:
     - Total reply count
@@ -69,7 +72,6 @@ async def get_replies_stats(request: Request):
     - Breakdown grouped by email subject
     - Most recent replies feed
     """
-    db = _get_db(request)
     if db is None:
         return {
             "total_replies": 0,
@@ -106,8 +108,9 @@ async def get_replies_stats(request: Request):
         by_subject = []
         for doc in by_subject_docs:
             clean_sub = doc.get("clean_subject") or doc.get("_id") or "No Subject"
-            # Limit senders sample to max 8
-            senders = list(doc.get("senders") or [])[:8]
+            # Filter None and limit senders sample to max 8
+            raw_senders = doc.get("senders") or []
+            senders = [s for s in raw_senders if s][:8]
             by_subject.append({
                 "clean_subject": clean_sub,
                 "sample_raw_subject": doc.get("sample_raw_subject") or clean_sub,
@@ -115,7 +118,7 @@ async def get_replies_stats(request: Request):
                 "latest_reply_at": _format_datetime_utc(doc.get("latest_reply_at")),
                 "first_reply_at": _format_datetime_utc(doc.get("first_reply_at")),
                 "senders": senders,
-                "unique_senders_count": len(doc.get("senders") or []),
+                "unique_senders_count": len(senders),
                 "campaign_id": doc.get("campaign_id"),
                 "campaign_title": doc.get("campaign_title"),
             })
@@ -146,10 +149,10 @@ async def list_replies(
     request: Request,
     subject: Optional[str] = Query(None, description="Filter by subject or clean subject"),
     sender: Optional[str] = Query(None, description="Filter by sender email"),
-    limit: int = Query(50, ge=1, le=200)
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Lists individual replies received, optionally filtered by subject or sender."""
-    db = _get_db(request)
     if db is None:
         return {"replies": []}
 
@@ -170,13 +173,13 @@ async def list_replies(
 @router.post("", dependencies=[Depends(get_current_admin)])
 async def create_manual_or_test_reply(
     payload: EmailReplyCreate,
-    request: Request
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """
     Logs or simulates an incoming email reply.
     Useful for testing the dashboard or recording replies tracked through custom channels.
     """
-    db = _get_db(request)
     if db is None:
         raise HTTPException(status_code=500, detail="Database unavailable")
 
@@ -217,13 +220,15 @@ async def create_manual_or_test_reply(
 
 
 @router.post("/sync", dependencies=[Depends(get_current_admin)])
-async def sync_replies_from_resend(request: Request):
+async def sync_replies_from_resend(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
     """
     Directly pulls inbound received emails from Resend Receiving API
     (resend.Emails.Receiving.list()) and idempotently ingests them into MongoDB.
     This provides an instant manual/automated sync without requiring public webhooks.
     """
-    db = _get_db(request)
     if db is None:
         raise HTTPException(status_code=500, detail="Database unavailable")
 
@@ -250,68 +255,74 @@ async def sync_replies_from_resend(request: Request):
     already_existing_count = 0
 
     for item in remote_items:
-        # Item may be dict or pydantic model
-        item_dict = item if isinstance(item, dict) else item.__dict__
-        email_id = item_dict.get("id")
+        # Item may be dict, Pydantic model, or class instance
+        item_dict = item if isinstance(item, dict) else (item.__dict__ if hasattr(item, "__dict__") else {})
+        email_id = item_dict.get("id") or getattr(item, "id", None) or item_dict.get("email_id") or getattr(item, "email_id", None)
         if not email_id:
             continue
 
-        existing = await db.email_replies.find_one({"email_id": email_id})
-        if existing and (existing.get("body_text") or existing.get("body_html") or existing.get("snippet")):
-            already_existing_count += 1
-            continue
-
-        raw_subject = item_dict.get("subject") or "No Subject"
+        raw_subject = item_dict.get("subject") or getattr(item, "subject", "No Subject") or "No Subject"
         clean_subj = normalize_subject(raw_subject)
 
-        sender_raw = item_dict.get("from") or ""
+        sender_raw = item_dict.get("from") or getattr(item, "from", "") or getattr(item, "from_address", "") or ""
         sender_name = None
-        sender_email = sender_raw
+        sender_email = str(sender_raw).strip()
         if "<" in sender_raw and ">" in sender_raw:
             match = re.match(r"^(.*?)\s*<([^>]+)>", sender_raw)
             if match:
                 sender_name = match.group(1).strip().strip('"')
                 sender_email = match.group(2).strip()
 
-        to_list = item_dict.get("to") or []
-        recipient_email = to_list[0] if isinstance(to_list, list) and to_list else "contact@psumanassociates.com"
+        to_val = item_dict.get("to") or getattr(item, "to", None) or []
+        if isinstance(to_val, list) and to_val:
+            recipient_email = to_val[0]
+        elif isinstance(to_val, str) and to_val:
+            recipient_email = to_val
+        else:
+            recipient_email = "contact@psumanassociates.com"
+
+        # Check existing record
+        existing = await db.email_replies.find_one({"email_id": email_id})
+
+        # Fetch detail snippet / body if missing
+        snippet = existing.get("snippet", "") if existing else ""
+        body_text = existing.get("body_text", "") if existing else ""
+        body_html = existing.get("body_html", "") if existing else ""
+
+        if not body_text and not body_html and not snippet:
+            try:
+                full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
+                full_dict = full_detail if isinstance(full_detail, dict) else (full_detail.__dict__ if hasattr(full_detail, "__dict__") else {})
+                body_text = full_dict.get("text") or getattr(full_detail, "text", "") or ""
+                body_html = full_dict.get("html") or getattr(full_detail, "html", "") or ""
+                raw_text = body_text or body_html or ""
+                clean_text = re.sub(r"<[^>]+>", " ", raw_text)
+                clean_text = re.sub(r"\s+", " ", clean_text).strip()
+                snippet = clean_text[:297] + ("..." if len(clean_text) > 297 else "")
+            except Exception as e:
+                logger.warning("Could not fetch detail for email_id %s: %s", email_id, e)
+
+        # Parse date
+        received_at = get_utc_now()
+        created_str = item_dict.get("created_at") or getattr(item, "created_at", None)
+        if created_str:
+            try:
+                received_at = datetime.fromisoformat(str(created_str).replace("Z", "+00:00"))
+            except Exception:
+                pass
+        elif existing and existing.get("received_at"):
+            received_at = existing.get("received_at")
 
         # Attempt to match to an existing campaign
-        campaign_id = None
-        campaign_title = None
-        if clean_subj:
+        campaign_id = existing.get("campaign_id") if existing else None
+        campaign_title = existing.get("campaign_title") if existing else None
+        if not campaign_id and clean_subj:
             campaign = await db.email_campaigns.find_one({
                 "subject": {"$regex": f"^{re.escape(clean_subj)}$", "$options": "i"}
             })
             if campaign:
                 campaign_id = campaign.get("campaign_id")
                 campaign_title = campaign.get("title")
-
-        # Fetch full text and HTML body
-        snippet = ""
-        body_text = ""
-        body_html = ""
-        try:
-            full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
-            full_dict = full_detail if isinstance(full_detail, dict) else full_detail.__dict__
-            body_text = full_dict.get("text") or ""
-            body_html = full_dict.get("html") or ""
-            raw_text = body_text or body_html or ""
-            clean_text = re.sub(r"<[^>]+>", " ", raw_text)
-            clean_text = re.sub(r"\s+", " ", clean_text).strip()
-            snippet = clean_text[:297] + ("..." if len(clean_text) > 297 else "")
-        except Exception as e:
-            logger.warning("Could not fetch detail for email_id %s: %s", email_id, e)
-
-        # Parse date
-        received_at = get_utc_now()
-        created_str = item_dict.get("created_at")
-        if created_str:
-            try:
-                # handles ISO formatted strings
-                received_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
-            except Exception:
-                pass
 
         reply_record = EmailReply(
             email_id=email_id,
@@ -328,12 +339,20 @@ async def sync_replies_from_resend(request: Request):
             received_at=received_at,
             source="resend_sync"
         )
+        
+        doc_data = reply_record.model_dump()
+        if existing and existing.get("reply_id"):
+            doc_data["reply_id"] = existing["reply_id"]
+
         await db.email_replies.update_one(
             {"email_id": email_id},
-            {"$set": reply_record.model_dump()},
+            {"$set": doc_data},
             upsert=True
         )
-        synced_count += 1
+        if existing:
+            already_existing_count += 1
+        else:
+            synced_count += 1
         logger.info(
             "[SYNC INGESTED] ID: %s | From: %s | Subj: %s",
             email_id, sender_email, clean_subj
@@ -360,13 +379,13 @@ async def sync_replies_from_resend(request: Request):
 @router.get("/{reply_id}/content", dependencies=[Depends(get_current_admin)])
 async def get_reply_content(
     reply_id: str,
-    request: Request
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """
     Fetches the full message body for an email reply.
     If not already stored in DB, queries Resend Receiving API on demand.
     """
-    db = _get_db(request)
     if db is None:
         raise HTTPException(status_code=500, detail="Database unavailable")
 
@@ -383,9 +402,9 @@ async def get_reply_content(
         try:
             resend.api_key = settings.RESEND_API_KEY
             full_detail = await asyncio.to_thread(resend.Emails.Receiving.get, email_id)
-            full_dict = full_detail if isinstance(full_detail, dict) else full_detail.__dict__
-            body_text = full_dict.get("text") or ""
-            body_html = full_dict.get("html") or ""
+            full_dict = full_detail if isinstance(full_detail, dict) else (full_detail.__dict__ if hasattr(full_detail, "__dict__") else {})
+            body_text = full_dict.get("text") or getattr(full_detail, "text", "") or ""
+            body_html = full_dict.get("html") or getattr(full_detail, "html", "") or ""
             
             # Compute updated snippet if missing
             raw_text = body_text or body_html or ""
@@ -425,10 +444,10 @@ async def get_reply_content(
 @router.delete("/{reply_id}", dependencies=[Depends(get_current_admin)])
 async def delete_reply(
     reply_id: str,
-    request: Request
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Deletes a reply record by ID."""
-    db = _get_db(request)
     if db is None:
         raise HTTPException(status_code=500, detail="Database unavailable")
 

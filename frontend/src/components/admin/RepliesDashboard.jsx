@@ -250,18 +250,21 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
     }
   };
 
-  const filteredSubjects = stats.by_subject.filter((s) => {
+  const filteredSubjects = (stats.by_subject || []).filter((s) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
+    const cleanSub = (s.clean_subject || "").toLowerCase();
+    const sampleRaw = (s.sample_raw_subject || "").toLowerCase();
+    const campTitle = (s.campaign_title || "").toLowerCase();
     return (
-      s.clean_subject.toLowerCase().includes(q) ||
-      s.sample_raw_subject.toLowerCase().includes(q) ||
-      (s.campaign_title && s.campaign_title.toLowerCase().includes(q))
+      cleanSub.includes(q) ||
+      sampleRaw.includes(q) ||
+      campTitle.includes(q)
     );
   });
 
-  const topSubject = stats.by_subject[0] || null;
-  const latestReply = stats.recent_replies[0] || null;
+  const topSubject = (stats.by_subject && stats.by_subject[0]) || null;
+  const latestReply = (stats.recent_replies && stats.recent_replies[0]) || (repliesList && repliesList[0]) || null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -925,9 +928,9 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
-                          title={s.senders.join(", ")}
+                          title={(s.senders || []).filter(Boolean).join(", ")}
                         >
-                          {s.senders.join(", ")}
+                          {(s.senders || []).filter(Boolean).join(", ") || "—"}
                         </div>
                       </td>
 
@@ -1086,8 +1089,8 @@ export default function RepliesDashboard({ backendUrl, campaigns = [] }) {
                       }}
                     >
                       {r.sender_name
-                        ? r.sender_name[0].toUpperCase()
-                        : r.sender_email[0].toUpperCase()}
+                        ? r.sender_name.charAt(0).toUpperCase()
+                        : (r.sender_email ? r.sender_email.charAt(0).toUpperCase() : "U")}
                     </div>
                     <div>
                       <div
