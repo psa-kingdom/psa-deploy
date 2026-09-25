@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
