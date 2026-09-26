@@ -351,6 +351,7 @@ async def seed_default_templates_if_empty(db: AsyncIOMotorDatabase):
 
 
 @router.get("/senders/approved", dependencies=[Depends(get_current_admin)])
+@router.get("/senders", dependencies=[Depends(get_current_admin)])
 async def get_approved_senders():
     """Returns list of approved sending identities."""
     return APPROVED_SENDER_IDENTITIES
